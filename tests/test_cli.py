@@ -28,6 +28,7 @@ def test_model_json_is_plain_and_limited_to_implemented_adapters():
     assert {m["adapter_id"] for m in json.loads(result.stdout)} == {
         "last_value",
         "seasonal_naive",
+        "chronos_bolt",
     }
     assert "\x1b[" not in result.stdout
 

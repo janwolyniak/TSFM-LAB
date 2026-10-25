@@ -4,8 +4,9 @@ The numerical core implements `Dataset`, `EvaluationSpec`, `ForecastRequest`,
 `ForecastOutput`, `EvaluationWindow`, model metadata/capabilities, and an
 `ExperimentResult`. Built-in model constructors supply their options directly.
 Milestone 2 adds validated YAML selections, recorded baseline runtime settings,
-and persistent results through `run_from_config`. Checkpoint-specific identities
-and probabilistic outputs below remain designs for later milestones.
+and persistent results through `run_from_config`. Milestone 3 adds verified
+checkpoint identities and the Chronos-Bolt adapter. Probabilistic outputs below
+remain a design for later milestones.
 
 The first numerical core handles one regular series, one numeric target, fixed
 context length, one forecast horizon, and point forecasts. It preserves explicit
@@ -64,9 +65,10 @@ reason; invalid bounds or lengths fail before calling a model.
 
 ## Model identities and capabilities
 
-The current configuration boundary validates built-in adapter/source/options as
-dictionaries. `ModelSpec` below describes the intended checkpoint-aware extension;
-it is not a current dataclass or an accepted arbitrary-repository loader.
+The current configuration boundary validates adapter/source/options as
+dictionaries. `ModelSpec` below is a conceptual grouping rather than a current
+dataclass. Curated Hub and compatible local Chronos-Bolt checkpoints are supported;
+there is no arbitrary-repository loader.
 
 Input configuration supplies adapter/source/options and, for a Hub checkpoint,
 the requested repository/revision. The catalog derives family and adapter version;
@@ -229,7 +231,11 @@ version, Python and dependency versions, operating system, hardware/backend,
 seed/determinism settings, dataset fingerprints, adapter
 version, metric version, and file checksums. An unversioned/dirty source tree must
 be identified explicitly, not represented as an exact clean source snapshot.
-Checkpoint revisions will be required when remote/local weight adapters exist.
+Chronos-Bolt records consumed file hashes, native capabilities, license when
+available, and requested/resolved Hub revisions or a standalone local identity.
+Optional runtime/environment hooks give direct Python and CLI callers the same
+model dtype and dependency provenance. Reload validates identity without weights
+or optional inference libraries; see [checkpoint rules](chronos.md).
 
 `run_experiment` currently returns an in-memory numerical result with JSON
 conversion through `to_dict()`. It validates dataset identity and snapshots

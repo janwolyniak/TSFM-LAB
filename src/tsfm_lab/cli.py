@@ -1,28 +1,25 @@
 """Scriptable terminal commands backed by the shared application functions."""
 
-import json
-import sys
-from dataclasses import asdict
-from functools import wraps
 from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 from tsfm_lab import __version__
 from tsfm_lab.application import load_dataset, run_from_config
-from tsfm_lab.comparison import ComparisonError, compare_runs
+from tsfm_lab.cli_support import emit as _emit
+from tsfm_lab.cli_support import guard as _guard
+from tsfm_lab.cli_support import table as _table
+from tsfm_lab.comparison import compare_runs
 from tsfm_lab.config import ConfigError
-from tsfm_lab.experiments import ExperimentStore, StoreError
-from tsfm_lab.exports import ExportError, export_predictions
-from tsfm_lab.models.baselines import LastValue, SeasonalNaive
+from tsfm_lab.experiments import ExperimentStore
+from tsfm_lab.exports import export_predictions
+from tsfm_lab.model_commands import models
 
 app = typer.Typer(
     help="Evaluate time-series forecasts locally.", invoke_without_command=True
 )
-models = typer.Typer(help="Inspect available model adapters.", no_args_is_help=True)
 datasets = typer.Typer(help="Inspect a local dataset.", no_args_is_help=True)
 experiments = typer.Typer(help="Inspect saved experiments.", no_args_is_help=True)
 app.add_typer(models, name="models")
@@ -31,37 +28,6 @@ app.add_typer(experiments, name="experiments")
 
 Workspace = Annotated[Path, typer.Option("--workspace", "-w")]
 JsonOutput = Annotated[bool, typer.Option("--json")]
-
-
-def _guard(function):
-    @wraps(function)
-    def wrapped(*args, **kwargs):
-        try:
-            return function(*args, **kwargs)
-        except (ConfigError, ComparisonError, ExportError) as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            raise typer.Exit(2) from exc
-        except (StoreError, OSError, ImportError, RuntimeError, ValueError) as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            raise typer.Exit(1) from exc
-        except KeyboardInterrupt as exc:
-            print("Experiment cancelled.", file=sys.stderr)
-            raise typer.Exit(130) from exc
-
-    return wrapped
-
-
-def _emit(value: dict | list) -> None:
-    print(json.dumps(value, indent=2, allow_nan=False))
-
-
-def _table(title: str, columns: list[str], rows: list[list[str]]) -> None:
-    table = Table(title=title)
-    for column in columns:
-        table.add_column(column)
-    for row in rows:
-        table.add_row(*row)
-    Console(markup=False, highlight=False).print(table)
 
 
 def _metric(value: dict) -> str:
@@ -101,28 +67,6 @@ def run(config: Path, json_output: bool = typer.Option(False, "--json")):
             [[key.upper(), _metric(value)] for key, value in result["metrics"].items()],
         )
         typer.echo(f"Saved to {result['directory']}")
-
-
-@models.command("list")
-@_guard
-def list_models(json_output: bool = typer.Option(False, "--json")):
-    """List the implemented built-in adapters; no downloads are performed."""
-    items = [asdict(model.metadata()) for model in (LastValue(), SeasonalNaive(1))]
-    if json_output:
-        _emit(items)
-    else:
-        _table(
-            "Available models",
-            ["Adapter", "Family", "Device"],
-            [
-                [
-                    item["adapter_id"],
-                    item["family"],
-                    ", ".join(item["capabilities"]["devices"]),
-                ]
-                for item in items
-            ],
-        )
 
 
 @datasets.command("inspect")

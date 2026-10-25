@@ -1,15 +1,18 @@
 # CLI and experiment configuration
 
-The shell workflow runs local baseline experiments synchronously. It provides
+The shell workflow runs local forecasting experiments synchronously. It provides
 validated YAML input, saved records, history, controlled comparisons, and exports.
-It does not download models or launch a full-screen interface. `tsfm` without
-arguments prints help.
+Normal experiments do not download models. Explicit `models pull` manages curated
+checkpoints. `tsfm` without arguments prints help; there is no full-screen UI yet.
 
 ## Commands and output
 
 | Command | Behavior |
 | --- | --- |
-| `tsfm models list` | List implemented built-in adapters without loading weights. Seasonal-naive requires an explicit seasonal period in configuration. |
+| `tsfm models list` | List supported baseline and Chronos-Bolt adapters without loading weights. |
+| `tsfm models info IDENTIFIER` | Show offline catalog metadata for an adapter or curated checkpoint repository. |
+| `tsfm models pull REPOSITORY --revision REF` | Explicitly resolve and download a curated checkpoint; optional `--cache-dir` selects its Hub cache. |
+| `tsfm models cache --cache-dir PATH` | Inspect complete/incomplete curated snapshots without network access or deletion. |
 | `tsfm datasets inspect FILE --timestamp-column timestamp --target-column demand --frequency 1h` | Validate a single CSV/Parquet series and report its range, units, frequency, and fingerprints. Add `--timezone` for naive datetimes. |
 | `tsfm run CONFIG.yaml` | Validate configuration/data before creating a run, execute one experiment, and save its artifacts. |
 | `tsfm experiments list --workspace results` | Scan local manifests and show completed, active/incomplete, failed, cancelled, and corrupt records. |
@@ -45,10 +48,12 @@ require integers: booleans, floats, and numeric strings are not coerced.
 The parser is based on [PyYAML SafeLoader](https://pyyaml.org/wiki/PyYAMLDocumentation)
 with duplicate/alias rejection and ISO timestamps preserved as strings.
 
-`model.source` is currently `builtin`, with adapter `last_value` or
+`model.source: builtin` selects adapter `last_value` or
 `seasonal_naive`. Last-value has no options. Seasonal-naive requires
-`options.seasonal_period` and a context long enough for that season. Repository,
-checkpoint, derived adapter-version, and remote model fields are unsupported.
+`options.seasonal_period` and a context long enough for that season.
+`huggingface` and `local` select the `chronos_bolt` adapter through the strict
+[checkpoint configuration](chronos.md). Arbitrary repositories, derived identity
+fields, and remote-code options are unsupported.
 
 Dataset fields select a local `.csv`, `.parquet`, or `.pq` file, timestamp/target
 columns, and fixed frequency. Units default to the explicit string `unspecified`;
@@ -63,9 +68,11 @@ pre-evaluation MASE denominator. The initial point task is median; deterministic
 baselines are valid for it. The model's seasonal period and MASE's lag are
 separate explicit settings.
 
-Runtime defaults are CPU, float64, batch size 1, and seed 0. Other devices,
-dtypes, or batch sizes fail. A nonnegative seed is recorded; the deterministic
-baselines do not use it, which is stated in resolved runtime metadata.
+Runtime defaults are CPU, batch size 1, and seed 0. Baselines use float64;
+Chronos-Bolt uses float32 model arithmetic and returns normalized float64 forecasts.
+Other device/dtype combinations or batch sizes fail. A nonnegative seed is
+recorded; the current deterministic point methods do not use it, which is stated
+in resolved runtime metadata.
 
 ## Saved artifacts and failure behavior
 

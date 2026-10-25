@@ -1,8 +1,8 @@
 # TSFM Lab architecture proposal
 
 Status: initial direction agreed on 25 October 2026. The numerical core is
-implemented along with shell commands and local records. Interactive terminal
-and pretrained-model sections describe later work.
+implemented along with shell commands, local records, and the Chronos-Bolt adapter.
+Interactive terminal and additional pretrained-model sections describe later work.
 
 TSFM Lab should make a local forecasting evaluation reproducible from dataset
 selection through exported predictions. The first engineering goal is a verified

@@ -9,7 +9,7 @@ from tsfm_lab.data import canonical_fingerprint, load_csv
 from tsfm_lab.evaluation.runner import run_experiment
 from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.experiments import ExperimentStore
-from tsfm_lab.models.baselines import LastValue, SeasonalNaive
+from tsfm_lab.models.factory import build_model
 
 
 class RunExecutionError(RuntimeError):
@@ -33,11 +33,7 @@ def run_from_config(
     config = load_config(path)
     try:
         dataset = load_dataset(config.dataset)
-        model = (
-            LastValue()
-            if config.model["adapter_id"] == "last_value"
-            else SeasonalNaive(**config.model["options"])
-        )
+        model = build_model(config.model, config.runtime)
         evaluation_bounds(dataset, config.evaluation)
         model.validate(config.evaluation)
         canonical_fingerprint(dataset)

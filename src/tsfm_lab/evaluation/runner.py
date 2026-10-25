@@ -149,7 +149,11 @@ def _configuration(dataset, metadata, model, spec) -> dict:
     return {
         "model": {
             **asdict(metadata),
-            "source": "builtin" if metadata.family == "baseline" else "local_python",
+            "source": getattr(
+                model,
+                "source",
+                "builtin" if metadata.family == "baseline" else "local_python",
+            ),
             "options": options,
         },
         "dataset": {
@@ -159,7 +163,22 @@ def _configuration(dataset, metadata, model, spec) -> dict:
             "frequency": dataset.frequency,
         },
         "evaluation": evaluation,
-        "runtime": {"device": "cpu", "dtype": "float64", "batch_size": 1},
+        "runtime": getattr(
+            model,
+            "runtime_configuration",
+            lambda: {"device": "cpu", "dtype": "float64", "batch_size": 1},
+        )(),
+    }
+
+
+def _environment(model) -> dict:
+    return {
+        "python": platform.python_version(),
+        "numpy": version("numpy"),
+        "pandas": version("pandas"),
+        "os": platform.platform(),
+        "machine": platform.machine(),
+        **getattr(model, "environment_metadata", lambda: {})(),
     }
 
 
@@ -225,13 +244,7 @@ def run_experiment(
                 **dataset.provenance,
                 "canonical_sha256": fingerprint,
             },
-            "environment": {
-                "python": platform.python_version(),
-                "numpy": version("numpy"),
-                "pandas": version("pandas"),
-                "os": platform.platform(),
-                "machine": platform.machine(),
-            },
+            "environment": _environment(model),
             "metric_version": "point_metrics_v1",
             "scale_history": {
                 "start": dataset.timestamps[0].isoformat(),

@@ -1,9 +1,8 @@
 # TSFM Lab
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
-Python core and scriptable terminal commands. Pretrained time-series model
-adapters and an interactive terminal application are planned. Financial analysis
-will be a later extension.
+Python core, scriptable terminal commands, and an optional Chronos-Bolt adapter.
+An interactive terminal application and financial analysis are later extensions.
 
 ## Project status
 
@@ -12,7 +11,9 @@ numeric series from CSV or Parquet, configure rolling baseline forecasts in YAML
 save experiment records, inspect history, compare compatible runs, and export
 predictions. Scores include pooled/per-lead MAE, RMSE, and MASE. The `tsfm` command
 uses optional terminal dependencies; the numerical core remains independent.
-Pretrained adapters and the interactive TUI are later milestones.
+Milestone 3 adds curated checkpoint selection, explicit pulls, exact revisions,
+verified local/cache-only Chronos-Bolt inference, and model-runtime provenance.
+The interactive TUI and other model families are later milestones.
 
 ## Run the offline example
 
@@ -82,6 +83,19 @@ directory; the examples use `results` from the repository root. Use
 dependencies are already available and you are working without installation.
 See [CLI and configuration](docs/cli.md) for validation, records, and exit codes.
 
+## Use Chronos Bolt
+
+The optional CPU adapter supports the official tiny/small checkpoints and
+compatible standalone local Bolt weights. `tsfm models info chronos_bolt` shows
+catalog metadata without downloading or importing the model runtime. Downloading
+requires an explicit `tsfm models pull` command; normal experiments require
+already cached or local files.
+
+See the [Chronos guide](docs/chronos.md) for the pinned runtime, exact revisions,
+cache paths, local checkpoints, median semantics, and the optional CPU test.
+[chronos-bolt-tiny.yaml](examples/configurations/chronos-bolt-tiny.yaml) uses the
+same numerical task as the baseline examples. Routine tests need no model weights.
+
 ## Use the Python core
 
 ```python
@@ -134,7 +148,8 @@ does not install dependencies. The configured CI matrix covers Python 3.11,
 3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
 remote CI and a fresh dependency installation have not been run. See the
 [Milestone 1 record](docs/verification.md) and
-[Milestone 2 record](docs/milestone2-verification.md) for evidence and limits.
+[Milestone 2 record](docs/milestone2-verification.md), plus the
+[Chronos CPU record](docs/milestone3-verification.md), for evidence and limits.
 
 ## Design and implementation plan
 
@@ -149,8 +164,8 @@ remote CI and a fresh dependency installation have not been run. See the
 
 The agreed implementation sequence starts with Python, NumPy, and pandas;
 introduces Typer and Rich for shell commands; and adds Textual for the interactive
-application. Model runtimes remain optional. Chronos-Bolt Tiny is the selected
-first adapter candidate, pending its runtime/dependency validation.
+application. Model runtimes remain optional. Chronos-Bolt is the first integrated
+family; other Chronos variants have separate APIs and remain unsupported.
 
 ## Contributing
 

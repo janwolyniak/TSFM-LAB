@@ -75,3 +75,4 @@ data/artifacts/**
 
 # Local experiment artifacts and exports.
 results/
+model-cache/

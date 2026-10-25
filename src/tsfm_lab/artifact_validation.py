@@ -100,6 +100,40 @@ def _metrics(metrics, spec):
                     raise StoreError("Defined metrics cannot have an undefined reason")
 
 
+def _checkpoint_identity(model, runtime, spec, environment):
+    if model["adapter_id"] != "chronos_bolt":
+        if model["source"] in {"huggingface", "local"}:
+            raise StoreError(
+                "Checkpoint sources require the supported Chronos-Bolt adapter"
+            )
+        return
+    from tsfm_lab.models.checkpoints import validate_checkpoint_record
+
+    record = validate_checkpoint_record(model["options"]["checkpoint"])
+    if model["source"] != record["source"] or model["family"] != "chronos":
+        raise StoreError("Checkpoint source/family disagrees with the adapter")
+    caps = model["capabilities"]
+    if (
+        caps["max_context"] != record["native_context_length"]
+        or caps["max_horizon"] != record["native_prediction_length"]
+        or spec.context_length > caps["max_context"]
+        or spec.horizon > caps["max_horizon"]
+        or runtime["device"] != "cpu"
+        or runtime["dtype"] != "float32"
+        or runtime["batch_size"] != 1
+    ):
+        raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
+    for key in (
+        "torch",
+        "chronos-forecasting",
+        "transformers",
+        "huggingface-hub",
+        "safetensors",
+        "accelerate",
+    ):
+        _text(environment[key], f"environment {key}")
+
+
 def _schema(result):
     result = _object(result, "result")
     if (
@@ -138,6 +172,7 @@ def _schema(result):
     environment = _object(provenance["environment"], "environment provenance")
     for key in ("python", "numpy", "pandas", "os", "machine"):
         _text(environment[key], f"environment {key}")
+    _checkpoint_identity(model, runtime, spec, environment)
     fingerprint = _object(provenance["dataset"], "dataset provenance")[
         "canonical_sha256"
     ]

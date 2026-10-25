@@ -1,4 +1,4 @@
-"""Strict, local-only YAML configuration for synchronous baseline experiments."""
+"""Strict YAML configuration with explicit local and curated checkpoint sources."""
 
 import copy
 import re
@@ -11,6 +11,7 @@ import yaml
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
 
 MAX_CONFIG_BYTES = 1024 * 1024
+_BOLT_REPOSITORIES = {"amazon/chronos-bolt-tiny", "amazon/chronos-bolt-small"}
 
 
 class ConfigError(ValueError):
@@ -133,12 +134,10 @@ def _dataset(value: Any, directory: Path) -> dict[str, Any]:
     return result
 
 
-def _model(value: Any) -> dict[str, Any]:
+def _builtin_model(fields: dict[str, Any]) -> dict[str, Any]:
     fields = _mapping(
-        value, "model", {"source", "adapter_id", "options"}, {"source", "adapter_id"}
+        fields, "model", {"source", "adapter_id", "options"}, {"source", "adapter_id"}
     )
-    if fields["source"] != "builtin":
-        raise ConfigError("model.source currently supports only builtin")
     adapter = _text(fields["adapter_id"], "model.adapter_id")
     if adapter not in {"last_value", "seasonal_naive"}:
         raise ConfigError("model.adapter_id must be last_value or seasonal_naive")
@@ -151,6 +150,68 @@ def _model(value: Any) -> dict[str, Any]:
             )
         }
     return {"source": "builtin", "adapter_id": adapter, "options": dict(options)}
+
+
+def _checkpoint_model(fields: dict[str, Any], directory: Path) -> dict[str, Any]:
+    source = fields["source"]
+    common = {"source", "adapter_id", "options"}
+    if source == "huggingface":
+        allowed = common | {"repository", "revision", "offline", "cache_dir"}
+        required = {"source", "adapter_id", "repository", "revision"}
+    else:
+        allowed = common | {"path"}
+        required = {"source", "adapter_id", "path"}
+    fields = _mapping(fields, "model", allowed, required)
+    if _text(fields["adapter_id"], "model.adapter_id") != "chronos_bolt":
+        raise ConfigError(
+            "Checkpoint sources support only model.adapter_id chronos_bolt"
+        )
+    _mapping(fields.get("options", {}), "model.options", set())
+    result = {"source": source, "adapter_id": "chronos_bolt", "options": {}}
+    if source == "local":
+        result["path"] = str(_local_path(fields["path"], "model.path", directory))
+        return result
+    repository = _text(fields["repository"], "model.repository")
+    if repository not in _BOLT_REPOSITORIES:
+        raise ConfigError("model.repository must be a curated Chronos-Bolt repository")
+    revision = _text(fields["revision"], "model.revision")
+    offline = fields.get("offline", True)
+    if type(offline) is not bool:
+        raise ConfigError("model.offline must be a boolean")
+    if offline and re.fullmatch(r"[0-9a-f]{40}", revision) is None:
+        raise ConfigError(
+            "Offline checkpoints require an exact lowercase 40-character SHA"
+        )
+    result.update(repository=repository, revision=revision, offline=offline)
+    if "cache_dir" in fields:
+        result["cache_dir"] = str(
+            _local_path(fields["cache_dir"], "model.cache_dir", directory)
+        )
+    return result
+
+
+def _model(value: Any, directory: Path) -> dict[str, Any]:
+    fields = _mapping(
+        value,
+        "model",
+        {
+            "source",
+            "adapter_id",
+            "options",
+            "repository",
+            "revision",
+            "offline",
+            "cache_dir",
+            "path",
+        },
+        {"source", "adapter_id"},
+    )
+    source = _text(fields["source"], "model.source")
+    if source == "builtin":
+        return _builtin_model(fields)
+    if source in {"huggingface", "local"}:
+        return _checkpoint_model(fields, directory)
+    raise ConfigError("model.source must be builtin, huggingface, or local")
 
 
 def _evaluation(value: Any) -> EvaluationSpec:
@@ -177,16 +238,19 @@ def _evaluation(value: Any) -> EvaluationSpec:
     return EvaluationSpec(**fields)
 
 
-def _runtime(value: Any) -> dict[str, Any]:
+def _runtime(value: Any, model: dict[str, Any]) -> dict[str, Any]:
     fields = _mapping(value, "runtime", {"device", "dtype", "batch_size", "seed"})
-    result = {"device": "cpu", "dtype": "float64", "batch_size": 1, "seed": 0}
+    dtype = "float32" if model["adapter_id"] == "chronos_bolt" else "float64"
+    result = {"device": "cpu", "dtype": dtype, "batch_size": 1, "seed": 0}
     result.update(fields)
     _text(result["device"], "runtime.device")
     _text(result["dtype"], "runtime.dtype")
     _integer(result["batch_size"], "runtime.batch_size")
     _integer(result["seed"], "runtime.seed", minimum=0)
-    if result["device"] != "cpu" or result["dtype"] != "float64":
-        raise ConfigError("Baseline runtime requires device cpu and dtype float64")
+    if result["device"] != "cpu" or result["dtype"] != dtype:
+        raise ConfigError(
+            f"{model['adapter_id']} runtime requires device cpu and dtype {dtype}"
+        )
     if result["batch_size"] != 1:
         raise ConfigError("The synchronous runner currently supports batch_size 1")
     return result
@@ -198,8 +262,13 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
     fields = _mapping(raw, "configuration", allowed, required)
     if _integer(fields["schema_version"], "schema_version") != 1:
         raise ConfigError("Only schema_version 1 is supported")
-    model = _model(fields["model"])
+    model = _model(fields["model"], source_path.parent)
     evaluation = _evaluation(fields["evaluation"])
+    if model["adapter_id"] == "chronos_bolt":
+        if evaluation.context_length > 2048 or evaluation.horizon > 64:
+            raise ConfigError(
+                "Chronos-Bolt requires context_length <= 2048 and horizon <= 64"
+            )
     if model["adapter_id"] == "seasonal_naive":
         if evaluation.context_length < model["options"]["seasonal_period"]:
             raise ConfigError("context_length must contain a complete baseline season")
@@ -209,7 +278,7 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
         dataset=_dataset(fields["dataset"], source_path.parent),
         model=model,
         evaluation=evaluation,
-        runtime=_runtime(fields.get("runtime", {})),
+        runtime=_runtime(fields.get("runtime", {}), model),
         output_directory=_local_path(
             output.get("directory", "./results"), "output.directory", source_path.parent
         ),

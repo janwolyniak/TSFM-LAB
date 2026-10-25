@@ -9,8 +9,8 @@ their acceptance criteria.
 
 The repository now contains the numerical Python package, scriptable CLI,
 YAML configuration, local records, Parquet support, tests, synthetic examples,
-and configured checks/CI. It has no pretrained-model evaluation
-yet. The pre-existing local `PLAN.md` remains the product brief;
+and configured checks/CI. Chronos-Bolt Tiny has passed a pinned local CPU
+integration on synthetic data. The pre-existing local `PLAN.md` remains the product brief;
 these tracked documents make the actionable proposal usable without relying on
 that untracked file.
 
@@ -34,7 +34,8 @@ The owner agreed to the following initial direction on 25 October 2026:
 The contribution workflow requires discussion of architecture, interfaces,
 dependencies, and evaluation methodology before implementation. The agreed
 proposal establishes the implementation direction. The owner's continuation
-request authorized Milestone 2. It does not authorize
+requests authorized Milestones 2 and 3; the owner separately authorized the
+pinned Tiny download and brief CPU test. Continuation does not by itself authorize
 dependency installation, model downloads, publication, merging, or cloud compute.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the maintained permission and Git
 workflow rules.
@@ -93,6 +94,12 @@ commands never prompt. Atomic-write and failure-injection tests show that partia
 runs do not appear completed. Package installation exposes the `tsfm` command.
 
 ## Milestone 3 First pretrained adapter
+
+Implemented and verified with the pinned Tiny checkpoint on CPU. Routine tests,
+cached replay, local copy, installed CLI, and the marked real smoke test passed.
+See [the checkpoint guide](chronos.md) and
+[verification record](milestone3-verification.md). Small and other devices were
+not executed; remote CI remains unrun.
 
 Add a small explicit model catalog, optional Chronos dependencies, metadata-first
 validation, Hub revision resolution, explicit model pulls, cache reuse, offline

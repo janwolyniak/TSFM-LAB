@@ -1,3 +1,4 @@
+import builtins
 import copy
 import json
 from pathlib import Path
@@ -308,3 +309,279 @@ def test_unknown_home_user_in_config_paths_has_a_config_error(
 def test_unknown_home_user_in_source_path_has_a_config_error():
     with pytest.raises(ConfigError, match="Invalid configuration"):
         load_config("~tsfmlab-no-such-user-928374/config.yaml")
+
+
+def bolt_model(source="huggingface", **changes):
+    model = {"source": source, "adapter_id": "chronos_bolt"}
+    if source == "huggingface":
+        model.update(repository="amazon/chronos-bolt-tiny", revision="a" * 40)
+    else:
+        model["path"] = "../models/checkpoint"
+    return model | changes
+
+
+@pytest.mark.parametrize(
+    "repository", ["amazon/chronos-bolt-tiny", "amazon/chronos-bolt-small"]
+)
+def test_curated_hub_model_defaults_to_exact_offline_cpu(
+    tmp_path, valid_config, repository
+):
+    valid_config["model"] = bolt_model(repository=repository)
+    config = load_config(write_config(tmp_path, valid_config))
+    assert config.model == {
+        **valid_config["model"],
+        "offline": True,
+        "options": {},
+    }
+    assert config.runtime == {
+        "device": "cpu",
+        "dtype": "float32",
+        "batch_size": 1,
+        "seed": 0,
+    }
+    assert config.resolved_dict()["model"] == config.model
+    assert (
+        json.loads(json.dumps(config.resolved_dict(), allow_nan=False))
+        == config.resolved_dict()
+    )
+
+
+def test_hub_cache_directory_resolves_against_configuration(
+    tmp_path, valid_config, monkeypatch
+):
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    valid_config["model"] = bolt_model(
+        cache_dir="../model-cache", offline=False, revision="main"
+    )
+    path = write_config(config_dir, valid_config)
+    monkeypatch.chdir(tmp_path.parent)
+    config = load_config(path)
+    assert config.model["cache_dir"] == str(tmp_path / "model-cache")
+    assert config.model["revision"] == "main"
+    assert config.model["offline"] is False
+    assert not (tmp_path / "model-cache").exists()
+
+
+def test_local_checkpoint_configuration_needs_no_existing_directory(
+    tmp_path, valid_config
+):
+    valid_config["model"] = bolt_model("local")
+    config = load_config(write_config(tmp_path, valid_config))
+    assert config.model == {
+        "source": "local",
+        "adapter_id": "chronos_bolt",
+        "path": str(tmp_path.parent / "models/checkpoint"),
+        "options": {},
+    }
+    assert config.runtime["dtype"] == "float32"
+    assert not Path(config.model["path"]).exists()
+    assert not config.output_directory.exists()
+
+
+@pytest.mark.parametrize(
+    "revision", ["main", "v1", "a" * 39, "a" * 41, "A" * 40, "g" * 40, " " + "a" * 40]
+)
+def test_offline_checkpoint_requires_exact_lowercase_sha(
+    tmp_path, valid_config, revision
+):
+    valid_config["model"] = bolt_model(revision=revision)
+    with pytest.raises(ConfigError, match="exact lowercase 40-character SHA"):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize("revision", ["main", "release/v1", "a" * 40])
+def test_online_metadata_selection_can_preserve_requested_revision(
+    tmp_path, valid_config, revision
+):
+    valid_config["model"] = bolt_model(offline=False, revision=revision)
+    config = load_config(write_config(tmp_path, valid_config))
+    assert config.model["revision"] == revision
+    assert config.model["offline"] is False
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"repository": "amazon/chronos-2"},
+        {"repository": "other/model"},
+        {"repository": None},
+        {"repository": []},
+        {"revision": ""},
+        {"revision": 123},
+        {"revision": None},
+        {"offline": "true"},
+        {"offline": 1},
+        {"offline": None},
+        {"offline": []},
+        {"cache_dir": "https://example.com/cache"},
+        {"cache_dir": None},
+        {"cache_dir": []},
+        {"path": "./local-checkpoint"},
+        {"adapter_id": "chronos_2"},
+        {"adapter_id": "last_value"},
+    ],
+)
+def test_invalid_hub_configuration_is_rejected(tmp_path, valid_config, changes):
+    valid_config["model"] = bolt_model(**changes)
+    with pytest.raises(ConfigError):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize("field", ["repository", "revision"])
+def test_hub_configuration_requires_checkpoint_selection(tmp_path, valid_config, field):
+    valid_config["model"] = bolt_model()
+    del valid_config["model"][field]
+    with pytest.raises(ConfigError, match="Missing model fields"):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"repository": "amazon/chronos-bolt-tiny"},
+        {"revision": "a" * 40},
+        {"offline": True},
+        {"cache_dir": "./cache"},
+        {"path": "https://example.com/model"},
+        {"path": None},
+        {"path": []},
+        {"adapter_id": "seasonal_naive"},
+        {"adapter_id": "chronos_2"},
+    ],
+)
+def test_invalid_local_configuration_is_rejected(tmp_path, valid_config, changes):
+    valid_config["model"] = bolt_model("local", **changes)
+    with pytest.raises(ConfigError):
+        load_config(write_config(tmp_path, valid_config))
+
+
+def test_local_configuration_requires_explicit_path(tmp_path, valid_config):
+    valid_config["model"] = {"source": "local", "adapter_id": "chronos_bolt"}
+    with pytest.raises(ConfigError, match="Missing model fields"):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize("source", ["local", "huggingface"])
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"family": "chronos"},
+        {"adapter_version": "spoofed"},
+        {"resolved_revision": "a" * 40},
+        {"trust_remote_code": True},
+        {"remote_code": False},
+        {"options": {"quantile_levels": [0.5]}},
+        {"options": {"trust_remote_code": True}},
+        {"options": None},
+        {"options": []},
+    ],
+)
+def test_checkpoint_configs_reject_derived_fields_and_unsupported_options(
+    tmp_path, valid_config, source, changes
+):
+    valid_config["model"] = bolt_model(source, **changes)
+    with pytest.raises(ConfigError):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("repository", "amazon/chronos-bolt-tiny"),
+        ("revision", "a" * 40),
+        ("path", "model"),
+        ("offline", True),
+        ("cache_dir", "cache"),
+    ],
+)
+def test_builtin_models_keep_their_original_source_schema(
+    tmp_path, valid_config, field, value
+):
+    valid_config["model"][field] = value
+    with pytest.raises(ConfigError, match="Unknown model fields"):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize("source", ["unknown", "", True, None, []])
+def test_unknown_or_malformed_model_source_is_rejected(tmp_path, valid_config, source):
+    valid_config["model"]["source"] = source
+    with pytest.raises(ConfigError):
+        load_config(write_config(tmp_path, valid_config))
+
+
+@pytest.mark.parametrize(
+    "runtime",
+    [
+        {"device": "cuda"},
+        {"device": "mps"},
+        {"device": "auto"},
+        {"dtype": "float64"},
+        {"dtype": "bfloat16"},
+        {"batch_size": 2},
+        {"seed": -1},
+        {"seed": True},
+    ],
+)
+def test_checkpoint_runtime_rejects_unverified_choices(tmp_path, valid_config, runtime):
+    valid_config["model"] = bolt_model()
+    valid_config["runtime"] = runtime
+    with pytest.raises(ConfigError):
+        load_config(write_config(tmp_path, valid_config))
+
+
+def test_checkpoint_runtime_preserves_explicit_supported_seed(tmp_path, valid_config):
+    valid_config["model"] = bolt_model()
+    valid_config["runtime"] = {
+        "device": "cpu",
+        "dtype": "float32",
+        "batch_size": 1,
+        "seed": 42,
+    }
+    config = load_config(write_config(tmp_path, valid_config))
+    assert config.runtime == valid_config["runtime"]
+
+
+@pytest.mark.parametrize("limits", [{"context_length": 2049}, {"horizon": 65}])
+def test_checkpoint_capability_preflight_rejects_extension(
+    tmp_path, valid_config, limits
+):
+    valid_config["model"] = bolt_model()
+    valid_config["evaluation"].update(limits)
+    with pytest.raises(ConfigError, match="context_length <= 2048 and horizon <= 64"):
+        load_config(write_config(tmp_path, valid_config))
+
+
+def test_checkpoint_capability_preflight_accepts_native_limits(tmp_path, valid_config):
+    valid_config["model"] = bolt_model()
+    valid_config["evaluation"].update(context_length=2048, horizon=64)
+    config = load_config(write_config(tmp_path, valid_config))
+    assert config.evaluation.context_length == 2048
+    assert config.evaluation.horizon == 64
+
+
+@pytest.mark.parametrize("source", ["local", "huggingface"])
+def test_checkpoint_validation_imports_no_runtime_and_opens_only_yaml(
+    tmp_path, valid_config, source, monkeypatch
+):
+    valid_config["model"] = bolt_model(source)
+    path = write_config(tmp_path, valid_config)
+    original_open = Path.open
+    original_import = builtins.__import__
+    opened = []
+
+    def only_yaml(self, *args, **kwargs):
+        assert self == path
+        opened.append(self)
+        return original_open(self, *args, **kwargs)
+
+    def no_runtime(name, *args, **kwargs):
+        if name.split(".")[0] in {"torch", "chronos", "huggingface_hub"}:
+            raise AssertionError("Configuration must not import a model runtime")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", only_yaml)
+    monkeypatch.setattr(builtins, "__import__", no_runtime)
+    config = load_config(path)
+    assert opened == [path]
+    assert not config.output_directory.exists()

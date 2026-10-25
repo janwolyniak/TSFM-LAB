@@ -16,6 +16,15 @@ dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<3"]
 dev = ["pytest>=8,<10", "ruff>=0.15,<0.16", "black>=26,<27"]
 cli = ["typer>=0.24,<0.25", "rich>=14,<15", "PyYAML>=6,<7"]
 parquet = ["pyarrow>=23,<24"]
+hub = ["huggingface-hub==0.34.4"]
+chronos = [
+    "chronos-forecasting==2.2.0",
+    "torch>=2.8,<2.9",
+    "transformers>=4.55,<4.56",
+    "huggingface-hub==0.34.4",
+    "safetensors>=0.6,<0.7",
+    "accelerate>=1.12,<1.13",
+]
 
 [project.scripts]
 tsfm = "tsfm_lab.__main__:main"
@@ -27,6 +36,7 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--strict-config --strict-markers"
+markers = ["chronos_smoke: explicit local checkpoint and installed runtime required; never downloads"]
 
 [tool.black]
 target-version = ["py311"]
