@@ -10,6 +10,11 @@ from tsfm_lab.application import load_dataset
 from tsfm_lab.config import ConfigError, ExperimentConfig, config_from_mapping
 from tsfm_lab.contracts import Dataset, fixed_interval
 from tsfm_lab.evaluation.windows import evaluation_bounds
+from tsfm_lab.models.catalog import (
+    CHECKPOINT_REPOSITORIES,
+    catalog_entries,
+    catalog_info,
+)
 from tsfm_lab.models.factory import build_model
 
 _DEFAULTS = {
@@ -17,7 +22,7 @@ _DEFAULTS = {
     "adapter": "last_value",
     "seasonal_period": "4",
     "source": "huggingface",
-    "repository": "amazon/chronos-bolt-tiny",
+    "repository": CHECKPOINT_REPOSITORIES["chronos_bolt"][0],
     "revision": "",
     "cache_dir": "",
     "checkpoint_path": "",
@@ -44,9 +49,12 @@ _LABELS = {
 
 
 def default_fields(initial_adapter: str = "last_value") -> dict[str, str]:
-    if initial_adapter not in {"last_value", "seasonal_naive", "chronos_bolt"}:
+    if initial_adapter not in {entry["adapter_id"] for entry in catalog_entries()}:
         raise ConfigError("Choose a supported model adapter")
-    return {**_DEFAULTS, "adapter": initial_adapter}
+    fields = {**_DEFAULTS, "adapter": initial_adapter}
+    if initial_adapter in CHECKPOINT_REPOSITORIES:
+        fields["repository"] = CHECKPOINT_REPOSITORIES[initial_adapter][0]
+    return fields
 
 
 def demo_fields(path: Path) -> dict[str, str]:
@@ -88,7 +96,7 @@ def _model(fields: dict[str, str]) -> dict:
             else {}
         )
         return {"source": "builtin", "adapter_id": adapter, "options": options}
-    if adapter != "chronos_bolt":
+    if adapter not in CHECKPOINT_REPOSITORIES:
         raise ConfigError("Choose a supported model adapter")
     result = {"source": fields["source"], "adapter_id": adapter, "options": {}}
     if fields["source"] == "local":
@@ -209,11 +217,7 @@ class PreparedExperiment:
         config, spec = self.config, self.config.evaluation
         model = config.model
         details = model.get("path") or model.get("repository", "Built-in baseline")
-        display_name = {
-            "last_value": "Last value",
-            "seasonal_naive": "Seasonal naive",
-            "chronos_bolt": "Chronos-Bolt",
-        }[model["adapter_id"]]
+        display_name = catalog_info(model["adapter_id"])["display_name"]
         revision = (
             f"\nCheckpoint SHA: {model['revision']} (offline)"
             if "revision" in model

@@ -1,0 +1,73 @@
+{
+  "fev_version": "0.10.0",
+  "source_tag": "v0.10.0",
+  "source_commit": "ec833b9865fac9a021e8ec9cc56b67bb4c515427",
+  "total_new_wheel_bytes": 888930,
+  "wheel_count": 5,
+  "pypi_url": "https://pypi.org/project/fev/0.10.0/",
+  "source_url": "https://github.com/autogluon/fev/tree/v0.10.0",
+  "new_wheels": [
+    {
+      "name": "fev",
+      "version": "0.10.0",
+      "filename": "fev-0.10.0-py3-none-any.whl",
+      "bytes": 47649,
+      "sha256": "de83fcd73920fc8823e3b2c388ffb4e612e6bc2ab61b27ec991c91e70aea128f"
+    },
+    {
+      "name": "datasets",
+      "version": "4.8.5",
+      "filename": "datasets-4.8.5-py3-none-any.whl",
+      "bytes": 528973,
+      "sha256": "5079900781719c0e063a8efdd2cd95a31ad0c63209178669cd23cf1b926149ff"
+    },
+    {
+      "name": "dill",
+      "version": "0.4.1",
+      "filename": "dill-0.4.1-py3-none-any.whl",
+      "bytes": 120019,
+      "sha256": "1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d"
+    },
+    {
+      "name": "multiprocess",
+      "version": "0.70.19",
+      "filename": "multiprocess-0.70.19-py313-none-any.whl",
+      "bytes": 156414,
+      "sha256": "8d5eb4ec5017ba2fab4e34a747c6d2c2b6fecfe9e7236e77988db91580ada952"
+    },
+    {
+      "name": "xxhash",
+      "version": "4.0.2",
+      "filename": "xxhash-4.0.2-cp313-cp313-macosx_11_0_arm64.whl",
+      "bytes": 35875,
+      "sha256": "f64380470531ca49aceb15179ea47dd7be2fc38e41207eca4f7d05e4d6c9f795"
+    }
+  ],
+  "verified_python_source_files": [
+    {
+      "path": "src/fev/__init__.py",
+      "sha256": "d43aefc4e2fc75cb004527057e47d39b42fa6e0a3d8130b57134f6a0b274048f",
+      "matches_source_commit": true
+    },
+    {
+      "path": "src/fev/__about__.py",
+      "sha256": "5416011156371a734ca7a16ed8f860a90e5fbf3ea80dcebd32d7ee9fe04f7e45",
+      "matches_source_commit": true
+    },
+    {
+      "path": "src/fev/task.py",
+      "sha256": "13f0cabeb5fd77ab7de0bc77dfee7f69eda3e043227040d4c55dda01d7b9bc10",
+      "matches_source_commit": true
+    },
+    {
+      "path": "src/fev/metrics.py",
+      "sha256": "680e1924974573ad929241a98cf1e5c622405cbc434d96abb4c08143158b3af9",
+      "matches_source_commit": true
+    },
+    {
+      "path": "src/fev/utils.py",
+      "sha256": "5c78da95378c265b78d09fc064ae8422a921249e34c091594077b6675b7fe61d",
+      "matches_source_commit": true
+    }
+  ]
+}

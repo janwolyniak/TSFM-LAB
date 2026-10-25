@@ -293,7 +293,16 @@ def test_local_checkpoint_metadata_refines_limits_without_loading_runtime(
     assert not setup["workspace"].exists()
 
 
-def test_cached_model_requires_exact_sha_and_respects_native_limits(setup, monkeypatch):
+@pytest.mark.parametrize(
+    "adapter,repository",
+    [
+        ("chronos_bolt", "amazon/chronos-bolt-tiny"),
+        ("timesfm_2p5", "google/timesfm-2.5-200m-pytorch"),
+    ],
+)
+def test_cached_model_requires_exact_sha_and_respects_native_limits(
+    setup, monkeypatch, adapter, repository
+):
     selections = []
     capabilities = ModelCapabilities(max_context=4, max_horizon=2)
 
@@ -311,14 +320,51 @@ def test_cached_model_requires_exact_sha_and_respects_native_limits(setup, monke
     monkeypatch.setattr(wizard, "build_model", model)
     monkeypatch.setattr("tsfm_lab.tui.forms.build_model", model)
     questions = Questions({"Exact checkpoint SHA": ["main", "a" * 40], _RUN: "yes"})
-    config = build(setup, questions, adapter="chronos_bolt")
+    config = build(setup, questions, adapter=adapter)
     assert questions.count("Exact checkpoint SHA") == 2
     assert config.model["offline"] is True
     assert config.model["revision"] == "a" * 40
+    assert config.model["repository"] == repository
     assert config.evaluation.context_length == 4
     assert config.evaluation.horizon == 2
     assert all(selection["source"] == "huggingface" for selection, _ in selections)
     assert not setup["workspace"].exists()
+
+
+def test_selecting_timesfm_from_default_setup_uses_only_its_repository(
+    setup, monkeypatch
+):
+    class Model:
+        def metadata(self):
+            return SimpleNamespace(capabilities=ModelCapabilities(max_horizon=128))
+
+        def validate(self, spec):
+            pass
+
+    monkeypatch.setattr(wizard, "build_model", lambda *_: Model())
+    monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: Model())
+    questions = Questions(
+        {
+            "Model adapter": "timesfm_2p5",
+            "Exact checkpoint SHA": "1d952420fba87f3c6dee4f240de0f1a0fbc790e3",
+            _RUN: "yes",
+        }
+    )
+    config = build(setup, questions)
+    assert config.model["adapter_id"] == "timesfm_2p5"
+    assert config.model["repository"] == "google/timesfm-2.5-200m-pytorch"
+    repository_call = next(
+        call for call in questions.calls if call[0] == "Checkpoint repository"
+    )
+    assert repository_call[2] == ("google/timesfm-2.5-200m-pytorch",)
+    assert config.runtime["dtype"] == "float32"
+    assert not setup["workspace"].exists()
+
+
+@pytest.mark.parametrize("adapter", ["chronos_bolt", "timesfm_2p5"])
+def test_checkpoint_quick_demo_requires_guided_selection(setup, adapter):
+    with pytest.raises(ConfigError, match="guided setup"):
+        build(setup, Questions(), adapter=adapter, demo=True)
 
 
 def test_fresh_process_demo_setup_imports_no_torch_textual_or_chronos(setup):
@@ -329,7 +375,7 @@ from tsfm_lab.repl.wizard import build_experiment
 config = build_experiment(lambda *args, **kwargs: 'yes', lambda text: None,
     workspace=Path(sys.argv[1]), demo_path=Path(sys.argv[2]), demo=True)
 assert config is not None
-assert not {'torch', 'textual', 'chronos', 'huggingface_hub'}.intersection(sys.modules)
+assert not {'torch', 'textual', 'chronos', 'timesfm', 'huggingface_hub'}.intersection(sys.modules)
 """
     subprocess.run(
         [

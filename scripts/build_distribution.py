@@ -24,10 +24,12 @@ SOURCE_FILES = {
     "requirements-dev.txt",
     "requirements-tui.txt",
     "requirements-chronos.txt",
+    "requirements-timesfm.txt",
     "docs/installation.md",
     "docs/releasing.md",
     "docs/adapters.md",
     "docs/evaluation.md",
+    "docs/timesfm.md",
     "examples/baseline.py",
     "examples/custom_adapter.py",
     "examples/datasets/README.md",
@@ -35,9 +37,13 @@ SOURCE_FILES = {
     "examples/configurations/last-value.yaml",
     "examples/configurations/seasonal-naive.yaml",
     "examples/configurations/chronos-bolt-tiny.yaml",
+    "examples/configurations/timesfm-2p5.yaml",
     "tests/conftest.py",
     "scripts/build_distribution.py",
     "scripts/verify_distribution.py",
+    "research/fev_compatibility/README.md",
+    "research/fev_compatibility/run_study.py",
+    "research/fev_compatibility/results.json",
 }
 
 

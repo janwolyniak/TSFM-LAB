@@ -29,6 +29,7 @@ def test_model_json_is_plain_and_limited_to_implemented_adapters():
         "last_value",
         "seasonal_naive",
         "chronos_bolt",
+        "timesfm_2p5",
     }
     assert "\x1b[" not in result.stdout
 

@@ -78,10 +78,17 @@ aborts setup. Nothing runs or creates a workspace until the final confirmation.
 `Run experiment?` defaults to **no**. Custom datasets need declared target units,
 frequency, and timezone handling; no gaps or missing values are silently repaired.
 
-Chronos-Bolt uses CPU and an already cached exact revision or standalone local
-checkpoint. Setup checks local metadata and native context/horizon limits without
-loading the model runtime or downloading weights. Use the
-[Chronos shell guide](chronos.md) for explicit pulls and runtime installation.
+Chronos-Bolt and TimesFM 2.5 use CPU/float32 and an already cached exact revision
+or compatible standalone local checkpoint. Select them with `/new chronos_bolt`
+or `/new timesfm_2p5`, or choose the model during `/new`. Setup validates the
+adapter/repository pairing, local architecture metadata, and supported
+context/horizon limits without loading model runtimes or downloading weights.
+
+TimesFM supports contexts up to 16,256 and horizons up to 128, with batch size 1.
+The runtime must use Torch's float32 default dtype; an incompatible process
+setting fails without being changed. Use the [Chronos guide](chronos.md) or
+[TimesFM guide](timesfm.md) for the optional runtime, explicit pulls, and checkpoint
+rules. The offline `/demo` command remains limited to the bundled baselines.
 
 ## Interrupts and saved results
 

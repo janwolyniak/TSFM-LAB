@@ -29,6 +29,12 @@ chronos = [
     "safetensors>=0.6,<0.7",
     "accelerate>=1.12,<1.13",
 ]
+timesfm = [
+    "timesfm==3.0.2",
+    "torch>=2.8,<2.9",
+    "huggingface-hub==0.34.4",
+    "safetensors>=0.6,<0.7",
+]
 
 [project.scripts]
 tsfm = "tsfm_lab.__main__:main"
@@ -44,7 +50,10 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--strict-config --strict-markers"
-markers = ["chronos_smoke: explicit local checkpoint and installed runtime required; never downloads"]
+markers = [
+    "chronos_smoke: explicit local checkpoint and installed runtime required; never downloads",
+    "timesfm_smoke: explicit local TimesFM 2.5 checkpoint and installed runtime required; never downloads",
+]
 
 [tool.black]
 target-version = ["py311"]

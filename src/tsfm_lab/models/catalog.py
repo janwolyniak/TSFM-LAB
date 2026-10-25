@@ -5,10 +5,15 @@ from dataclasses import asdict
 from tsfm_lab import __version__
 from tsfm_lab.contracts import ModelCapabilities
 from tsfm_lab.models.baselines import LastValue, SeasonalNaive
+from tsfm_lab.models.checkpoint_profiles import (
+    ADAPTER_LIMITS,
+    CHECKPOINT_REPOSITORIES,
+)
 
-CURATED_REPOSITORIES = (
-    "amazon/chronos-bolt-tiny",
-    "amazon/chronos-bolt-small",
+CURATED_REPOSITORIES = tuple(
+    repository
+    for repositories in CHECKPOINT_REPOSITORIES.values()
+    for repository in repositories
 )
 
 
@@ -30,20 +35,27 @@ def catalog_entries() -> list[dict]:
                 "repositories": [],
             }
         )
-    entries.append(
-        {
-            "adapter_id": "chronos_bolt",
-            "adapter_version": __version__,
-            "family": "chronos",
-            "display_name": "Chronos-Bolt",
-            "source": "huggingface",
-            "license": "apache-2.0",
-            "dtypes": ["float32"],
-            "point_statistic": "median",
-            "capabilities": asdict(ModelCapabilities(max_context=2048, max_horizon=64)),
-            "repositories": list(CURATED_REPOSITORIES),
-        }
-    )
+    for adapter, family, name in (
+        ("chronos_bolt", "chronos", "Chronos-Bolt"),
+        ("timesfm_2p5", "timesfm", "TimesFM 2.5"),
+    ):
+        context, horizon = ADAPTER_LIMITS[adapter]
+        entries.append(
+            {
+                "adapter_id": adapter,
+                "adapter_version": __version__,
+                "family": family,
+                "display_name": name,
+                "source": "huggingface",
+                "license": "apache-2.0",
+                "dtypes": ["float32"],
+                "point_statistic": "median",
+                "capabilities": asdict(
+                    ModelCapabilities(max_context=context, max_horizon=horizon)
+                ),
+                "repositories": list(CHECKPOINT_REPOSITORIES[adapter]),
+            }
+        )
     # Tuples in typed metadata become ordinary JSON arrays at this boundary.
     for entry in entries:
         for key in ("output_types", "devices"):

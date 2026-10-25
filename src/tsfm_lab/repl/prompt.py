@@ -19,6 +19,7 @@ from prompt_toolkit.history import DummyHistory, InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 
+from tsfm_lab.models.catalog import catalog_entries
 from tsfm_lab.repl.text import literal
 
 COMMANDS = {
@@ -60,7 +61,8 @@ class CommandCompleter(Completer):
                         yield Completion(run_id, -len(word))
                 return
         if command in {"/new", "/demo"}:
-            for adapter in ("last_value", "seasonal_naive", "chronos_bolt"):
+            for entry in catalog_entries():
+                adapter = entry["adapter_id"]
                 if adapter.startswith(word):
                     yield Completion(adapter, -len(word))
         elif command in {"/run", "/workspace", "/export"}:

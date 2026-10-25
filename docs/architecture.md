@@ -1,13 +1,15 @@
 # TSFM Lab architecture proposal
 
 Status: initial direction agreed on 25 October 2026. The numerical core is
-implemented along with shell commands, local records, the Chronos-Bolt adapter,
-and the interactive terminal. Additional pretrained models remain later work.
+implemented along with shell commands, local records, Chronos-Bolt and TimesFM 2.5
+adapters, and the interactive terminal. Other pretrained families remain later work.
 
 TSFM Lab should make a local forecasting evaluation reproducible from dataset
 selection through exported predictions. The first engineering goal is a verified
 numerical experiment. The first product release adds a scriptable command line,
 one pretrained model adapter, experiment history, and an interactive terminal.
+The subsequent TimesFM integration keeps that evaluation contract while adding
+a second pretrained family.
 
 ## Critique of the product brief
 
@@ -37,17 +39,17 @@ maintaining those features locally. Neither library is an initial dependency.
 
 The release accepts local CSV and Parquet files containing one timestamp column
 and one numeric target, with a declared regular frequency and target units.
-It runs last-value, seasonal-naive, or Chronos-Bolt forecasts on identical rolling
-origins. Users can inspect and export predictions and point metrics, reload
-experiment records, and compare compatible completed runs.
+It runs last-value, seasonal-naive, Chronos-Bolt, or TimesFM 2.5 forecasts on
+identical rolling origins. Users can inspect and export predictions and point
+metrics, reload experiment records, and compare compatible completed runs.
 
 The terminal supports a guided experiment flow and equivalent YAML-driven shell
 commands. Interactive progress and cancellation are required before calling the
 terminal product complete. Simple tables and a short forecast preview are enough;
 advanced charts and resource telemetry can follow.
 
-Panels, multivariate targets, covariates, probabilistic scoring, a second model
-family, finance, plugins, model environment orchestration, a web service, and
+Panels, multivariate targets, covariates, probabilistic scoring, further model
+families, finance, plugins, model environment orchestration, a web service, and
 automatic result caching are deferred. One configured horizon per experiment is
 sufficient; lead-time metrics cover steps 1 through that horizon. Separate runs
 can evaluate different horizons.
@@ -65,7 +67,7 @@ can evaluate different horizons.
 | Interactive interface | A prompt_toolkit line editor with slash commands, inline questions, and Rich output in native terminal scrollback. No full-screen surface. Keep terminal imports outside the numerical core. |
 | Configuration | YAML using safe parsing, an explicit schema version, unknown-field rejection, and conversion to the same validated internal objects used by Python callers. |
 | Files | JSON for manifests and metrics; CSV initially, then Parquet for predictions through a separately declared PyArrow dependency. |
-| Pretrained models | Optional `huggingface_hub`, `chronos-forecasting`, and compatible PyTorch/runtime dependencies behind a Chronos extra. Select and test exact versions during adapter implementation. |
+| Pretrained models | Separate optional `chronos` and `timesfm` extras use pinned APIs with shared safe checkpoint management. Neither runtime is imported for catalog metadata or stored-result reload. |
 
 [Typer](https://typer.tiangolo.com/) supplies typed command construction.
 [prompt_toolkit](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/asking_for_input.html)
@@ -170,13 +172,21 @@ a second checkpoint cache.
 
 ## Hugging Face integration and first checkpoint
 
-Propose `chronos-bolt` as the first pretrained adapter and
-[`amazon/chronos-bolt-tiny`](https://huggingface.co/amazon/chronos-bolt-tiny) as its
-CPU integration checkpoint. The official model card lists Apache-2.0 and
-Safetensors. [`amazon/chronos-bolt-small`](https://huggingface.co/amazon/chronos-bolt-small)
-can be an optional larger checkpoint after the tiny smoke test works.
-[`amazon/chronos-2`](https://huggingface.co/amazon/chronos-2) follows as a separate
-adapter, rather than inheriting Bolt's input/output assumptions.
+`chronos_bolt` is the first pretrained adapter, with
+[`amazon/chronos-bolt-tiny`](https://huggingface.co/amazon/chronos-bolt-tiny) and
+[`amazon/chronos-bolt-small`](https://huggingface.co/amazon/chronos-bolt-small).
+Tiny's original pinned CPU evidence is preserved; Small now has a separate
+bounded CPU check. Both use Safetensors and list Apache-2.0.
+
+`timesfm_2p5` adds
+[`google/timesfm-2.5-200m-pytorch`](https://huggingface.co/google/timesfm-2.5-200m-pytorch)
+through the explicit 2.5 Torch API in `timesfm==3.0.2`. Its own architecture
+profile, repository allowlist, local-only loader, and runtime provenance keep the
+two families distinct. The adapter supports CPU/float32, batch size 1, contexts
+up to 16,256, and horizons up to 128 without autoregressive extension. The process
+must already use Torch's float32 default dtype; the adapter refuses other
+defaults rather than mutating them. See the [TimesFM guide](timesfm.md).
+Chronos-2 and other variants remain separate future adapters.
 
 This choice favors a smaller first integration, not a claim of forecasting
 superiority. Test CPU first. Validate CUDA or MPS separately for the selected

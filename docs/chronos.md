@@ -14,8 +14,11 @@ The official cards list Apache-2.0. A checkpoint record derives its license from
 its consumed README when available and reports `null` otherwise; catalog license
 metadata and an inspected local file's license are separate fields of evidence.
 Other Hub repositories and Chronos variants are outside this adapter.
-The real CPU integration was verified with Tiny. Small is cataloged for the same
-adapter but was not downloaded or executed in this verification run.
+The initial CPU integration was verified with Tiny. A subsequent explicitly
+authorized Small run verified the pinned checkpoint, offline replay, local
+loading, saved records, comparison, and exports; see the
+[expanded verification record](milestone6-verification.md). Other devices remain
+unverified.
 
 The initial supported runtime uses Chronos forecasting 2.2.0, PyTorch 2.8.x,
 Transformers 4.55.x, and Hugging Face Hub 0.34.4. The exact development runtime is
@@ -162,3 +165,5 @@ runtime/checkpoint metadata. It passed after an explicitly authorized pinned Tin
 download. Cached replay, a standalone local copy, and installed CLI execution also
 passed. These checks do not establish accuracy superiority. See the
 [verification record](milestone3-verification.md) for evidence and limits.
+The later [Small verification](milestone6-verification.md) is a separate record;
+the original milestone's counts and artifact identities remain historical.

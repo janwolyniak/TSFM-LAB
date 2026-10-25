@@ -22,6 +22,9 @@ Release, release tag, and PyPI publication have not been created by this work.
   and compatible standalone local Bolt weights. Downloads are explicit;
   experiments use cached/local files and record checkpoint identities (resolved
   revisions or local-file hashes) and runtime provenance.
+- An optional TimesFM 2.5 CPU adapter with explicit checkpoint identities,
+  a pinned 3.0.2 runtime, median forecasts, and the same configuration, guided
+  setup, saved-result, comparison, and export contracts.
 - Source-to-wheel builds, archive-content validation, and verification of an
   ordinary installation outside the source checkout.
 
@@ -55,6 +58,7 @@ See the [installation guide](https://github.com/janwolyniak/TSFM-LAB/blob/main/d
 [terminal walkthrough](https://github.com/janwolyniak/TSFM-LAB/blob/main/docs/tui.md),
 [CLI reference](https://github.com/janwolyniak/TSFM-LAB/blob/main/docs/cli.md), and
 [Chronos-Bolt guide](https://github.com/janwolyniak/TSFM-LAB/blob/main/docs/chronos.md)
+and [TimesFM guide](https://github.com/janwolyniak/TSFM-LAB/blob/main/docs/timesfm.md)
 for complete setup and usage.
 
 ## Scope and verification limits
@@ -62,8 +66,7 @@ for complete setup and usage.
 - The initial interface evaluates one regular univariate series. Missing values,
   irregular grids, duplicate timestamps, and unsorted input are rejected rather
   than silently repaired.
-- Chronos-Bolt is the first integrated pretrained family. Its real-checkpoint CPU
-  smoke test verified Tiny in a prior run; Small is cataloged but unexecuted.
+- Chronos-Bolt Tiny/Small and TimesFM 2.5 have bounded CPU integration evidence.
   Baseline installation checks do not verify every optional runtime or checkpoint.
 - GPU/MPS execution, panel data, covariates, and probabilistic scoring remain
   outside this release's verified scope.

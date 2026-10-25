@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from tsfm_lab.models.catalog import CURATED_REPOSITORIES, catalog_entries, catalog_info
+from tsfm_lab.models.catalog import (
+    CHECKPOINT_REPOSITORIES,
+    CURATED_REPOSITORIES,
+    catalog_entries,
+    catalog_info,
+)
 
 
 def test_catalog_metadata_is_json_compatible_and_has_cpu_only_verified_bounds():
@@ -17,25 +22,34 @@ def test_catalog_metadata_is_json_compatible_and_has_cpu_only_verified_bounds():
         "last_value",
         "seasonal_naive",
         "chronos_bolt",
+        "timesfm_2p5",
     ]
     assert json.loads(json.dumps(entries, allow_nan=False)) == entries
-    bolt = entries[-1]
+    bolt = catalog_info("chronos_bolt")
     assert bolt["capabilities"]["devices"] == ["cpu"]
     assert bolt["dtypes"] == ["float32"]
     assert bolt["point_statistic"] == "median"
     assert bolt["capabilities"]["max_context"] == 2048
     assert bolt["capabilities"]["max_horizon"] == 64
-    assert bolt["repositories"] == list(CURATED_REPOSITORIES)
+    assert bolt["repositories"] == list(CHECKPOINT_REPOSITORIES["chronos_bolt"])
+    timesfm = catalog_info("timesfm_2p5")
+    assert timesfm["family"] == "timesfm"
+    assert timesfm["capabilities"]["devices"] == ["cpu"]
+    assert timesfm["capabilities"]["max_context"] == 16256
+    assert timesfm["capabilities"]["max_horizon"] == 128
+    assert timesfm["dtypes"] == ["float32"]
+    assert timesfm["point_statistic"] == "median"
+    assert timesfm["repositories"] == ["google/timesfm-2.5-200m-pytorch"]
 
 
 @pytest.mark.parametrize(
     "identifier",
-    ["last_value", "seasonal_naive", "chronos_bolt", *CURATED_REPOSITORIES],
+    ["last_value", "seasonal_naive", *CHECKPOINT_REPOSITORIES, *CURATED_REPOSITORIES],
 )
 def test_catalog_supports_adapter_and_curated_repository_lookup(identifier):
     entry = catalog_info(identifier)
     if identifier in CURATED_REPOSITORIES:
-        assert entry["adapter_id"] == "chronos_bolt"
+        assert identifier in CHECKPOINT_REPOSITORIES[entry["adapter_id"]]
         assert entry["repository"] == identifier
     else:
         assert entry["adapter_id"] == identifier
@@ -61,7 +75,8 @@ def test_catalog_and_checkpoint_metadata_import_without_optional_runtimes():
     source = Path(__file__).resolve().parents[1] / "src"
     script = (
         "import sys; import tsfm_lab.models.catalog; import tsfm_lab.models.checkpoints; "
-        "assert not ({'torch', 'chronos', 'huggingface_hub'} & set(sys.modules))"
+        "assert not ({'torch', 'chronos', 'timesfm', 'huggingface_hub', "
+        "'safetensors', 'transformers'} & set(sys.modules))"
     )
     result = subprocess.run(
         [sys.executable, "-c", script],

@@ -9,9 +9,9 @@ from typing import Any
 import yaml
 
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
+from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES, catalog_info
 
 MAX_CONFIG_BYTES = 1024 * 1024
-_BOLT_REPOSITORIES = {"amazon/chronos-bolt-tiny", "amazon/chronos-bolt-small"}
 
 
 class ConfigError(ValueError):
@@ -162,18 +162,17 @@ def _checkpoint_model(fields: dict[str, Any], directory: Path) -> dict[str, Any]
         allowed = common | {"path"}
         required = {"source", "adapter_id", "path"}
     fields = _mapping(fields, "model", allowed, required)
-    if _text(fields["adapter_id"], "model.adapter_id") != "chronos_bolt":
-        raise ConfigError(
-            "Checkpoint sources support only model.adapter_id chronos_bolt"
-        )
+    adapter = _text(fields["adapter_id"], "model.adapter_id")
+    if adapter not in CHECKPOINT_REPOSITORIES:
+        raise ConfigError("Checkpoint sources require a supported checkpoint adapter")
     _mapping(fields.get("options", {}), "model.options", set())
-    result = {"source": source, "adapter_id": "chronos_bolt", "options": {}}
+    result = {"source": source, "adapter_id": adapter, "options": {}}
     if source == "local":
         result["path"] = str(_local_path(fields["path"], "model.path", directory))
         return result
     repository = _text(fields["repository"], "model.repository")
-    if repository not in _BOLT_REPOSITORIES:
-        raise ConfigError("model.repository must be a curated Chronos-Bolt repository")
+    if repository not in CHECKPOINT_REPOSITORIES[adapter]:
+        raise ConfigError(f"model.repository must be a curated {adapter} repository")
     revision = _text(fields["revision"], "model.revision")
     offline = fields.get("offline", True)
     if type(offline) is not bool:
@@ -240,7 +239,7 @@ def _evaluation(value: Any) -> EvaluationSpec:
 
 def _runtime(value: Any, model: dict[str, Any]) -> dict[str, Any]:
     fields = _mapping(value, "runtime", {"device", "dtype", "batch_size", "seed"})
-    dtype = "float32" if model["adapter_id"] == "chronos_bolt" else "float64"
+    dtype = "float32" if model["adapter_id"] in CHECKPOINT_REPOSITORIES else "float64"
     result = {"device": "cpu", "dtype": dtype, "batch_size": 1, "seed": 0}
     result.update(fields)
     _text(result["device"], "runtime.device")
@@ -264,10 +263,16 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
         raise ConfigError("Only schema_version 1 is supported")
     model = _model(fields["model"], source_path.parent)
     evaluation = _evaluation(fields["evaluation"])
-    if model["adapter_id"] == "chronos_bolt":
-        if evaluation.context_length > 2048 or evaluation.horizon > 64:
+    if model["adapter_id"] in CHECKPOINT_REPOSITORIES:
+        entry = catalog_info(model["adapter_id"])
+        caps = entry["capabilities"]
+        if (
+            evaluation.context_length > caps["max_context"]
+            or evaluation.horizon > caps["max_horizon"]
+        ):
             raise ConfigError(
-                "Chronos-Bolt requires context_length <= 2048 and horizon <= 64"
+                f"{entry['display_name']} requires context_length <= "
+                f"{caps['max_context']} and horizon <= {caps['max_horizon']}"
             )
     if model["adapter_id"] == "seasonal_naive":
         if evaluation.context_length < model["options"]["seasonal_period"]:

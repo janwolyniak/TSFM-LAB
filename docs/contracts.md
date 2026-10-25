@@ -4,8 +4,8 @@ The numerical core implements `Dataset`, `EvaluationSpec`, `ForecastRequest`,
 `ForecastOutput`, `EvaluationWindow`, model metadata/capabilities, and an
 `ExperimentResult`. Built-in model constructors supply their options directly.
 Milestone 2 adds validated YAML selections, recorded baseline runtime settings,
-and persistent results through `run_from_config`. Milestone 3 adds verified
-checkpoint identities and the Chronos-Bolt adapter. Probabilistic outputs below
+and persistent results through `run_from_config`. Verified checkpoint identities
+support the Chronos-Bolt and TimesFM 2.5 adapters. Probabilistic outputs below
 remain a design for later milestones.
 
 Milestone 4 adds `config_from_mapping(mapping, base_directory=...)` for the same
@@ -74,8 +74,9 @@ reason; invalid bounds or lengths fail before calling a model.
 
 The current configuration boundary validates adapter/source/options as
 dictionaries. `ModelSpec` below is a conceptual grouping rather than a current
-dataclass. Curated Hub and compatible local Chronos-Bolt checkpoints are supported;
-there is no arbitrary-repository loader.
+dataclass. Curated Hub and compatible standalone local checkpoints are supported
+for Chronos-Bolt and TimesFM 2.5; there is no arbitrary-repository loader.
+Each adapter has its own repository allowlist and validated architecture profile.
 
 Input configuration supplies adapter/source/options and, for a Hub checkpoint,
 the requested repository/revision. The catalog derives family and adapter version;
@@ -86,9 +87,9 @@ the YAML boundary.
 
 `ModelSpec` separates the following fields:
 
-- `family`: a catalog grouping such as `baseline` or `chronos`.
+- `family`: a catalog grouping such as `baseline`, `chronos`, or `timesfm`.
 - `adapter_id` and `adapter_version`: implementation identity, for example
-  `last_value`, `seasonal_naive`, or the future `chronos_bolt` adapter.
+  `last_value`, `seasonal_naive`, `chronos_bolt`, or `timesfm_2p5`.
 - `source`: `builtin`, `huggingface`, or `local`.
 - Source-specific identity: repository plus requested/resolved revision, or
   local checkpoint path plus a file/checksum manifest. Built-ins have neither.
@@ -105,6 +106,14 @@ The first built-ins run on CPU. Adapter validation rejects unsupported options;
 it never silently truncates history, changes the horizon, removes a covariate, or
 changes the requested device. The later `auto` policy may resolve to CPU, but
 records that choice before execution.
+
+Both checkpoint adapters currently require CPU, float32 model arithmetic, and
+batch size 1. Normalized outputs retain float64 target-unit values. TimesFM 2.5
+supports context lengths 1–16,256 and horizons 1–128; its stored native context
+limit is 16,384, while the adapter reserves space for the rounded output patch.
+It requires the process's default Torch dtype to be float32 and fails explicitly
+otherwise; it does not change that global setting. See the
+[TimesFM guide](timesfm.md) for its pinned runtime and genuine median semantics.
 
 ## ForecastRequest
 
@@ -238,11 +247,14 @@ version, Python and dependency versions, operating system, hardware/backend,
 seed/determinism settings, dataset fingerprints, adapter
 version, metric version, and file checksums. An unversioned/dirty source tree must
 be identified explicitly, not represented as an exact clean source snapshot.
-Chronos-Bolt records consumed file hashes, native capabilities, license when
-available, and requested/resolved Hub revisions or a standalone local identity.
+Checkpoint adapters record consumed file hashes, native capabilities, license
+when available, and requested/resolved Hub revisions or a standalone local
+identity. The schema-1 key set and existing Bolt fingerprints remain unchanged;
+architecture and pipeline fields distinguish the supported families.
 Optional runtime/environment hooks give direct Python and CLI callers the same
 model dtype and dependency provenance. Reload validates identity without weights
-or optional inference libraries; see [checkpoint rules](chronos.md).
+or optional inference libraries; see the [Chronos](chronos.md) and
+[TimesFM](timesfm.md) checkpoint rules.
 
 `run_experiment` currently returns an in-memory numerical result with JSON
 conversion through `to_dict()`. It validates dataset identity and snapshots

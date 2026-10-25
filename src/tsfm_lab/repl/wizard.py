@@ -9,6 +9,7 @@ from pathlib import Path
 from tsfm_lab.config import ConfigError, ExperimentConfig
 from tsfm_lab.contracts import fixed_interval, utc_timestamp
 from tsfm_lab.evaluation.windows import evaluation_bounds
+from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES, catalog_entries
 from tsfm_lab.models.factory import build_model
 from tsfm_lab.tui.forms import (
     config_from_fields,
@@ -20,8 +21,7 @@ from tsfm_lab.tui.forms import (
     validate_model_fields,
 )
 
-_ADAPTERS = ("last_value", "seasonal_naive", "chronos_bolt")
-_REPOSITORIES = ("amazon/chronos-bolt-tiny", "amazon/chronos-bolt-small")
+_ADAPTERS = tuple(entry["adapter_id"] for entry in catalog_entries())
 
 
 class _Cancel(Exception):
@@ -101,7 +101,10 @@ class _Guide:
         self.set("adapter", "Model adapter", choices=_ADAPTERS)
         if self.fields["adapter"] == "seasonal_naive":
             self.set("seasonal_period", "Baseline seasonal period", validate=_positive)
-        elif self.fields["adapter"] == "chronos_bolt":
+        elif self.fields["adapter"] in CHECKPOINT_REPOSITORIES:
+            repositories = CHECKPOINT_REPOSITORIES[self.fields["adapter"]]
+            if self.fields["repository"] not in repositories:
+                self.fields.update(repository=repositories[0], revision="")
             self.emit(
                 "Use an existing cached or local checkpoint; setup does not download models."
             )
@@ -114,7 +117,7 @@ class _Guide:
             )
             self.fields["source"] = "huggingface" if source == "cached" else "local"
             if source == "cached":
-                self.set("repository", "Checkpoint repository", choices=_REPOSITORIES)
+                self.set("repository", "Checkpoint repository", choices=repositories)
                 self.set("revision", "Exact checkpoint SHA", validate=self._sha)
                 self.set("cache_dir", "Cache directory (optional; - uses the default)")
                 if self.fields["cache_dir"] == "-":
@@ -321,8 +324,8 @@ def build_experiment(
     try:
         if not demo:
             return _Guide(ask, emit, workspace, demo_path, adapter).run()
-        if adapter == "chronos_bolt":
-            raise ConfigError("Use guided setup to select a Chronos-Bolt checkpoint")
+        if adapter in CHECKPOINT_REPOSITORIES:
+            raise ConfigError("Use guided setup to select a pretrained checkpoint")
         fields = demo_fields(demo_path)
         fields["adapter"] = adapter or "last_value"
         arguments = {"workspace": workspace, "base_directory": Path.cwd()}

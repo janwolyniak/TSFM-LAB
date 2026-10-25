@@ -11,12 +11,13 @@
 [Quick start](#run-the-offline-example) ·
 [Terminal walkthrough](docs/tui.md) ·
 [Chronos-Bolt](docs/chronos.md) ·
+[TimesFM](docs/timesfm.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and an optional
-Chronos-Bolt adapter. Financial analysis remains a later extension.
+Chronos-Bolt and TimesFM 2.5 adapters. Financial analysis remains a later extension.
 
 ## Project status
 
@@ -27,9 +28,9 @@ Chronos-Bolt adapter. Financial analysis remains a later extension.
 - **Work locally:** use the Python core, scriptable `tsfm` commands, or a
   persistent terminal prompt with inline setup, progress, and cancellation.
   Output stays in terminal scrollback; terminal dependencies remain optional.
-- **Add pretrained forecasts:** use the optional Chronos-Bolt adapter with
+- **Add pretrained forecasts:** use optional Chronos-Bolt or TimesFM 2.5 adapters with
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
-  experiments, and recorded runtime provenance. Other model families remain
+  experiments, and recorded runtime provenance. Additional model families remain
   later work.
 
 ### Release status
@@ -133,6 +134,19 @@ cache paths, local checkpoints, median semantics, and the optional CPU test.
 [chronos-bolt-tiny.yaml](examples/configurations/chronos-bolt-tiny.yaml) uses the
 same numerical task as the baseline examples. Routine tests need no model weights.
 
+## Use TimesFM 2.5
+
+The optional `timesfm_2p5` adapter provides CPU float32 median forecasts with
+context up to 16,256 observations and horizon up to 128. It uses the explicit
+TimesFM 2.5 model through the pinned `timesfm` 3.0.2 runtime; model and library
+versions are separate identities. Model imports and downloads remain explicit.
+
+See the [TimesFM guide](docs/timesfm.md) for installation, exact cached revisions,
+safe local loading, and the [matching example](examples/configurations/timesfm-2p5.yaml).
+The [verification record](docs/milestone6-verification.md) covers the real CPU
+workflow and expanded Chronos-Bolt Small checks. It makes no real-data advantage
+claim.
+
 ## Use the Python core
 
 ```python
@@ -221,7 +235,9 @@ remaining publication gates. The repository has not published a package release.
 The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
-family; other Chronos variants have separate APIs and remain unsupported.
+family, followed by TimesFM 2.5; other Chronos variants and TimesFM 3.0 remain
+unsupported. The proposed [finance contract](docs/finance-extension.md) and
+[benchmarking bridge](docs/benchmarking-extension.md) describe separate next stages.
 
 ## Contributing
 
