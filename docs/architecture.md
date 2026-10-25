@@ -62,15 +62,17 @@ can evaluate different horizons.
 | Packaging | `src/tsfm_lab`, `pyproject.toml`, setuptools build backend. Start with standard virtual environments and pip; do not require a new package manager. |
 | Quality checks | pytest, Ruff for linting, Black for formatting. Add a package build check with packaging; type checking follows meaningful typed interfaces. |
 | Shell interface | Typer for commands and Rich for human-readable tables and progress. JSON output remains free of formatting. |
-| Interactive interface | Textual, introduced after the shell workflow works. Keep its imports outside the numerical core. |
+| Interactive interface | A prompt_toolkit line editor with slash commands, inline questions, and Rich output in native terminal scrollback. No full-screen surface. Keep terminal imports outside the numerical core. |
 | Configuration | YAML using safe parsing, an explicit schema version, unknown-field rejection, and conversion to the same validated internal objects used by Python callers. |
 | Files | JSON for manifests and metrics; CSV initially, then Parquet for predictions through a separately declared PyArrow dependency. |
 | Pretrained models | Optional `huggingface_hub`, `chronos-forecasting`, and compatible PyTorch/runtime dependencies behind a Chronos extra. Select and test exact versions during adapter implementation. |
 
 [Typer](https://typer.tiangolo.com/) supplies typed command construction.
-[Textual](https://textual.textualize.io/guide/testing/) supplies headless interaction
-tests. Their roles fit a shell interface and a stateful terminal application
-respectively; neither belongs in forecasting or scoring functions.
+[prompt_toolkit](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/asking_for_input.html)
+supplies editable prompts, completion, and in-memory command history. The original
+Textual screens remain only for regression coverage; the active session uses
+inline commands and questions. Neither terminal library belongs in forecasting
+or scoring functions.
 
 Declaring proposed dependencies does not authorize installing them. Introduce
 dependencies at their milestone, validate supported combinations, and record
@@ -82,7 +84,7 @@ file should accompany packaging after dependency selection is agreed.
 ```mermaid
 flowchart TD
     CLI[Typer commands] --> APP[Application functions]
-    TUI[Textual screens] --> APP
+    TUI[Persistent terminal prompt] --> APP
     APP --> DATA[Dataset validation and windows]
     APP --> MODEL[Model adapter]
     DATA --> REQUEST[Historical request and future timestamps]
@@ -120,7 +122,7 @@ commands use stdout for results, stderr for progress/errors, and `--json` for
 structured output. Exit codes are 0 for success, 2 for invalid configuration,
 1 for execution failure, and 130 for user cancellation.
 
-The TUI launches one local inference process using a spawn-compatible entry
+The interactive prompt launches one local inference process using a spawn-compatible entry
 point. A one-way pipe carries small progress/status events, while result files carry
 large arrays. The worker loads the model inside its process. Both terminal modes
 call the same orchestration code; the synchronous path remains useful for tests.
@@ -132,11 +134,15 @@ after another 0.25 seconds. It reaps the child and reconciles its manifest befor
 reporting a terminal state. A completed record wins a late cancellation race;
 otherwise known active runs become cancelled or failed. No background job server
 or resumable execution is required. Dataset inspection, saved-record reads, and
-exports run off the rendering thread. See [terminal usage](tui.md).
-[Textual workers](https://textual.textualize.io/guide/workers/) keep application
-work separate from rendering, but thread cancellation alone does not guarantee
-that native inference has stopped. A worker process also avoids sharing a loaded
-model with the UI process.
+exports run between input prompts; inference and final manifest reconciliation
+remain outside the line editor. See [terminal usage](tui.md).
+The main session monitors progress while the run owns the prompt. Its temporary
+SIGINT handler records a request, processed between IPC reads, and is restored
+after cleanup. The worker ignores terminal SIGINT and uses the cancellation
+event. This keeps native inference stoppage separate from input interruption.
+The application uses ordinary terminal scrollback rather than an alternate
+screen; results stay visible above the next prompt. A worker process also avoids
+sharing a loaded model with the presentation process.
 
 ## Local persistence
 

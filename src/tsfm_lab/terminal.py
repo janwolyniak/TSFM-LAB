@@ -12,12 +12,12 @@ def interactive_terminal() -> bool:
 
 def launch_tui(workspace: str | Path = Path("results")) -> None:
     try:
-        from tsfm_lab.tui.app import LabApp
+        from tsfm_lab.repl.session import TerminalSession
     except ModuleNotFoundError as exc:
-        if exc.name not in {"textual", "mdit_py_plugins", "linkify_it"}:
+        if exc.name != "prompt_toolkit":
             raise
         raise ConfigError(
-            "The interactive terminal requires the optional tsfm-lab[tui] dependencies. "
+            "The interactive terminal requires the optional tsfm-lab[cli] dependencies. "
             "Shell commands remain available."
         ) from exc
-    LabApp(workspace=Path(workspace)).run()
+    TerminalSession(workspace=Path(workspace)).run()

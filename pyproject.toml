@@ -14,7 +14,7 @@ dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<3"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "ruff>=0.15,<0.16", "black>=26,<27"]
-cli = ["typer>=0.24,<0.25", "rich>=14,<15", "PyYAML>=6,<7"]
+cli = ["typer>=0.24,<0.25", "rich>=14,<15", "PyYAML>=6,<7", "prompt-toolkit>=3.0.50,<3.1"]
 parquet = ["pyarrow>=23,<24"]
 hub = ["huggingface-hub==0.34.4"]
 tui = ["tsfm-lab[cli]", "textual==8.2.8"]

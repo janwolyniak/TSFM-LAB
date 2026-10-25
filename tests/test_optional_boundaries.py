@@ -22,7 +22,7 @@ import importlib.abc
 import sys
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        if fullname.split('.')[0] in {'typer', 'rich', 'yaml', 'pyarrow', 'torch', 'huggingface_hub', 'textual'}:
+        if fullname.split('.')[0] in {'typer', 'rich', 'yaml', 'pyarrow', 'torch', 'huggingface_hub', 'textual', 'prompt_toolkit'}:
             raise ModuleNotFoundError(fullname, name=fullname)
 sys.meta_path.insert(0, Block())
 from tsfm_lab.evaluation.runner import run_experiment
@@ -49,13 +49,13 @@ main()
     assert "Traceback" not in completed.stderr
 
 
-def test_missing_tui_extra_is_explained_without_affecting_shell_commands():
+def test_missing_prompt_editor_is_explained_without_affecting_shell_commands():
     completed = execute("""
 import importlib.abc
 import sys
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        if fullname == 'textual':
+        if fullname == 'prompt_toolkit':
             raise ModuleNotFoundError(fullname, name=fullname)
 sys.meta_path.insert(0, Block())
 from typer.testing import CliRunner
@@ -63,10 +63,31 @@ import tsfm_lab.cli as cli
 cli.interactive_terminal = lambda: True
 failed = CliRunner().invoke(cli.app, ['ui'])
 assert failed.exit_code == 2
-assert 'tsfm-lab[tui]' in failed.stderr
+assert 'tsfm-lab[cli]' in failed.stderr
 assert 'Traceback' not in failed.stderr
 plain = CliRunner().invoke(cli.app, ['models', 'list', '--json'])
 assert plain.exit_code == 0
 assert 'last_value' in plain.stdout
+""")
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_native_command_session_needs_neither_textual_nor_model_runtimes():
+    completed = execute("""
+import importlib.abc
+import io
+import sys
+from rich.console import Console
+class Block(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path, target=None):
+        if fullname.split('.')[0] in {'textual', 'torch', 'chronos', 'huggingface_hub'}:
+            raise AssertionError('Unexpected import: ' + fullname)
+sys.meta_path.insert(0, Block())
+from tsfm_lab.repl.session import TerminalSession
+class Editor:
+    def read(self): return '/exit'
+session = TerminalSession(editor=Editor(), console=Console(file=io.StringIO()))
+session.run()
+assert session.closed
 """)
     assert completed.returncode == 0, completed.stderr

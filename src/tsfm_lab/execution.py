@@ -3,6 +3,7 @@
 import math
 import multiprocessing
 import os
+import signal
 import sys
 import tempfile
 import threading
@@ -62,6 +63,9 @@ def _worker_main(config, events, cancellation) -> None:
 
 def _spawn_entry(config, events, cancellation, log_path, target) -> None:
     try:
+        # The foreground terminal sends Ctrl+C to the whole process group. Only
+        # the controller interprets it; workers stop through the shared Event.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         with open(log_path, "ab", buffering=0) as output:
             os.dup2(output.fileno(), 1)
             os.dup2(output.fileno(), 2)

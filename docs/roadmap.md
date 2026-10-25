@@ -41,6 +41,12 @@ dependency installation, model downloads, publication, merging, or cloud compute
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the maintained permission and Git
 workflow rules.
 
+After inspecting the first terminal implementation, the owner revised its
+interaction direction on 25 October 2026: use a persistent prompt with guided
+commands, native scrollback, and local deterministic actions, with no AI service.
+The active interface now uses prompt_toolkit and Rich. The forecasting contracts
+and managed worker remain shared with the shell. See [the rework](terminal-rework.md).
+
 ## Milestone 0 Architecture review
 
 Deliver the bounded MVP, stack, contracts, methodology, checkpoint plan, repository
@@ -126,7 +132,8 @@ shapes, and finite aligned outputs. This proves integration, not model advantage
 ## Milestone 4 Interactive terminal
 
 Implemented and verified locally. See the [keyboard guide](tui.md) and
-[verification record](milestone4-verification.md). Remote CI and other platforms
+[original verification record](milestone4-verification.md), followed by the
+[persistent-prompt revision](terminal-rework.md). Remote CI and other platforms
 remain unexecuted.
 
 Add model/dataset selection, a validated experiment wizard, progress and errors,
@@ -135,7 +142,8 @@ and application functions as shell commands. Introduce one managed inference
 process and persisted stage transitions when needed for responsiveness.
 
 Acceptance: a user completes the documented synthetic baseline workflow using
-only keyboard navigation. Invalid selections block submission with actionable
+only keyboard commands and inline questions. Commands and results stay in native
+terminal scrollback with no alternate-screen takeover. Invalid selections block submission with actionable
 errors. Headless interaction tests cover navigation, execution, failure, and
 cancellation. Inspect rendered terminal screens at common sizes, including
 80 by 24. Both terminal modes produce equivalent numerical results; a cancelled

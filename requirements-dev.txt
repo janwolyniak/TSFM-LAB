@@ -14,6 +14,7 @@ platformdirs==4.3.7
 pluggy==1.6.0
 pygments==2.19.2
 pytest==9.0.2
+prompt-toolkit==3.0.50
 pyarrow==23.0.1
 PyYAML==6.0.2
 python-dateutil==2.9.0.post0
@@ -25,4 +26,5 @@ setuptools==80.9.0
 six==1.17.0
 shellingham==1.5.4
 typer==0.24.1
+wcwidth==0.2.13
 tzdata==2025.2

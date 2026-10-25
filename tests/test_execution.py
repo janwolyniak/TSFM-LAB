@@ -182,6 +182,44 @@ def test_cooperative_cancellation_retains_cancelled_record(config_factory):
         worker.close()
 
 
+def test_worker_ignores_sigint_until_controller_requests_event_cancellation(
+    config_factory,
+):
+    config = load_config(config_factory())
+    worker = ManagedRun(config, _target=cooperative_worker)
+    try:
+        worker.start()
+        collect(
+            worker,
+            until=lambda events: any(
+                event.get("stage") == "running" for event in events
+            ),
+        )
+        os.kill(worker._process.pid, signal.SIGINT)
+        time.sleep(0.1)
+        assert worker._process.is_alive()
+        assert all(
+            event["type"] not in {"completed", "cancelled", "failed"}
+            for event in worker.poll()
+        )
+        assert (
+            ExperimentStore(config.output_directory).get_manifest(worker.run_id)[
+                "status"
+            ]
+            == "running"
+        )
+        worker.request_cancel()
+        assert collect(worker)[-1]["type"] == "cancelled"
+        assert (
+            ExperimentStore(config.output_directory).get_manifest(worker.run_id)[
+                "status"
+            ]
+            == "cancelled"
+        )
+    finally:
+        worker.close()
+
+
 def test_unresponsive_worker_is_terminated_then_killed_without_false_completion(
     config_factory,
 ):

@@ -1,5 +1,9 @@
 # Interactive terminal verification record
 
+This records the original Textual milestone. The owner subsequently requested a
+persistent terminal prompt; see the [rework record](terminal-rework.md) for the
+current interaction and its verification.
+
 Date: 25 October 2026. Scope: Milestone 4 following the owner's continuation
 request. Local branch: `feat/interactive-terminal`, based on the unmerged
 `feat/chronos-bolt-integration` branch. Merge the prerequisite milestones first.

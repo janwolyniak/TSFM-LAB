@@ -13,9 +13,9 @@ predictions. Scores include pooled/per-lead MAE, RMSE, and MASE. The `tsfm` comm
 uses optional terminal dependencies; the numerical core remains independent.
 Milestone 3 adds curated checkpoint selection, explicit pulls, exact revisions,
 verified local/cache-only Chronos-Bolt inference, and model-runtime provenance.
-Milestone 4 adds a keyboard-driven experiment wizard, managed background inference,
-progress/cancellation, saved results, comparison, and export. Other model families
-remain later work.
+The interactive workflow uses a persistent local prompt, slash commands, inline
+setup questions, progress/cancellation, saved results, comparison, and export.
+Output stays in terminal scrollback. Other model families remain later work.
 
 ## Run the offline example
 
@@ -38,14 +38,13 @@ CSV evaluation. The commands above install the development checks as well.
 For the interactive terminal, add the optional UI dependencies:
 
 ```sh
-python -m pip install -c requirements-tui.txt -e '.[tui,parquet]'
+python -m pip install -c requirements-dev.txt -e '.[cli,parquet]'
 tsfm ui --workspace results
 ```
 
-`requirements-tui.txt` pins Textual and its additional Markdown dependencies.
 In a terminal, `tsfm` without arguments also opens the application. With redirected
 input or output it prints help; named shell commands remain scriptable. See the
-[keyboard walkthrough](docs/tui.md) for the bundled offline demo and cancellation.
+[command-session walkthrough](docs/tui.md) for `/demo`, `/new`, history, and cancellation.
 
 If NumPy and pandas are already available, the example can run from source
 without an installation:
@@ -159,14 +158,16 @@ python3 -m pip wheel --no-deps --no-build-isolation --no-index --wheel-dir /tmp/
 
 The wheel command uses an already available setuptools 77+ build backend; it
 does not install dependencies. Install `[tui]` with the constraints above to
-include the headless UI tests; those tests skip when Textual is unavailable.
-CI installs the UI extra and runs them without model downloads. The configured CI matrix covers Python 3.11,
+include the original headless Textual regression tests; those skip when Textual is
+unavailable. The active prompt uses `[cli]`; its tests include real pseudo-terminal
+interactions. CI installs both sets without model downloads. The configured CI matrix covers Python 3.11,
 3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
 remote CI and a fresh dependency installation have not been run. See the
 [Milestone 1 record](docs/verification.md) and
 [Milestone 2 record](docs/milestone2-verification.md), plus the
 [Chronos CPU record](docs/milestone3-verification.md) and
-[interactive terminal record](docs/milestone4-verification.md), for evidence and limits.
+[original terminal record](docs/milestone4-verification.md), plus the
+[prompt rework record](docs/terminal-rework.md), for evidence and limits.
 
 ## Design and implementation plan
 
@@ -180,8 +181,8 @@ remote CI and a fresh dependency installation have not been run. See the
   and milestone acceptance criteria.
 
 The agreed implementation sequence starts with Python, NumPy, and pandas;
-introduces Typer and Rich for shell commands; and adds Textual for the interactive
-application. Model runtimes remain optional. Chronos-Bolt is the first integrated
+uses Typer and Rich for shell commands and prompt_toolkit for the persistent
+interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
 family; other Chronos variants have separate APIs and remain unsupported.
 
 ## Contributing
