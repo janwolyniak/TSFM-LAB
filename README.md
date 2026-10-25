@@ -16,16 +16,19 @@ verified local/cache-only Chronos-Bolt inference, and model-runtime provenance.
 The interactive workflow uses a persistent local prompt, slash commands, inline
 setup questions, progress/cancellation, saved results, comparison, and export.
 Output stays in terminal scrollback. Other model families remain later work.
+Release-candidate tooling now builds and verifies source/wheel packages and checks
+installation in a clean environment. Publication and the remote CI matrix remain
+pending; see the [release record](docs/milestone5-verification.md).
 
 ## Run the offline example
 
-From a clone, using Python 3.11 or newer, create an environment and install the
-core with development tools when you are ready to install dependencies:
+From a clone or unpacked source archive, using Python 3.11 or newer, create an
+environment and install the command interface:
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -c requirements-dev.txt -e '.[dev,cli,parquet]'
+python -m pip install -c requirements-dev.txt '.[cli,parquet]'
 python examples/baseline.py
 ```
 
@@ -33,12 +36,12 @@ python examples/baseline.py
 the compatible dependency ranges declared in `pyproject.toml`. No model weights,
 credentials, or torch are required. Install only `.[cli]` for shell commands,
 add `[parquet]` for Parquet input/export, or use the base package for Python-only
-CSV evaluation. The commands above install the development checks as well.
+CSV evaluation. See the [installation guide](docs/installation.md) for built
+wheels, optional runtimes, and the generated `tsfm` command.
 
-For the interactive terminal, add the optional UI dependencies:
+The same installation provides the interactive terminal:
 
 ```sh
-python -m pip install -c requirements-dev.txt -e '.[cli,parquet]'
 tsfm ui --workspace results
 ```
 
@@ -150,24 +153,36 @@ history. See [evaluation.md](docs/evaluation.md) for complete semantics.
 ## Checks
 
 ```sh
-python3 -m black --check src tests examples
-python3 -m ruff check src tests examples
+python3 -m black --check src tests examples scripts
+python3 -m ruff check src tests examples scripts
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest
-python3 -m pip wheel --no-deps --no-build-isolation --no-index --wheel-dir /tmp/tsfm-lab-wheels .
+python3 scripts/build_distribution.py --out-dir /tmp/tsfm-lab-distributions
 ```
 
-The wheel command uses an already available setuptools 77+ build backend; it
-does not install dependencies. Install `[tui]` with the constraints above to
-include the original headless Textual regression tests; those skip when Textual is
+Install development checks when needed with:
+
+```sh
+python -m pip install -c requirements-dev.txt setuptools
+python -m pip install --no-build-isolation -c requirements-dev.txt -c requirements-tui.txt '.[dev,cli,parquet,tui]'
+```
+
+The distribution builder uses already available setuptools 77+ and pip. It makes
+a source archive, checks its contents, and builds the wheel from that archive
+without resolving dependencies. Use an empty output directory. `[tui]` supplies
+the original headless Textual regression tests; those skip when Textual is
 unavailable. The active prompt uses `[cli]`; its tests include real pseudo-terminal
 interactions. CI installs both sets without model downloads. The configured CI matrix covers Python 3.11,
 3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
-remote CI and a fresh dependency installation have not been run. See the
-[Milestone 1 record](docs/verification.md) and
+remote CI remains unexecuted. The release checks include an installation into a
+clean environment; see the [Milestone 5 record](docs/milestone5-verification.md).
+See the [Milestone 1 record](docs/verification.md) and
 [Milestone 2 record](docs/milestone2-verification.md), plus the
 [Chronos CPU record](docs/milestone3-verification.md) and
 [original terminal record](docs/milestone4-verification.md), plus the
 [prompt rework record](docs/terminal-rework.md), for evidence and limits.
+
+The [release guide](docs/releasing.md) describes artifact verification and the
+remaining publication gates. The repository has not published a package release.
 
 ## Design and implementation plan
 
@@ -179,6 +194,8 @@ remote CI and a fresh dependency installation have not been run. See the
   formulas, aggregation, and comparison requirements.
 - [Development roadmap](docs/roadmap.md): review decisions, implementation tasks,
   and milestone acceptance criteria.
+- [Adapter extension guide](docs/adapters.md): the current protocol and a runnable
+  direct-Python example, including limits on shell/catalog integration.
 
 The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent

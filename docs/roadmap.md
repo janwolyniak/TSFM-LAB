@@ -34,8 +34,9 @@ The owner agreed to the following initial direction on 25 October 2026:
 The contribution workflow requires discussion of architecture, interfaces,
 dependencies, and evaluation methodology before implementation. The agreed
 proposal establishes the implementation direction. The owner's continuation
-requests authorized Milestones 2 through 4; the owner separately authorized the
-pinned Tiny download, brief CPU test, and isolated UI dependency installation.
+requests authorized Milestones 2 through 5; the owner separately authorized the
+pinned Tiny download, brief CPU test, isolated UI dependencies, and a clean
+core/CLI/Parquet installation check.
 Continuation does not by itself authorize
 dependency installation, model downloads, publication, merging, or cloud compute.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the maintained permission and Git
@@ -150,6 +151,20 @@ cancellation. Inspect rendered terminal screens at common sizes, including
 or crashed process never becomes a completed experiment.
 
 ## Milestone 5 First public release
+
+Local release-candidate preparation is implemented and verified. See the
+[installation guide](installation.md), [release workflow](releasing.md),
+[adapter extension guide](adapters.md), and
+[verification record](milestone5-verification.md).
+
+- [x] Source archive includes reproducible examples, documentation, and fixtures.
+- [x] Wheel is built from the source archive and its metadata/resources checked.
+- [x] Clean core/CLI/Parquet installation passes locally on Python 3.13 macOS.
+- [x] Installation, methodology, model/license, and adapter guidance are available.
+- [x] Clean installed-wheel verification is configured in the CI matrix.
+- [ ] Remote Linux/macOS Python 3.11–3.13 matrix has passed for the candidate.
+- [ ] Prerequisite branches are reviewed/integrated and publication is authorized.
+- [ ] Approved package release is published.
 
 Complete installation and methodology documentation, a baseline demo and pinned
 Chronos example, optional dependency instructions, model/license metadata, CI,
