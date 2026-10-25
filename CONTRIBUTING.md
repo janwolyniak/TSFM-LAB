@@ -282,9 +282,64 @@ a rejection or branch protection.
 
 Resolve conflicts by understanding both changes; do not blindly select one side.
 Rerun affected tests and obtain renewed review when the resolution changes
-behavior. Delete local or remote topic branches only after confirming they are
-merged, contain no remaining work, and deletion is authorized. Do not delete an
-unmerged experiment merely because its pull request is closed.
+behavior.
+
+### Finish, merge, and remove the topic branch
+
+The normal completion sequence is **implement → validate → review → merge →
+verify integration → delete the topic branch**. Once the work is finished and
+the applicable checks pass, proceed through the remaining steps within the
+owner's authorization. Do not leave an authorized merge or cleanup unfinished
+merely because the topic branch has been committed. If authorization is missing,
+present the verified result and request only the remaining action.
+
+1. Confirm the acceptance criteria are met and all task-owned changes are
+   committed. Inspect the final diff and preserve unrelated local work.
+2. Run tests when executable behavior changes, and run the other applicable
+   checks described under validation above. Documentation-only changes require
+   diff, link, and example checks; they do not require unrelated code tests.
+   Record what passed, what was not run, and any accepted limitations.
+3. Complete review, incorporate the latest `main`, and validate the merge
+   candidate. If new changes or conflict resolutions affect behavior, rerun the
+   relevant checks before merging. Stop the merge if a required check fails.
+4. Merge using the merge-commit policy above once authorized. Publish the updated
+   `main` only if publication is authorized. A local merge does not establish
+   that the remote repository has been updated.
+5. Verify that the topic branch tip is an ancestor of the intended `main`. For a
+   published merge, fetch and also verify it is an ancestor of `origin/main`.
+   Check any post-merge CI results before deleting the published branch.
+6. Once integration is verified, delete the completed local topic branch and,
+   if it was published, its remote branch when cleanup is authorized. Confirm
+   no collaborator or dependent pull request still needs it. Keep the checkout
+   on `main` and report the merge, validation, publication, and cleanup status.
+
+For a local branch, run these commands individually after the merge. Continue
+to deletion only if the ancestry check succeeds:
+
+```sh
+git switch main
+git merge-base --is-ancestor feat/42-rolling-origin-evaluation main
+git branch -d feat/42-rolling-origin-evaluation
+```
+
+For a published branch, verify the remote integration before deleting it. Run
+these commands individually, require the ancestry check to succeed, and confirm
+post-merge CI has passed where configured:
+
+```sh
+git fetch origin
+git merge-base --is-ancestor feat/42-rolling-origin-evaluation origin/main
+git push origin --delete feat/42-rolling-origin-evaluation
+git branch -d feat/42-rolling-origin-evaluation
+```
+
+The published-branch example replaces the local-only cleanup example; it needs
+the local branch to remain available for the ancestry check. If GitHub already
+deleted the remote branch after merging, skip the remote deletion. Use
+`git branch -d`, never `-D` to bypass an unmerged-work warning. If an ancestry
+check fails or deletion is refused, inspect the cause and preserve the branch
+until resolved. Do not delete an unmerged experiment merely because its pull
+request is closed, and never delete `main` as part of topic-branch cleanup.
 
 Revert a faulty published change with a new reviewed revert commit rather than
 resetting `main`. Reverting a merge requires selecting the correct parent and
