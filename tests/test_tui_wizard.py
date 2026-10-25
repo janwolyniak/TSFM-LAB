@@ -10,6 +10,7 @@ pytest.importorskip("textual")
 
 from textual.app import App
 from textual.widgets import Button, Footer, Input, Select, Static
+from textual.widgets._select import InvalidSelectValueError
 
 from tsfm_lab.config import ExperimentConfig
 from tsfm_lab.tui import wizard as wizard_module
@@ -187,9 +188,12 @@ def test_invalid_seasonal_period_blocks_model_step(tmp_path, demo):
     asyncio.run(exercise())
 
 
-def test_chronos_source_visibility_and_offline_sha_validation(tmp_path, demo):
+@pytest.mark.parametrize("adapter", ["chronos_bolt", "timesfm_2p5"])
+def test_checkpoint_source_visibility_and_offline_sha_validation(
+    tmp_path, demo, adapter
+):
     async def exercise():
-        app = WizardApp(tmp_path / "runs", demo, "chronos_bolt")
+        app = WizardApp(tmp_path / "runs", demo, adapter)
         async with app.run_test(size=(80, 24)) as pilot:
             screen = app.wizard
             assert screen.query_one("#wizard-checkpoint-fields").display
@@ -210,6 +214,35 @@ def test_chronos_source_visibility_and_offline_sha_validation(tmp_path, demo):
             await pilot.pause(0.3)
             await pilot.click("#wizard-next")
             assert screen.step == "data"
+            assert not (tmp_path / "runs").exists()
+
+    asyncio.run(exercise())
+
+
+def test_switching_checkpoint_family_filters_repositories_and_clears_old_revision(
+    tmp_path, demo
+):
+    async def exercise():
+        app = WizardApp(tmp_path / "runs", demo, "timesfm_2p5")
+        async with app.run_test(size=(80, 24)) as pilot:
+            screen = app.wizard
+            repository = screen.query_one("#wizard-repository", Select)
+            revision = screen.query_one("#wizard-revision", Input)
+            assert repository.value == "google/timesfm-2.5-200m-pytorch"
+            revision.value = "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"
+            screen.query_one("#wizard-adapter", Select).value = "chronos_bolt"
+            await pilot.pause()
+            assert repository.value == "amazon/chronos-bolt-tiny"
+            assert revision.value == ""
+            repository.value = "amazon/chronos-bolt-small"
+            await pilot.pause()
+            assert repository.value == "amazon/chronos-bolt-small"
+            screen.query_one("#wizard-adapter", Select).value = "timesfm_2p5"
+            await pilot.pause()
+            assert repository.value == "google/timesfm-2.5-200m-pytorch"
+            with pytest.raises(InvalidSelectValueError):
+                repository.value = "amazon/chronos-bolt-tiny"
+            assert screen.query_one("#wizard-checkpoint-fields").display
             assert not (tmp_path / "runs").exists()
 
     asyncio.run(exercise())

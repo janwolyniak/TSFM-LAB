@@ -6,16 +6,19 @@ published to PyPI. Commands such as `pip install tsfm-lab==0.1.0` from a package
 index are therefore not an installation route for this release candidate.
 
 Package metadata requires Python 3.11 or newer. The configured test matrix covers
-Python 3.11, 3.12, and 3.13 on Linux and macOS. Local execution has been verified
-with Python 3.13 on macOS; a configured CI job is not evidence that the whole
-matrix has passed. See the [release verification record](milestone5-verification.md)
-for the actual environments and commands; the build helper emits the artifact
-hashes in a separate manifest.
+Python 3.11, 3.12, and 3.13 on Linux and macOS. The pre-TimesFM `main` revision
+`0e3eb70` passed all six jobs in
+[run 40233446539](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40233446539).
+That result does not establish the new adapter's full platform/runtime matrix.
+Local model checks use Python 3.13 on macOS and are documented separately in the
+[Chronos](chronos.md) and [TimesFM](timesfm.md) guides. See the
+[release verification record](milestone5-verification.md) for prior installation
+evidence; the build helper emits artifact hashes in a separate manifest.
 
 ## Install from a checkout or source archive
 
 Use a checkout containing `pyproject.toml`, `src/tsfm_lab`, and the documentation.
-Once the reviewed implementation is published, it can be cloned from
+For a published source revision, clone
 [the project repository](https://github.com/janwolyniak/TSFM-LAB):
 
 ```sh
@@ -71,12 +74,13 @@ The dependency groups let users choose a smaller installation:
 | `parquet` | Parquet input and export, using PyArrow. |
 | `hub` | Explicit curated checkpoint downloads and cache inspection. |
 | `chronos` | The pinned optional CPU Chronos-Bolt inference runtime. |
+| `timesfm` | The pinned optional TimesFM 2.5 CPU inference runtime. |
 | `dev` | pytest, Black, and Ruff for contributors. |
 
 `cli` is sufficient for the active interactive terminal. The older `tui` extra
 installs the retained Textual screens for regression coverage; it is not required
-for the current prompt-based interface. Adding `chronos` or `hub` does not pull
-model weights automatically.
+for the current prompt-based interface. Adding `chronos`, `timesfm`, or `hub`
+does not pull model weights automatically.
 
 ## Find the installed command
 
@@ -165,3 +169,23 @@ catalog, explicitly pull an exact checkpoint revision when a download is intende
 and run from cached or standalone local files. Normal runs never install
 dependencies, download checkpoint files, or enable remote model code. Baseline
 results, history, comparison, and export remain usable without the model runtime.
+
+## Add CPU TimesFM inference separately
+
+The `timesfm_2p5` adapter uses TimesFM model 2.5 through the explicit Torch API in
+runtime package `timesfm==3.0.2`, with PyTorch 2.8.x, Hugging Face Hub 0.34.4, and
+Safetensors 0.6.x. The [TimesFM constraints](../requirements-timesfm.txt) record
+the tested versions. From the source root, install the optional runtime only
+when dependency installation is authorized:
+
+```sh
+python -m pip install -c requirements-timesfm.txt '.[cli,timesfm]'
+tsfm models info timesfm_2p5 --json
+```
+
+Select the curated `google/timesfm-2.5-200m-pytorch` repository or a compatible
+standalone local checkpoint. The adapter requires CPU/float32, batch size 1,
+contexts up to 16,256 observations, and horizons up to 128. It fails if Torch's
+process-wide default dtype is not float32; it never changes that setting.
+Follow the [TimesFM guide](timesfm.md) for explicit pulls, cache-only experiments,
+median semantics, and the bounded local verification evidence.

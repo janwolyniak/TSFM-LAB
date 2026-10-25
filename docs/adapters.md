@@ -4,8 +4,8 @@ TSFM Lab's Python evaluator accepts any trusted local object implementing the
 [ForecastModel protocol](../src/tsfm_lab/models/base.py). A custom adapter can use
 the numerical pipeline directly today. The YAML commands and interactive setup
 accept only the explicitly supported adapter IDs: `last_value`, `seasonal_naive`,
-and `chronos_bolt`. There is no automatic plugin discovery or arbitrary import
-path in configuration.
+`chronos_bolt`, and `timesfm_2p5`. There is no automatic plugin discovery or
+arbitrary import path in configuration.
 
 ## Run the educational example
 
@@ -113,6 +113,13 @@ univariate point adapter supporting CPU. A model's broader native capabilities
 do not add multivariate targets, covariates, or accelerators to this engine.
 Publish only the subset the adapter actually supports and verifies.
 
+The TimesFM 2.5 adapter exposes CPU/float32, batch size 1, contexts up to 16,256,
+and horizons up to 128. It extracts the genuine 0.5 quantile rather than relabelling
+the mean. The model version is separate from its `timesfm==3.0.2` runtime package;
+the optional `[timesfm]` extra and [constraints](../requirements-timesfm.txt)
+select that tested API. See [TimesFM usage](timesfm.md). An incompatible global
+Torch default dtype fails without the adapter changing process-wide settings.
+
 Use a stable adapter ID and change its adapter version when inference semantics
 change. Keep model implementation identity distinct from checkpoint identity.
 The example uses family `example`; the runner consequently records its default
@@ -127,7 +134,8 @@ The runner also recognizes optional hooks outside the required protocol:
 
 - A `source` attribute/property can supply the model source. Ordinary local Python
   adapters can use `local_python`. The `local` and `huggingface` checkpoint-source
-  schemas currently have validation specific to Chronos-Bolt.
+  schemas have explicit per-family validation for Chronos-Bolt and TimesFM 2.5.
+  An adapter/repository mismatch is rejected before loading weights.
 - `runtime_configuration() -> dict` records actual device, dtype, batch size, and
   relevant seed/determinism choices. Without it, the current defaults are CPU,
   float64, and batch size 1. Describe the actual model arithmetic dtype, even when
@@ -140,10 +148,13 @@ The runner also recognizes optional hooks outside the required protocol:
 For pretrained integrations, record repository, requested revision, resolved
 commit SHA, consumed-file identities, adapter version, runtime configuration,
 and relevant dependency versions. Local checkpoint identity needs a file/checksum
-manifest. The existing [checkpoint manager](../src/tsfm_lab/models/checkpoints.py)
-and [Chronos adapter](../src/tsfm_lab/models/chronos_bolt.py) show the supported
+manifest. The existing [checkpoint manager](../src/tsfm_lab/models/checkpoints.py),
+[family profiles](../src/tsfm_lab/models/checkpoint_profiles.py),
+[Chronos adapter](../src/tsfm_lab/models/chronos_bolt.py), and
+[TimesFM adapter](../src/tsfm_lab/models/timesfm.py) show the supported
 policy: metadata inspection first, native-limit checks, verified local-only safe
 weight loading, and explicit downloads managed separately from experiments.
+New families must preserve reload of existing records and their fingerprints.
 
 Display checkpoint/model-code license information separately from the platform's
 [Apache-2.0 license](../LICENSE). Do not assume model weights or datasets inherit

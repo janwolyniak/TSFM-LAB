@@ -101,20 +101,28 @@ def _metrics(metrics, spec):
 
 
 def _checkpoint_identity(model, runtime, spec, environment):
-    if model["adapter_id"] != "chronos_bolt":
+    adapter = model["adapter_id"]
+    if adapter not in {"chronos_bolt", "timesfm_2p5"}:
         if model["source"] in {"huggingface", "local"}:
-            raise StoreError(
-                "Checkpoint sources require the supported Chronos-Bolt adapter"
-            )
+            raise StoreError("Checkpoint sources require a supported model adapter")
         return
+    from tsfm_lab.models.checkpoint_profiles import checkpoint_adapter
     from tsfm_lab.models.checkpoints import validate_checkpoint_record
 
     record = validate_checkpoint_record(model["options"]["checkpoint"])
-    if model["source"] != record["source"] or model["family"] != "chronos":
+    family = "chronos" if adapter == "chronos_bolt" else "timesfm"
+    if (
+        model["source"] != record["source"]
+        or model["family"] != family
+        or checkpoint_adapter(record["architecture"]) != adapter
+    ):
         raise StoreError("Checkpoint source/family disagrees with the adapter")
     caps = model["capabilities"]
+    max_context = record["native_context_length"]
+    if adapter == "timesfm_2p5":
+        max_context -= 128
     if (
-        caps["max_context"] != record["native_context_length"]
+        caps["max_context"] != max_context
         or caps["max_horizon"] != record["native_prediction_length"]
         or spec.context_length > caps["max_context"]
         or spec.horizon > caps["max_horizon"]
@@ -123,14 +131,22 @@ def _checkpoint_identity(model, runtime, spec, environment):
         or runtime["batch_size"] != 1
     ):
         raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
-    for key in (
-        "torch",
-        "chronos-forecasting",
-        "transformers",
-        "huggingface-hub",
-        "safetensors",
-        "accelerate",
-    ):
+    distributions = ("torch", "huggingface-hub", "safetensors")
+    if adapter == "chronos_bolt":
+        distributions += ("chronos-forecasting", "transformers", "accelerate")
+    else:
+        from tsfm_lab.models.timesfm import FORECAST_OPTIONS
+
+        distributions += ("timesfm",)
+        options = runtime.get("forecast_options")
+        if (
+            runtime.get("torch_compile") is not False
+            or not isinstance(options, dict)
+            or set(options) != set(FORECAST_OPTIONS)
+            or any(options[key] is not value for key, value in FORECAST_OPTIONS.items())
+        ):
+            raise StoreError("TimesFM runtime requires its recorded forecast options")
+    for key in distributions:
         _text(environment[key], f"environment {key}")
 
 

@@ -9,8 +9,9 @@ their acceptance criteria.
 
 The repository now contains the numerical Python package, scriptable CLI,
 YAML configuration, local records, Parquet support, tests, synthetic examples,
-and configured checks/CI, plus an interactive terminal. Chronos-Bolt Tiny has
-passed a pinned local CPU integration on synthetic data. The pre-existing local `PLAN.md` remains the product brief;
+and configured checks/CI, plus an interactive terminal. Chronos-Bolt Tiny/Small
+and TimesFM 2.5 have passed pinned local CPU integrations on synthetic data.
+The pre-existing local `PLAN.md` remains the product brief;
 these tracked documents make the actionable proposal usable without relying on
 that untracked file.
 
@@ -48,6 +49,12 @@ commands, native scrollback, and local deterministic actions, with no AI service
 The active interface now uses prompt_toolkit and Rich. The forecasting contracts
 and managed worker remain shared with the shell. See [the rework](terminal-rework.md).
 
+The owner selected TimesFM for the second family and authorized a bounded Small
+download/CPU test and an isolated TimesFM runtime installation. The broader
+benchmarking compatibility study is authorized in a separate temporary runtime;
+finance implementation awaits agreement on trading rules. These decisions do
+not authorize publishing a package release.
+
 ## Milestone 0 Architecture review
 
 Deliver the bounded MVP, stack, contracts, methodology, checkpoint plan, repository
@@ -62,8 +69,9 @@ structure, and acceptance criteria. Review the following before closing it:
 
 ## Milestone 1 Numerical evaluation core
 
-Implemented and verified locally. CI is configured but has not run remotely;
-the supported matrix and a fresh dependency installation remain to be exercised.
+Implemented and verified locally, with subsequent clean-install and remote
+Linux/macOS Python 3.11–3.13 checks. Original milestone records remain historical;
+current candidates must pass their own configured checks.
 
 Implement only the Python numerical workflow. No UI, remote models, database,
 or domain-specific metrics are needed to pass this milestone.
@@ -88,7 +96,8 @@ that reported metrics mean what the documentation says.
 ## Milestone 2 Shell workflow and experiment records
 
 Implemented and verified locally; see [CLI usage](cli.md) and the
-[verification record](milestone2-verification.md). Remote CI remains unexecuted.
+[verification record](milestone2-verification.md). The integrated pre-TimesFM
+workflow subsequently passed remote CI and clean installation checks.
 
 Add Typer/Rich, safe YAML configuration, Parquet ingestion/export, UUID run
 directories, configuration snapshots, JSON manifests/metrics, prediction export,
@@ -106,8 +115,9 @@ runs do not appear completed. Package installation exposes the `tsfm` command.
 Implemented and verified with the pinned Tiny checkpoint on CPU. Routine tests,
 cached replay, local copy, installed CLI, and the marked real smoke test passed.
 See [the checkpoint guide](chronos.md) and
-[verification record](milestone3-verification.md). Small and other devices were
-not executed; remote CI remains unrun.
+[verification record](milestone3-verification.md). Small was subsequently verified
+on CPU; see the [expanded record](milestone6-verification.md). Other devices remain
+unverified. Routine integration checks subsequently passed remote CI.
 
 Add a small explicit model catalog, optional Chronos dependencies, metadata-first
 validation, Hub revision resolution, explicit model pulls, cache reuse, offline
@@ -134,8 +144,9 @@ shapes, and finite aligned outputs. This proves integration, not model advantage
 
 Implemented and verified locally. See the [keyboard guide](tui.md) and
 [original verification record](milestone4-verification.md), followed by the
-[persistent-prompt revision](terminal-rework.md). Remote CI and other platforms
-remain unexecuted.
+[persistent-prompt revision](terminal-rework.md). The integrated workflow
+subsequently passed the Linux/macOS Python 3.11–3.13 matrix; Windows remains
+unverified.
 
 Add model/dataset selection, a validated experiment wizard, progress and errors,
 results, history, comparison, and cancellation. Use the same configuration objects
@@ -162,7 +173,8 @@ Local release-candidate preparation is implemented and verified. See the
 - [x] Clean core/CLI/Parquet installation passes locally on Python 3.13 macOS.
 - [x] Installation, methodology, model/license, and adapter guidance are available.
 - [x] Clean installed-wheel verification is configured in the CI matrix.
-- [ ] Prerequisite branches are reviewed/integrated and publication is authorized.
+- [x] Original core/CLI/Bolt/terminal/release-tooling branches are integrated.
+- [ ] Publication is authorized for the final release revision.
 - [ ] Approved package release is published.
 
 The Linux/macOS Python 3.11–3.13 matrix is a live merge/release gate. Its current
@@ -179,11 +191,45 @@ offline, explicitly pull a checkpoint, run a saved config, and reload/export its
 results. Verify the clean-install path on the advertised platform/Python matrix.
 Publish only within owner authorization and the contribution workflow.
 
-## Later work
+## Milestone 6 Second model family and expanded CPU verification
 
-Evaluate fev reuse before panels, covariates, or probability scoring. Add
-Chronos-2 or TimesFM only after the first adapter passes its contract; each new
-family must establish its own capabilities and verified runtime matrix.
+The owner selected TimesFM, following the original product brief. The bounded
+adapter is `timesfm_2p5`: the explicit 2.5 Torch model through runtime 3.0.2,
+CPU/float32, context up to 16,256, horizon up to 128, median point forecasts only.
+The [model guide](timesfm.md) and [verification record](milestone6-verification.md)
+state exact identities and evidence.
+
+- [x] Add per-family catalog/config/checkpoint selection without changing old
+  Bolt record fingerprints or enabling arbitrary repositories.
+- [x] Implement lazy optional loading, native-bound refusal, true median output,
+  recorded forecast settings, and cleanup after failures.
+- [x] Integrate shell/guided selection and preserve no-runtime saved-result
+  reload, controlled comparison, and export.
+- [x] Verify real cached TimesFM CPU inference/replay and the approved Small
+  workflow, without a real-data forecasting advantage claim.
+- [x] Complete routine, package, and installed-wheel checks for the preparation tree.
+- [ ] Review/integrate this milestone and verify its current remote CI.
+
+Acceptance: a baseline and TimesFM use identical forecast cases and metric
+definitions; saved records remain usable without either model's weights/runtime;
+wrong-family identities, unsupported limits, unsafe files, and unverified runtime
+versions fail explicitly. Routine CI needs no weights. Larger device/model claims
+require separate verification; Chronos-2 remains a later adapter.
+
+## Next-stage contracts
+
+Agree the [finance rules](finance-extension.md) before finance coding. The owner
+chose to settle execution/position/cost conventions first, rather than begin
+with diagnostics alone. The proposal separates return diagnostics from executable
+trading, preserving forecast metrics and requiring explicit timing, fills, costs,
+capital accounting, and comparison benchmarks.
+
+The bounded [fev compatibility study](benchmarking-extension.md) is authorized.
+Assess reuse before panels, covariates, or probability scoring. Its isolated
+prototype/evidence must establish where contracts agree or differ; it does not
+automatically add a mandatory dependency or replace the numerical scorer.
+
+## Later work
 
 Finance can consume the generic aligned output after its data timing, target,
 signal availability, execution prices, costs, capital, and risk conventions have
@@ -193,5 +239,6 @@ finance into the core.
 
 SQLite indexing, resumability, forecast caches, environment isolation, advanced
 terminal charts, and performance telemetry require a demonstrated need.
+No such convenience feature is added merely to populate this list.
 Training, fine-tuning, web infrastructure, and distributed compute are outside
 this roadmap.

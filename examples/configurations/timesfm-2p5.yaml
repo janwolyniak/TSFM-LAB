@@ -1,0 +1,29 @@
+schema_version: 1
+name: TimesFM 2.5 seasonal demonstration
+model:
+  source: huggingface
+  adapter_id: timesfm_2p5
+  repository: google/timesfm-2.5-200m-pytorch
+  revision: 1d952420fba87f3c6dee4f240de0f1a0fbc790e3
+  offline: true
+  cache_dir: ../../model-cache
+dataset:
+  path: ../datasets/seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+evaluation:
+  context_length: 8
+  horizon: 4
+  stride: 4
+  seasonal_period: 4
+  evaluation_start: "2026-01-01T16:00:00Z"
+  evaluation_end: "2026-01-02T08:00:00Z"
+runtime:
+  device: cpu
+  dtype: float32
+  batch_size: 1
+  seed: 0
+output:
+  directory: ../../results

@@ -23,7 +23,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 _CHECKOUT = Path(__file__).resolve().parents[1]
-_OPTIONAL = ("torch", "chronos", "transformers", "huggingface_hub", "textual")
+_OPTIONAL = (
+    "torch",
+    "chronos",
+    "timesfm",
+    "transformers",
+    "huggingface_hub",
+    "textual",
+)
 _COLUMNS = {
     "request_id",
     "series_id",
@@ -39,7 +46,7 @@ _BLOCK_OPTIONAL = """import importlib.abc
 import json
 import sys
 
-blocked = {'torch', 'chronos', 'transformers', 'huggingface_hub', 'textual'}
+blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual'}
 
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -366,12 +373,13 @@ class Verifier:
         catalog = self.json_command("models", "list")
         require(
             {item["adapter_id"] for item in catalog}
-            == {"last_value", "seasonal_naive", "chronos_bolt"},
+            == {"last_value", "seasonal_naive", "chronos_bolt", "timesfm_2p5"},
             "Installed model catalog differs from supported adapters",
         )
         for identifier, adapter in (
             ("last_value", "last_value"),
             ("amazon/chronos-bolt-tiny", "chronos_bolt"),
+            ("google/timesfm-2.5-200m-pytorch", "timesfm_2p5"),
         ):
             require(
                 self.json_command("models", "info", identifier)["adapter_id"]
@@ -606,14 +614,15 @@ print(json.dumps({'optional_loaded': sorted(blocked.intersection(sys.modules))})
             "Interactive prompt metadata required optional model or Textual runtimes",
         )
         runtime_probe = _BLOCK_OPTIONAL + """
-from tsfm_lab.models.chronos_bolt import _runtime
-try:
-    _runtime()
-except ImportError as exc:
-    assert '[chronos]' in str(exc)
-    print(json.dumps({'missing_runtime': 'actionable_error'}))
-else:
-    raise AssertionError('Optional runtime unexpectedly loaded')
+from importlib import import_module
+for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm')]:
+    try:
+        import_module('tsfm_lab.models.' + module)._runtime()
+    except ImportError as exc:
+        assert '[' + extra + ']' in str(exc)
+    else:
+        raise AssertionError('Optional runtime unexpectedly loaded')
+print(json.dumps({'missing_runtime': 'actionable_error'}))
 """
         require(
             strict_json(self.command("-c", runtime_probe, python=True).stdout)

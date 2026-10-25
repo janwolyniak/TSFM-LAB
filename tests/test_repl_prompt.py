@@ -21,6 +21,11 @@ def test_command_completion_contains_help_and_filters_prefix():
     assert [item.text for item in complete("/hist")] == ["/history"]
 
 
+@pytest.mark.parametrize("command", ["/new", "/demo"])
+def test_timesfm_adapter_completion_comes_from_the_model_catalog(command):
+    assert [item.text for item in complete(f"{command} times")] == ["timesfm_2p5"]
+
+
 def test_id_completion_does_not_read_experiment_files():
     assert [item.text for item in complete("/show abc", ["abcdef", "12345"])] == [
         "abcdef"

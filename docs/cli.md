@@ -12,7 +12,7 @@ noninteractive.
 
 | Command | Behavior |
 | --- | --- |
-| `tsfm models list` | List supported baseline and Chronos-Bolt adapters without loading weights. |
+| `tsfm models list` | List baseline, Chronos-Bolt, and TimesFM 2.5 adapters without loading weights. |
 | `tsfm models info IDENTIFIER` | Show offline catalog metadata for an adapter or curated checkpoint repository. |
 | `tsfm models pull REPOSITORY --revision REF` | Explicitly resolve and download a curated checkpoint; optional `--cache-dir` selects its Hub cache. |
 | `tsfm models cache --cache-dir PATH` | Inspect complete/incomplete curated snapshots without network access or deletion. |
@@ -54,9 +54,19 @@ with duplicate/alias rejection and ISO timestamps preserved as strings.
 `model.source: builtin` selects adapter `last_value` or
 `seasonal_naive`. Last-value has no options. Seasonal-naive requires
 `options.seasonal_period` and a context long enough for that season.
-`huggingface` and `local` select the `chronos_bolt` adapter through the strict
-[checkpoint configuration](chronos.md). Arbitrary repositories, derived identity
-fields, and remote-code options are unsupported.
+`huggingface` and `local` select `chronos_bolt` or `timesfm_2p5` through the strict
+[Chronos](chronos.md) or [TimesFM](timesfm.md) checkpoint configuration.
+Each adapter accepts only its own curated repositories or a compatible local
+architecture. Arbitrary repositories, derived identity fields, and remote-code
+options are unsupported.
+
+| Adapter | Curated repositories | Supported context / horizon |
+| --- | --- | --- |
+| `chronos_bolt` | `amazon/chronos-bolt-tiny`, `amazon/chronos-bolt-small` | 1–2,048 / 1–64 |
+| `timesfm_2p5` | `google/timesfm-2.5-200m-pytorch` | 1–16,256 / 1–128 |
+
+These are adapter limits. TimesFM's larger native context metadata does not
+permit a request above its supported bound or an undocumented horizon rollout.
 
 Dataset fields select a local `.csv`, `.parquet`, or `.pq` file, timestamp/target
 columns, and fixed frequency. Units default to the explicit string `unspecified`;
@@ -72,7 +82,10 @@ baselines are valid for it. The model's seasonal period and MASE's lag are
 separate explicit settings.
 
 Runtime defaults are CPU, batch size 1, and seed 0. Baselines use float64;
-Chronos-Bolt uses float32 model arithmetic and returns normalized float64 forecasts.
+Chronos-Bolt and TimesFM 2.5 use float32 model arithmetic and return normalized
+float64 forecasts. Both score genuine median predictions. TimesFM additionally
+requires Torch's existing global default dtype to be float32, with an explicit
+failure otherwise; it does not modify that setting.
 Other device/dtype combinations or batch sizes fail. A nonnegative seed is
 recorded; the current deterministic point methods do not use it, which is stated
 in resolved runtime metadata.

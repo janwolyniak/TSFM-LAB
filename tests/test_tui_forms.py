@@ -86,12 +86,14 @@ def test_seasonal_baseline_and_metric_lags_remain_separate(demo, arguments):
 
 
 @pytest.mark.parametrize("source", ["huggingface", "local"])
+@pytest.mark.parametrize("adapter", ["chronos_bolt", "timesfm_2p5"])
 def test_chronos_form_parsing_is_offline_without_checkpoint_or_runtime_access(
-    demo, arguments, monkeypatch, source
+    demo, arguments, monkeypatch, source, adapter
 ):
     fields = ready_fields(demo, arguments)
     fields.update(
-        adapter="chronos_bolt",
+        adapter=adapter,
+        repository=default_fields(adapter)["repository"],
         source=source,
         revision="a" * 40,
         checkpoint_path="models/bolt",
@@ -99,7 +101,7 @@ def test_chronos_form_parsing_is_offline_without_checkpoint_or_runtime_access(
     original_import = builtins.__import__
 
     def no_runtime(name, *args, **kwargs):
-        if name.split(".")[0] in {"torch", "chronos", "huggingface_hub"}:
+        if name.split(".")[0] in {"torch", "chronos", "timesfm", "huggingface_hub"}:
             raise AssertionError("Form validation must not initialize model runtimes")
         return original_import(name, *args, **kwargs)
 
@@ -183,11 +185,16 @@ def test_checkpoint_native_limits_are_checked_before_review(
     assert not arguments["workspace"].exists()
 
 
+@pytest.mark.parametrize("adapter", ["chronos_bolt", "timesfm_2p5"])
 def test_hub_review_selects_only_existing_offline_checkpoint_metadata(
-    demo, arguments, monkeypatch
+    demo, arguments, monkeypatch, adapter
 ):
     fields = ready_fields(demo, arguments)
-    fields.update(adapter="chronos_bolt", revision="a" * 40)
+    fields.update(
+        adapter=adapter,
+        repository=default_fields(adapter)["repository"],
+        revision="a" * 40,
+    )
     calls = []
 
     class MetadataOnlyModel:
@@ -198,6 +205,7 @@ def test_hub_review_selects_only_existing_offline_checkpoint_metadata(
             raise AssertionError("Review must not initialize model weights")
 
     def metadata(selection, runtime):
+        assert selection["adapter_id"] == adapter
         assert selection["source"] == "huggingface"
         assert selection["offline"] is True
         assert selection["revision"] == "a" * 40
@@ -220,7 +228,9 @@ def test_invalid_integer_entries_are_not_coerced(demo, arguments, field, value):
         config_from_fields(fields, **arguments)
 
 
-@pytest.mark.parametrize("adapter", ["last_value", "seasonal_naive", "chronos_bolt"])
+@pytest.mark.parametrize(
+    "adapter", ["last_value", "seasonal_naive", "chronos_bolt", "timesfm_2p5"]
+)
 def test_model_step_does_not_depend_on_unfilled_data_or_evaluation(arguments, adapter):
     fields = default_fields(adapter)
     fields["revision"] = "a" * 40

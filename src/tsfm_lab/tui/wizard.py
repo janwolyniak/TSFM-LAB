@@ -21,6 +21,11 @@ from textual.widgets import (
 )
 
 from tsfm_lab.config import ConfigError, ExperimentConfig
+from tsfm_lab.models.catalog import (
+    CHECKPOINT_REPOSITORIES,
+    catalog_entries,
+    catalog_info,
+)
 from tsfm_lab.tui.forms import (
     PreparedExperiment,
     default_fields,
@@ -99,9 +104,8 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                     "Forecast model",
                     "adapter",
                     [
-                        ("Last value", "last_value"),
-                        ("Seasonal naive", "seasonal_naive"),
-                        ("Chronos-Bolt", "chronos_bolt"),
+                        (entry["display_name"], entry["adapter_id"])
+                        for entry in catalog_entries()
                     ],
                     self._defaults["adapter"],
                 )
@@ -133,10 +137,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                         yield _selection(
                             "Repository",
                             "repository",
-                            [
-                                ("Chronos-Bolt Tiny", "amazon/chronos-bolt-tiny"),
-                                ("Chronos-Bolt Small", "amazon/chronos-bolt-small"),
-                            ],
+                            self._repository_choices(),
                             self._defaults["repository"],
                         )
                         yield _field(
@@ -200,11 +201,23 @@ class WizardScreen(Screen[ExperimentConfig | None]):
     def _arguments(self) -> dict:
         return {"workspace": self.workspace, "base_directory": self.base_directory}
 
+    def _repository_choices(self, adapter=None) -> list[tuple[str, str]]:
+        repositories = CHECKPOINT_REPOSITORIES.get(
+            adapter or self._defaults["adapter"],
+            CHECKPOINT_REPOSITORIES["chronos_bolt"],
+        )
+        return [
+            (f"{catalog_info(repository)['display_name']} · {repository}", repository)
+            for repository in repositories
+        ]
+
     def _update_model_visibility(self) -> None:
         adapter = self.query_one("#wizard-adapter", Select).value
         source = self.query_one("#wizard-source", Select).value
         self.query_one("#wizard-seasonal-fields").display = adapter == "seasonal_naive"
-        self.query_one("#wizard-checkpoint-fields").display = adapter == "chronos_bolt"
+        self.query_one("#wizard-checkpoint-fields").display = (
+            adapter in CHECKPOINT_REPOSITORIES
+        )
         self.query_one("#wizard-hub-fields").display = source == "huggingface"
         self.query_one("#wizard-local-fields").display = source == "local"
 
@@ -248,9 +261,21 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         self._invalidate()
 
     @on(Select.Changed)
-    def selection_changed(self) -> None:
+    def selection_changed(self, event: Select.Changed) -> None:
         self._invalidate()
         if self.is_mounted:
+            if event.select.id == "wizard-adapter":
+                repository = self.query_one("#wizard-repository", Select)
+                choices = self._repository_choices(event.value)
+                previous = repository.value
+                repository.set_options(choices)
+                repository.value = (
+                    previous
+                    if previous in {value for _, value in choices}
+                    else choices[0][1]
+                )
+                if previous != repository.value:
+                    self.query_one("#wizard-revision", Input).value = ""
             self._update_model_visibility()
 
     @on(Input.Submitted)

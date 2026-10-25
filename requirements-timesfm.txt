@@ -1,0 +1,5 @@
+# Tested TimesFM 2.5 Torch runtime; optional and separate from routine CI.
+timesfm==3.0.2
+torch==2.8.0
+huggingface-hub==0.34.4
+safetensors==0.6.2

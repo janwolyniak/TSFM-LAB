@@ -1,22 +1,25 @@
-"""Pinned, safe Chronos-Bolt checkpoints; only explicit pulls download artifacts."""
+"""Pinned, safe family-specific checkpoints; only explicit pulls download artifacts."""
 
 import hashlib
 import importlib
 import json
-import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
 from tsfm_lab.models.catalog import CURATED_REPOSITORIES
+from tsfm_lab.models.checkpoint_profiles import (
+    checkpoint_adapter,
+    config_metadata,
+    repository_adapter,
+    validate_record_profile,
+)
 
 _FILES = {"config.json", "model.safetensors", "README.md"}
 _REQUIRED = {"config.json", "model.safetensors"}
 _SHA = re.compile(r"[0-9a-f]{40}")
 _HEX = re.compile(r"[0-9a-f]{64}")
-_ARCHITECTURE = "ChronosBoltModelForForecasting"
-_PIPELINE = "ChronosBoltPipeline"
 _MAX_CONFIG_BYTES = 1024 * 1024
 _LOADING_DIRECTIVES = {
     "transformers_weights",
@@ -54,7 +57,7 @@ def _hub():
 def _repository(repository):
     if repository not in CURATED_REPOSITORIES:
         raise CheckpointError(
-            "Only curated Chronos-Bolt tiny/small repositories are supported"
+            "Only curated Chronos-Bolt and TimesFM 2.5 repositories are supported"
         )
 
 
@@ -69,26 +72,6 @@ def _sha(value):
             "An exact lowercase 40-character checkpoint SHA is required"
         )
     return value
-
-
-def _bounds(context, horizon, quantiles):
-    if type(context) is not int or not 0 < context <= 2048:
-        raise CheckpointError("Supported Bolt context length must be in 1..2048")
-    if type(horizon) is not int or not 0 < horizon <= 64:
-        raise CheckpointError("Supported Bolt prediction length must be in 1..64")
-    if (
-        not isinstance(quantiles, list)
-        or not quantiles
-        or any(
-            type(q) not in (int, float) or not math.isfinite(q) or not 0 < q < 1
-            for q in quantiles
-        )
-        or quantiles != sorted(set(quantiles))
-        or 0.5 not in quantiles
-    ):
-        raise CheckpointError(
-            "Bolt quantiles must be ordered, unique, inside (0,1), and include 0.5"
-        )
 
 
 def _security(value):
@@ -120,22 +103,7 @@ def _config(raw: bytes) -> dict:
         if not isinstance(config, dict):
             raise CheckpointError("Checkpoint config must be a JSON object")
         _security(config)
-        if (
-            config.get("architectures") != [_ARCHITECTURE]
-            or config.get("chronos_pipeline_class") != _PIPELINE
-            or config.get("model_type") != "t5"
-        ):
-            raise CheckpointError(
-                "Checkpoint is not a supported Chronos-Bolt architecture"
-            )
-        options = config["chronos_config"]
-        if not isinstance(options, dict):
-            raise CheckpointError("chronos_config must be an object")
-        _bounds(
-            options["context_length"],
-            options["prediction_length"],
-            options["quantiles"],
-        )
+        config_metadata(config)
         return config
     except RecursionError as exc:
         raise CheckpointError("Checkpoint configuration nesting is too deep") from exc
@@ -217,7 +185,6 @@ class ResolvedCheckpoint:
 
     def record(self) -> dict:
         """Return consumed-file identity and native capabilities, excluding raw config."""
-        options = self.config["chronos_config"]
         return json.loads(
             _json(
                 {
@@ -230,12 +197,7 @@ class ResolvedCheckpoint:
                     "files": self.files,
                     "fingerprint": self.fingerprint,
                     "license": self.license,
-                    "architecture": self.config["architectures"][0],
-                    "pipeline_class": self.config["chronos_pipeline_class"],
-                    "model_type": self.config["model_type"],
-                    "native_context_length": options["context_length"],
-                    "native_prediction_length": options["prediction_length"],
-                    "quantiles": options["quantiles"],
+                    **config_metadata(self.config),
                 }
             )
         )
@@ -306,17 +268,7 @@ def validate_checkpoint_record(record: dict) -> dict:
                 or item["size"] <= 0
             ):
                 raise CheckpointError("Invalid checkpoint file identity")
-        if (
-            record["architecture"] != _ARCHITECTURE
-            or record["pipeline_class"] != _PIPELINE
-            or record["model_type"] != "t5"
-        ):
-            raise CheckpointError("Unsupported checkpoint record architecture")
-        _bounds(
-            record["native_context_length"],
-            record["native_prediction_length"],
-            record["quantiles"],
-        )
+        validate_record_profile(record)
         if record["license"] is not None and (
             not isinstance(record["license"], str) or not record["license"].strip()
         ):
@@ -371,6 +323,7 @@ def _inspect(
     config, config_identity = _config_file(
         path / "config.json", path, hub=source == "huggingface"
     )
+    _match_repository(config, repository)
     files, consumed = {"config.json": config_identity}, {}
     for name in sorted(_FILES - {"config.json"}):
         candidate = path / name
@@ -405,6 +358,13 @@ def _inspect(
 
 def inspect_local_checkpoint(path: str | Path) -> ResolvedCheckpoint:
     return _inspect(Path(path), "local")
+
+
+def _match_repository(config: dict, repository):
+    if repository is not None:
+        adapter = checkpoint_adapter(config["architectures"][0])
+        if repository_adapter(repository) != adapter:
+            raise CheckpointError("Checkpoint repository and architecture disagree")
 
 
 def verify_checkpoint(checkpoint: ResolvedCheckpoint) -> ResolvedCheckpoint:
@@ -498,7 +458,8 @@ def pull_checkpoint(
     config_snapshot = _snapshot_path(config_path.parent, repository, resolved)
     if config_path.name != "config.json":
         raise CheckpointError("Hub config download returned an unexpected file")
-    _config_file(config_path, config_snapshot.resolve(), hub=True)
+    config, _ = _config_file(config_path, config_snapshot.resolve(), hub=True)
+    _match_repository(config, repository)
     path = hub.snapshot_download(
         repository,
         revision=resolved,

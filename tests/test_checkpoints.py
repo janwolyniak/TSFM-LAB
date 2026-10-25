@@ -157,6 +157,14 @@ def test_record_fingerprint_is_independent_of_source_paths(tmp_path):
         verify_checkpoint(b)
 
 
+def test_existing_bolt_schema_one_fingerprint_remains_unchanged(tmp_path):
+    checkpoint = inspect_local_checkpoint(write_checkpoint(tmp_path / "checkpoint"))
+    # Frozen from the original schema-1 serializer, before family dispatch.
+    assert checkpoint.fingerprint == (
+        "53094feaa885ccb64a18faa83a4b26a2e897b64b2a10dd0289046ea39b0f1704"
+    )
+
+
 @pytest.mark.parametrize(
     "field,value",
     [

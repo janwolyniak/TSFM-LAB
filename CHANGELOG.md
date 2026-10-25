@@ -13,11 +13,14 @@ The first local release candidate provides:
   command history/completion, progress, and managed process cancellation.
 - An optional CPU Chronos-Bolt adapter with curated checkpoint metadata, explicit
   downloads, exact revision identities, and cached/local-only experiment loading.
+- A second optional CPU adapter, `timesfm_2p5`, with pinned TimesFM 2.5 checkpoint
+  identities, genuine median output, strict local loading, and the same shell,
+  guided setup, comparison, and saved-record workflows.
 - A bundled original seasonal demo, an educational direct-Python adapter example,
   installation/evaluation/extension guides, and source/wheel verification tools.
 
-The verified real model integration is Chronos-Bolt Tiny on CPU. Small is
-cataloged but unexecuted; other families, GPU/MPS, panels, covariates, probability
+The verified real model integrations are Chronos-Bolt Tiny/Small and TimesFM 2.5
+on CPU. Other families, GPU/MPS, panels, covariates, probability
 scoring, training, and domain-specific trading evaluations remain outside this
 candidate. Synthetic examples establish arithmetic and integration behavior,
 without a forecasting-advantage claim.
@@ -25,3 +28,5 @@ without a forecasting-advantage claim.
 See the [release verification record](docs/milestone5-verification.md) for local
 evidence and outstanding platform/publication gates. No package release has been
 published.
+The [second-family record](docs/milestone6-verification.md) adds current CPU
+integration evidence; finance and broader benchmarking remain separately scoped.

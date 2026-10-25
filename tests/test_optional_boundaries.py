@@ -22,7 +22,7 @@ import importlib.abc
 import sys
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        if fullname.split('.')[0] in {'typer', 'rich', 'yaml', 'pyarrow', 'torch', 'huggingface_hub', 'textual', 'prompt_toolkit'}:
+        if fullname.split('.')[0] in {'typer', 'rich', 'yaml', 'pyarrow', 'torch', 'timesfm', 'huggingface_hub', 'textual', 'prompt_toolkit'}:
             raise ModuleNotFoundError(fullname, name=fullname)
 sys.meta_path.insert(0, Block())
 from tsfm_lab.evaluation.runner import run_experiment
@@ -80,7 +80,7 @@ import sys
 from rich.console import Console
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        if fullname.split('.')[0] in {'textual', 'torch', 'chronos', 'huggingface_hub'}:
+        if fullname.split('.')[0] in {'textual', 'torch', 'chronos', 'timesfm', 'huggingface_hub'}:
             raise AssertionError('Unexpected import: ' + fullname)
 sys.meta_path.insert(0, Block())
 from tsfm_lab.repl.session import TerminalSession
