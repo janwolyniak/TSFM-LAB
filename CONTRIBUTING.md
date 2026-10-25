@@ -13,14 +13,14 @@ scope, public interfaces, dependencies, or evaluation methodology before
 implementing them. Do not add cloud infrastructure, a web backend, or model
 training as incidental parts of another change.
 
-The repository currently has no Python package configuration, automated test
-suite, formatter configuration, or CI workflow. This guide establishes workflow
-rules; it does not imply that those checks or GitHub protections are already
-configured. When tooling is introduced, record the exact setup and check commands
-in [README.md](README.md) and configure them in the repository. Prefer Black for
-Python formatting, Ruff for linting, and pytest for tests unless an agreed project
-decision establishes alternatives. Do not install or upgrade dependencies without
-the repository owner's authorization.
+The numerical core has Python packaging, pytest tests, Black formatting, Ruff
+linting, and a lightweight CI workflow. Use the exact setup and check commands in
+[README.md](README.md); keep that guidance and repository configuration current
+when tooling changes. A configured workflow does not imply that remote checks
+have run or GitHub protections are enabled. Prefer Black for Python formatting,
+Ruff for linting, and pytest for tests unless an agreed project decision
+establishes alternatives. Do not install or upgrade dependencies without the
+repository owner's authorization.
 
 Read applicable `AGENTS.md` instructions and current architecture or setup
 documentation before editing the relevant area. Keep shared contribution rules

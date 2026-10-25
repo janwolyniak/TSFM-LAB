@@ -1,0 +1,154 @@
+# Development roadmap and acceptance criteria
+
+The first delivery is a small offline numerical experiment. The first product
+release is the complete terminal workflow with one pretrained model adapter.
+Milestones build on verified behavior; generating module stubs does not satisfy
+their acceptance criteria.
+
+## Current state and review decisions
+
+The repository now contains the numerical Python package, tests, a synthetic
+demonstration, and configured checks/CI. It has no pretrained-model evaluation
+yet. The pre-existing local `PLAN.md` remains the product brief;
+these tracked documents make the actionable proposal usable without relying on
+that untracked file.
+
+The owner agreed to the following initial direction on 25 October 2026:
+
+1. Start with a single regular univariate series, explicit timezone/frequency,
+   no covariates or imputation, and last-value plus seasonal-naive baselines.
+2. Adopt the [core contracts](contracts.md) and
+   [evaluation semantics](evaluation.md), including complete horizons, fixed
+   pre-evaluation MASE scaling, and equal weighting of forecast cases.
+3. Use Python, NumPy, pandas, typed dataclasses, setuptools, pytest, Ruff, and
+   Black for the first implementation. Introduce terminal/model dependencies
+   later. Dependency installation remains a separate authorization.
+4. Use Typer/Rich for shell commands and Textual for the interactive application,
+   sharing application functions and eventually one inference worker process.
+5. Start persistence with run directories and manifests, deferring SQLite and
+   automatic forecast cache lookup.
+6. Integrate Chronos-Bolt Tiny on CPU first, followed by an optional larger Bolt
+   checkpoint; keep Chronos-2 as a separate adapter and finance outside the MVP.
+
+The contribution workflow requires discussion of architecture, interfaces,
+dependencies, and evaluation methodology before implementation. The agreed
+proposal establishes the scope for Milestone 1. It does not authorize
+dependency installation, model downloads, publication, merging, or cloud compute.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for the maintained permission and Git
+workflow rules.
+
+## Milestone 0 Architecture review
+
+Deliver the bounded MVP, stack, contracts, methodology, checkpoint plan, repository
+structure, and acceptance criteria. Review the following before closing it:
+
+- [x] Architecture critique and proposed simplifications are documented.
+- [x] Dataset, model, forecast, and experiment contracts are specified.
+- [x] Temporal and metric definitions include boundary and undefined cases.
+- [x] First adapter candidates and official sources are identified.
+- [x] Implementation milestones have observable acceptance criteria.
+- [x] Owner agrees to the implementation scope and proposed choices.
+
+## Milestone 1 Numerical evaluation core
+
+Implemented and verified locally. CI is configured but has not run remotely;
+the supported matrix and a fresh dependency installation remain to be exercised.
+
+Implement only the Python numerical workflow. No UI, remote models, database,
+or domain-specific metrics are needed to pass this milestone.
+
+| Task | Deliverable and required verification |
+| --- | --- |
+| M1.1 Package and checks | Add `pyproject.toml`, a `src` package, declared core/dev dependencies, and pytest/Ruff/Black configuration. Build and inspect a wheel; document exact setup/check commands. Add lightweight Linux/macOS CI for the supported Python matrix. |
+| M1.2 Contracts | Implement validated dataset, evaluation, request, output, model metadata, and result types. Reject invalid integer lengths, unsupported fields, and impossible evaluation bounds. |
+| M1.3 CSV import | Explicit column/timezone/frequency mapping, finite numeric values, strict grid validation, and versioned fingerprints. Test duplicates, unordered rows, gaps, timezone ambiguity, and invalid values. |
+| M1.4 Windows | Implement fixed-context rolling origins with separate detached requests and evaluator-only truth. Test exact timestamp bounds, window counts, and incomplete horizons. |
+| M1.5 Baselines | Last-value and seasonal-naive adapters with the same protocol. Test multiple leads, season wrap, and insufficient context. |
+| M1.6 Metrics | Implement pooled and per-lead MAE/RMSE/MASE, explicit scale metadata, and undefined statuses. Check against independent hand calculations. |
+| M1.7 Runner | Validate before inference, load once, score aligned outputs, and always release model resources. Test malformed adapters, failed runs, and future-value perturbations. |
+| M1.8 Demonstration | Bundle a small original synthetic seasonal CSV with generation formula/provenance and a runnable Python example. Repeated runs reproduce predictions and method metadata. |
+
+Acceptance: a clean local environment can execute the documented example offline
+and inspect aligned predictions and scores. Tests, formatting, linting, and wheel
+checks pass. CI requires no model downloads, credentials, or GPUs. The package
+core imports without any terminal or model runtime. A hand-worked fixture verifies
+that reported metrics mean what the documentation says.
+
+## Milestone 2 Shell workflow and experiment records
+
+Add Typer/Rich, safe YAML configuration, Parquet ingestion/export, UUID run
+directories, configuration snapshots, JSON manifests/metrics, prediction export,
+history, and compatibility checks for comparisons. Start with synchronous runs.
+
+Acceptance: a user can run a baseline experiment, inspect it from a separate
+process, compare two compatible runs, and export/reload predictions without
+inference. Relative paths resolve against the config file. Invalid configs fail
+before work begins. JSON is parseable without terminal decoration, and automated
+commands never prompt. Atomic-write and failure-injection tests show that partial
+runs do not appear completed. Package installation exposes the `tsfm` command.
+
+## Milestone 3 First pretrained adapter
+
+Add a small explicit model catalog, optional Chronos dependencies, metadata-first
+validation, Hub revision resolution, explicit model pulls, cache reuse, offline
+loading, and the Chronos-Bolt adapter. Verify version-specific output shapes,
+median point semantics, safe loading, context/horizon limits, and CPU behavior.
+
+The current tiny checkpoint configuration specifies context length 2048 and
+native prediction length 64. The first adapter should reject longer requests
+until horizon extension is specified and tested, and reject excess context
+rather than relying on silent truncation.
+[Official checkpoint configuration](https://huggingface.co/amazon/chronos-bolt-tiny/blob/main/config.json).
+Recheck these limits at the resolved checkpoint revision during implementation.
+
+Acceptance: after an explicitly authorized download, a user evaluates the exact
+resolved checkpoint on local synthetic data. A second run uses cached files and
+works offline. Mocked Hub/adapter tests cover moving revisions, missing files,
+unsupported architectures, and missing optional dependencies. A separately
+tested local checkpoint path loads without network access; its file manifest
+changes identity when a file changes. A separately
+marked real CPU smoke test records checkpoint SHA, dependency versions, device,
+shapes, and finite aligned outputs. This proves integration, not model advantage.
+
+## Milestone 4 Interactive terminal
+
+Add model/dataset selection, a validated experiment wizard, progress and errors,
+results, history, comparison, and cancellation. Use the same configuration objects
+and application functions as shell commands. Introduce one managed inference
+process and persisted stage transitions when needed for responsiveness.
+
+Acceptance: a user completes the documented synthetic baseline workflow using
+only keyboard navigation. Invalid selections block submission with actionable
+errors. Headless interaction tests cover navigation, execution, failure, and
+cancellation. Inspect rendered terminal screens at common sizes, including
+80 by 24. Both terminal modes produce equivalent numerical results; a cancelled
+or crashed process never becomes a completed experiment.
+
+## Milestone 5 First public release
+
+Complete installation and methodology documentation, a baseline demo and pinned
+Chronos example, optional dependency instructions, model/license metadata, CI,
+and adapter extension guidance. Keep downloads out of routine checks and results
+claims within the recorded evidence.
+
+Acceptance: an external user can install a built package, run the baseline demo
+offline, explicitly pull a checkpoint, run a saved config, and reload/export its
+results. Verify the clean-install path on the advertised platform/Python matrix.
+Publish only within owner authorization and the contribution workflow.
+
+## Later work
+
+Evaluate fev reuse before panels, covariates, or probability scoring. Add
+Chronos-2 or TimesFM only after the first adapter passes its contract; each new
+family must establish its own capabilities and verified runtime matrix.
+
+Finance can consume the generic aligned output after its data timing, target,
+signal availability, execution prices, costs, capital, and risk conventions have
+been specified separately. Forecast accuracy and trading performance remain
+different evaluations. A second domain must be possible without importing
+finance into the core.
+
+SQLite indexing, resumability, forecast caches, environment isolation, advanced
+terminal charts, and performance telemetry require a demonstrated need.
+Training, fine-tuning, web infrastructure, and distributed compute are outside
+this roadmap.
