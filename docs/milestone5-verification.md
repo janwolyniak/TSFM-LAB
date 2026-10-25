@@ -52,13 +52,17 @@ remain in the reviewed changes.
 ## Remaining release gates
 
 Linux/macOS Python 3.11–3.13 CI is configured, with a wheel rebuilt from the source
-archive and installed into a separate clean environment. The remote matrix has
-not been run here. Windows and other Python/platform combinations remain unverified.
+archive and installed into a separate clean environment. The
+[first remote run](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40229631472)
+passed all three macOS jobs and exposed a Linux test assertion that assumed a
+workspace path stayed on one display line. That assertion was corrected without
+changing runtime behavior; the current candidate must pass the full matrix before
+integration. Windows and other Python/platform combinations remain unverified.
 The prior pinned Tiny CPU integration remains historical evidence; this step
 does not make a new model-advantage claim.
 
 Local implementation and installation checks are complete. The public-release
-milestone remains gated on the unrun platform matrix, reviewed integration of the
+milestone remains gated on a successful platform matrix, reviewed integration of the
 prerequisite branches, and explicit owner approval to publish.
 
 Final artifact paths, sizes, SHA-256 identities, and source Git state are emitted by
@@ -70,5 +74,6 @@ against that artifact. An untracked local brief can make the reported Git state
 dirty even when task-owned tracked changes are committed; its content is excluded.
 
 The pre-existing untracked `PLAN.md` remains unchanged and excluded from the
-distribution. No push, pull request, merge, tag, package upload, or public release
-has been performed.
+distribution. The original local preparation did not push, open a pull request,
+merge, tag, or upload a package. Subsequent branch publication and integration
+are recorded in repository history; package publication remains a separate gate.
