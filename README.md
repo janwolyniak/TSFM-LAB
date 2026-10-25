@@ -1,25 +1,45 @@
 # TSFM Lab
 
+**Local time-series forecast evaluation with reproducible experiments.**
+
+[![Source version: 0.1.0](https://img.shields.io/badge/source-v0.1.0-2563eb)](pyproject.toml)
+[![Release: in preparation](https://img.shields.io/badge/release-in_preparation-d97706)](docs/release-v0.1.0.md)
+[![Python checks](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml/badge.svg?branch=main&event=push)](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
+[![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](docs/installation.md)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-15803d)](LICENSE)
+
+[Quick start](#run-the-offline-example) ·
+[Terminal walkthrough](docs/tui.md) ·
+[Chronos-Bolt](docs/chronos.md) ·
+[Release notes](docs/release-v0.1.0.md) ·
+[Contributing](CONTRIBUTING.md)
+
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and an optional
 Chronos-Bolt adapter. Financial analysis remains a later extension.
 
 ## Project status
 
-Milestones 1 and 2 provide an offline Python and shell workflow: load one regular
-numeric series from CSV or Parquet, configure rolling baseline forecasts in YAML,
-save experiment records, inspect history, compare compatible runs, and export
-predictions. Scores include pooled/per-lead MAE, RMSE, and MASE. The `tsfm` command
-uses optional terminal dependencies; the numerical core remains independent.
-Milestone 3 adds curated checkpoint selection, explicit pulls, exact revisions,
-verified local/cache-only Chronos-Bolt inference, and model-runtime provenance.
-The interactive workflow uses a persistent local prompt, slash commands, inline
-setup questions, progress/cancellation, saved results, comparison, and export.
-Output stays in terminal scrollback. Other model families remain later work.
-Release-candidate tooling now builds and verifies source/wheel packages and checks
-installation in a clean environment. Publication remains pending; see the
-[release record](docs/milestone5-verification.md) and
-[current CI results](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml).
+- **Evaluate:** import one regular numeric series from CSV or optional Parquet,
+  configure rolling forecasts in YAML, and score pooled/per-lead MAE, RMSE, and MASE.
+- **Reproduce:** save experiment records, inspect history, compare compatible
+  runs, and export aligned predictions as CSV, JSON, or optional Parquet.
+- **Work locally:** use the Python core, scriptable `tsfm` commands, or a
+  persistent terminal prompt with inline setup, progress, and cancellation.
+  Output stays in terminal scrollback; terminal dependencies remain optional.
+- **Add pretrained forecasts:** use the optional Chronos-Bolt adapter with
+  curated checkpoints, explicit downloads, exact revisions, local/cache-only
+  experiments, and recorded runtime provenance. Other model families remain
+  later work.
+
+### Release status
+
+The source version is **0.1.0**. The first GitHub Release is being prepared;
+no GitHub or PyPI package release has been published. See the
+[draft release notes](docs/release-v0.1.0.md),
+[release verification record](docs/milestone5-verification.md), and
+[publication checklist](docs/releasing.md). The CI badge above tracks checks on
+`main`; it does not indicate that a package has been published.
 
 ## Run the offline example
 

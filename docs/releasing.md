@@ -14,6 +14,11 @@ and the repository's configured checks passing. Follow the maintained
 [development and merge workflow](../CONTRIBUTING.md), rather than creating an
 independent release branch policy here.
 
+Keep the README's source-version badge consistent with both version fields.
+Its release-status badge and text describe publication separately. The static
+metadata badges work for this private repository; the native GitHub Actions badge
+tracks `main` checks for users with repository access.
+
 Record the Git revision, package version, Python version, operating system,
 installed build tools, dependency constraints, and exact commands. Refer to the
 [README checks](../README.md#checks) for formatting, linting, and tests. Routine
@@ -137,3 +142,18 @@ publication destination to the owner. Publication approval is separate from
 approval to implement, install dependencies, build local artifacts, or run tests.
 Until that approval is given, retain the candidate locally and report its status
 without uploading, tagging, or claiming that PyPI/GitHub publication has occurred.
+
+For the first GitHub Release, start from the
+[prepared release notes](release-v0.1.0.md). Once publication is authorized,
+finalize the README's release badge/status and the changelog, remove the notes'
+preparation-status paragraph, and change their documentation links from `main`
+to `v0.1.0`. A GitHub Release does not imply PyPI publication. Do not use a public
+Shields GitHub-release lookup for this private repository.
+
+Review, commit, and integrate that final wording before freezing the release
+revision. Rebuild the source distribution and wheel from that exact revision
+and repeat the affected installation checks; the preparation candidate's hashes
+do not identify these new artifacts. Create tag `v0.1.0` at the verified revision
+and attach its wheel, source distribution, and `SHA256SUMS` to the authorized
+GitHub Release. Include the exact source revision, check results, and artifact
+hashes in the release body so the tag and downloadable files agree.
