@@ -1,5 +1,9 @@
 # Release-readiness verification record
 
+This records the local candidate preparation. Subsequent matrix runs and merge
+status are tracked in [GitHub Actions](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
+and the repository history; the local counts below identify the original check.
+
 Date: 25 October 2026. Branch: `build/release-readiness`, based on the unmerged
 persistent-terminal branch at `5dca17d`. The owner accepted the terminal and
 authorized the next implementation milestone, then separately authorized a clean

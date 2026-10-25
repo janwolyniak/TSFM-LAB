@@ -2,6 +2,7 @@ import io
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from rich.console import Console
 
 from tsfm_lab.application import run_config, run_from_config
@@ -110,15 +111,20 @@ def test_idle_interrupt_then_eof_closes_without_creating_workspace(tmp_path):
     assert not app.workspace.exists()
 
 
-def test_workspace_switch_resets_session_ids_without_creating_directory(tmp_path):
+@pytest.mark.parametrize("width", [20, 80, 120])
+def test_workspace_switch_resets_session_ids_without_creating_directory(
+    tmp_path, width
+):
     app, output = session(tmp_path / "old", Editor([]))
+    app.console.width = width
     app.last_run, app.known_ids = "old-id", ["old-id"]
     app.dispatch(f'/workspace "{tmp_path / "new directory"}"')
     assert app.records.workspace == tmp_path / "new directory"
     assert app.last_run is None
     assert app.known_ids == []
     assert not app.workspace.exists()
-    assert "new directory" in output.getvalue()
+    rendered = "".join(output.getvalue().split())
+    assert "".join(str(app.workspace).split()) in rendered
 
 
 def test_saved_config_respects_its_output_directory(config_factory, tmp_path):

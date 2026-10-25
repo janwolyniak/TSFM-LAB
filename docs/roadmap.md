@@ -162,9 +162,12 @@ Local release-candidate preparation is implemented and verified. See the
 - [x] Clean core/CLI/Parquet installation passes locally on Python 3.13 macOS.
 - [x] Installation, methodology, model/license, and adapter guidance are available.
 - [x] Clean installed-wheel verification is configured in the CI matrix.
-- [ ] Remote Linux/macOS Python 3.11–3.13 matrix has passed for the candidate.
 - [ ] Prerequisite branches are reviewed/integrated and publication is authorized.
 - [ ] Approved package release is published.
+
+The Linux/macOS Python 3.11–3.13 matrix is a live merge/release gate. Its current
+status is tracked in [GitHub Actions](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
+and must pass for the candidate before integration or publication.
 
 Complete installation and methodology documentation, a baseline demo and pinned
 Chronos example, optional dependency instructions, model/license metadata, CI,

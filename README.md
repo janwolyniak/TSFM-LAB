@@ -17,8 +17,9 @@ The interactive workflow uses a persistent local prompt, slash commands, inline
 setup questions, progress/cancellation, saved results, comparison, and export.
 Output stays in terminal scrollback. Other model families remain later work.
 Release-candidate tooling now builds and verifies source/wheel packages and checks
-installation in a clean environment. Publication and the remote CI matrix remain
-pending; see the [release record](docs/milestone5-verification.md).
+installation in a clean environment. Publication remains pending; see the
+[release record](docs/milestone5-verification.md) and
+[current CI results](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml).
 
 ## Run the offline example
 
@@ -173,7 +174,7 @@ the original headless Textual regression tests; those skip when Textual is
 unavailable. The active prompt uses `[cli]`; its tests include real pseudo-terminal
 interactions. CI installs both sets without model downloads. The configured CI matrix covers Python 3.11,
 3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
-remote CI remains unexecuted. The release checks include an installation into a
+the live matrix status is available in the CI results linked above. Release checks include an installation into a
 clean environment; see the [Milestone 5 record](docs/milestone5-verification.md).
 See the [Milestone 1 record](docs/verification.md) and
 [Milestone 2 record](docs/milestone2-verification.md), plus the
