@@ -1,0 +1,337 @@
+"""Inline experiment questions over the shared configuration and evaluation rules."""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Callable
+from pathlib import Path
+
+from tsfm_lab.config import ConfigError, ExperimentConfig
+from tsfm_lab.contracts import fixed_interval, utc_timestamp
+from tsfm_lab.evaluation.windows import evaluation_bounds
+from tsfm_lab.models.factory import build_model
+from tsfm_lab.tui.forms import (
+    config_from_fields,
+    default_fields,
+    demo_fields,
+    inspect_data,
+    prepare_experiment,
+    suggested_bounds,
+    validate_model_fields,
+)
+
+_ADAPTERS = ("last_value", "seasonal_naive", "chronos_bolt")
+_REPOSITORIES = ("amazon/chronos-bolt-tiny", "amazon/chronos-bolt-small")
+
+
+class _Cancel(Exception):
+    pass
+
+
+class _Back(Exception):
+    pass
+
+
+def _required(value: str) -> None:
+    if not value.strip():
+        raise ConfigError("Enter a value, or /cancel to stop setup")
+
+
+def _positive(value: str) -> int:
+    if re.fullmatch(r"[0-9]+", value) is None:
+        raise ConfigError("Enter a positive whole number")
+    try:
+        result = int(value)
+    except ValueError as exc:
+        raise ConfigError("That number is too large") from exc
+    if result <= 0:
+        raise ConfigError("Enter a number greater than zero")
+    return result
+
+
+def _question(ask, emit, label, default="", choices=(), validate=None) -> str:
+    while True:
+        answer = ask(label, default=default, choices=tuple(choices))
+        if not isinstance(answer, str):
+            emit("Enter text, or /cancel to stop setup.")
+            continue
+        answer = answer.strip()
+        if answer == "/cancel":
+            raise _Cancel
+        if answer == "/back":
+            raise _Back
+        answer = answer or default
+        aliases = {"y": "yes", "n": "no"}
+        if choices:
+            canonical = aliases.get(answer.casefold(), answer.casefold())
+            if canonical not in choices:
+                emit(f"Choose {', '.join(choices)}, or /cancel.")
+                continue
+            answer = canonical
+        try:
+            if validate:
+                validate(answer)
+        except (ConfigError, ValueError, OSError, RuntimeError, OverflowError) as exc:
+            emit(str(exc))
+            continue
+        return answer
+
+
+class _Guide:
+    def __init__(self, ask, emit, workspace, demo_path, adapter):
+        self.ask, self.emit = ask, emit
+        self.workspace, self.demo_path = Path(workspace), Path(demo_path).resolve()
+        self.arguments = {"workspace": self.workspace, "base_directory": Path.cwd()}
+        self.fields = default_fields(adapter or "last_value")
+        self.fields["dataset_path"] = str(self.demo_path)
+        self.dataset = self.capabilities = None
+        self._evaluation_started = False
+
+    def set(self, key, label, *, choices=(), validate=None, default=None):
+        self.fields[key] = _question(
+            self.ask,
+            self.emit,
+            label,
+            self.fields[key] if default is None else default,
+            choices,
+            validate,
+        )
+
+    def model(self):
+        self.set("adapter", "Model adapter", choices=_ADAPTERS)
+        if self.fields["adapter"] == "seasonal_naive":
+            self.set("seasonal_period", "Baseline seasonal period", validate=_positive)
+        elif self.fields["adapter"] == "chronos_bolt":
+            self.emit(
+                "Use an existing cached or local checkpoint; setup does not download models."
+            )
+            source = _question(
+                self.ask,
+                self.emit,
+                "Checkpoint source",
+                "cached" if self.fields["source"] == "huggingface" else "local",
+                ("cached", "local"),
+            )
+            self.fields["source"] = "huggingface" if source == "cached" else "local"
+            if source == "cached":
+                self.set("repository", "Checkpoint repository", choices=_REPOSITORIES)
+                self.set("revision", "Exact checkpoint SHA", validate=self._sha)
+                self.set("cache_dir", "Cache directory (optional; - uses the default)")
+                if self.fields["cache_dir"] == "-":
+                    self.fields["cache_dir"] = ""
+            else:
+                self.set(
+                    "checkpoint_path", "Local checkpoint directory", validate=_required
+                )
+        validate_model_fields(self.fields, **self.arguments)
+        prototype = {
+            **self.fields,
+            "dataset_path": str(self.demo_path),
+            "context_length": (
+                self.fields["seasonal_period"]
+                if self.fields["adapter"] == "seasonal_naive"
+                else "1"
+            ),
+            "horizon": "1",
+            "evaluation_start": "2000-01-01T01:00:00Z",
+            "evaluation_end": "2000-01-01T02:00:00Z",
+        }
+        config = config_from_fields(prototype, **self.arguments)
+        model = build_model(config.model, config.runtime)
+        self.capabilities = model.metadata().capabilities
+
+    @staticmethod
+    def _sha(value):
+        if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+            raise ConfigError("Enter an exact 40-character lowercase checkpoint SHA")
+
+    def _data_path(self, value):
+        _required(value)
+        if "://" in value or value.startswith("//"):
+            raise ConfigError("Choose a local CSV or Parquet file")
+        path = Path(value).expanduser()
+        if path.suffix.lower() not in {".csv", ".parquet", ".pq"} or not path.is_file():
+            raise ConfigError("Choose an existing local CSV or Parquet file")
+
+    def data(self):
+        self.set("dataset_path", "Dataset path", validate=self._data_path)
+        if Path(self.fields["dataset_path"]).expanduser().resolve() == self.demo_path:
+            selected = demo_fields(self.demo_path)
+            for key in (
+                "timestamp_column",
+                "target_column",
+                "frequency",
+                "timezone",
+                "units",
+            ):
+                self.fields[key] = selected[key]
+        else:
+            for key, label, validator in (
+                ("timestamp_column", "Timestamp column", _required),
+                ("target_column", "Target column", _required),
+                ("frequency", "Observation frequency", fixed_interval),
+                (
+                    "timezone",
+                    "Source timezone (optional; - leaves it unspecified)",
+                    None,
+                ),
+                ("units", "Target units", _required),
+            ):
+                self.set(key, label, validate=validator)
+            if self.fields["timezone"] == "-":
+                self.fields["timezone"] = ""
+        self.dataset = inspect_data(self.fields, **self.arguments)
+        self.emit(
+            f"Validated {len(self.dataset.values)} observations of {self.dataset.target_name} ({self.dataset.units}), frequency {self.dataset.frequency}."
+        )
+
+    def _limits(self):
+        size, caps = len(self.dataset.values), self.capabilities
+        maximum = min(size - 1, caps.max_context or size - 1)
+        if maximum < caps.min_context:
+            raise ConfigError(
+                "The dataset is too short for this model's minimum context"
+            )
+        return caps.min_context, maximum
+
+    def evaluation(self):
+        low, high = self._limits()
+        if not self._evaluation_started:
+            context = max(low, min(8, len(self.dataset.values) // 2, high))
+            horizon = min(
+                4,
+                len(self.dataset.values) - context,
+                self.capabilities.max_horizon or 4,
+            )
+            self.fields.update(
+                context_length=str(context),
+                horizon=str(horizon),
+                stride=str(horizon),
+                mase_period=str(min(4, context)),
+            )
+            self._evaluation_started = True
+        self.set("name", "Experiment name", validate=_required)
+
+        def context_limit(value):
+            if not low <= _positive(value) <= high:
+                raise ConfigError(
+                    f"Context length must be between {low} and {high} observations"
+                )
+
+        self.set("context_length", "Context length", validate=context_limit)
+        maximum_horizon = min(
+            len(self.dataset.values) - int(self.fields["context_length"]),
+            self.capabilities.max_horizon or len(self.dataset.values),
+        )
+
+        def horizon_limit(value):
+            if _positive(value) > maximum_horizon:
+                raise ConfigError(
+                    f"Forecast horizon must be between 1 and {maximum_horizon} observations"
+                )
+
+        self.set("horizon", "Forecast horizon", validate=horizon_limit)
+        self.set("stride", "Evaluation stride", validate=_positive)
+        self.set("mase_period", "MASE seasonal lag", validate=_positive)
+        proposals = suggested_bounds(self.dataset, self.fields)
+        for key, value in proposals.items():
+            if not self.fields[key]:
+                self.fields[key] = value
+        self.set(
+            "evaluation_start",
+            "First target timestamp (inclusive)",
+            validate=self._start,
+        )
+        self.set(
+            "evaluation_end", "Target end timestamp (exclusive)", validate=self._end
+        )
+
+    def _start(self, value):
+        timestamp = utc_timestamp(value, "First target timestamp")
+        position = int(self.dataset.timestamps.get_indexer([timestamp])[0])
+        if position < int(self.fields["context_length"]):
+            raise ConfigError(
+                "The first target must be on the dataset grid with sufficient preceding context"
+            )
+        if position + int(self.fields["horizon"]) > len(self.dataset.values):
+            raise ConfigError("The first target leaves no complete forecast horizon")
+
+    def _end(self, value):
+        candidate = {**self.fields, "evaluation_end": value}
+        config = config_from_fields(candidate, **self.arguments)
+        evaluation_bounds(self.dataset, config.evaluation)
+
+    def run(self):
+        phase = 0
+        self.emit("New experiment. Enter /back to revisit a step or /cancel to stop.")
+        while True:
+            try:
+                if phase == 0:
+                    self.model()
+                elif phase == 1:
+                    self.data()
+                elif phase == 2:
+                    self.evaluation()
+                else:
+                    prepared = prepare_experiment(self.fields, **self.arguments)
+                    self.emit(prepared.summary())
+                    answer = _question(
+                        self.ask,
+                        self.emit,
+                        "Run experiment?",
+                        "no",
+                        ("yes", "no", "back"),
+                    )
+                    if answer == "yes":
+                        return prepared.config
+                    if answer == "no":
+                        return None
+                    phase = 2
+                    continue
+                phase += 1
+            except _Back:
+                phase = max(0, phase - 1)
+            except (ConfigError, ValueError, OSError, ImportError) as exc:
+                self.emit(str(exc))
+                try:
+                    answer = _question(
+                        self.ask,
+                        self.emit,
+                        "Setup needs attention: retry, back, or cancel?",
+                        "cancel",
+                        ("retry", "back", "cancel"),
+                    )
+                except _Back:
+                    answer = "back"
+                if answer == "cancel":
+                    return None
+                phase = max(0, phase - 1) if answer == "back" else min(phase, 2)
+
+
+def build_experiment(
+    ask: Callable,
+    emit: Callable[[str], None],
+    *,
+    workspace: Path,
+    demo_path: Path,
+    adapter: str | None = None,
+    demo: bool = False,
+) -> ExperimentConfig | None:
+    """Ask inline questions and return a reviewed config without execution or writes."""
+    try:
+        if not demo:
+            return _Guide(ask, emit, workspace, demo_path, adapter).run()
+        if adapter == "chronos_bolt":
+            raise ConfigError("Use guided setup to select a Chronos-Bolt checkpoint")
+        fields = demo_fields(demo_path)
+        fields["adapter"] = adapter or "last_value"
+        arguments = {"workspace": workspace, "base_directory": Path.cwd()}
+        dataset = inspect_data(fields, **arguments)
+        fields.update(suggested_bounds(dataset, fields))
+        prepared = prepare_experiment(fields, **arguments)
+        emit(prepared.summary())
+        answer = _question(ask, emit, "Run experiment?", "no", ("yes", "no"))
+        return prepared.config if answer == "yes" else None
+    except (_Cancel, _Back):
+        emit("Experiment setup cancelled.")
+        return None

@@ -72,3 +72,7 @@ data/raw/**
 data/processed/**
 data/artifacts/**
 !data/raw/.gitkeep
+
+# Local experiment artifacts and exports.
+results/
+model-cache/

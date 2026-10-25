@@ -1,0 +1,27 @@
+schema_version: 1
+name: seasonal-demo-seasonal-naive
+model:
+  source: builtin
+  adapter_id: seasonal_naive
+  options:
+    seasonal_period: 4
+dataset:
+  path: ../datasets/seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+evaluation:
+  context_length: 8
+  horizon: 4
+  stride: 4
+  evaluation_start: "2026-01-01T16:00:00Z"
+  evaluation_end: "2026-01-02T08:00:00Z"
+  seasonal_period: 4
+  metrics: [mae, rmse, mase]
+runtime:
+  device: cpu
+  batch_size: 1
+  seed: 0
+output:
+  directory: ../../results

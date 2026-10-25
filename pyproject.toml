@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tsfm-lab"
+version = "0.1.0"
+description = "Local, domain-independent time-series forecast evaluation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = ["numpy>=1.26,<3", "pandas>=2.2,<3"]
+
+[project.urls]
+Repository = "https://github.com/janwolyniak/TSFM-LAB"
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.15,<0.16", "black>=26,<27"]
+cli = ["typer>=0.24,<0.25", "rich>=14,<15", "PyYAML>=6,<7", "prompt-toolkit>=3.0.50,<3.1"]
+parquet = ["pyarrow>=23,<24"]
+hub = ["huggingface-hub==0.34.4"]
+tui = ["tsfm-lab[cli]", "textual==8.2.8"]
+chronos = [
+    "chronos-forecasting==2.2.0",
+    "torch>=2.8,<2.9",
+    "transformers>=4.55,<4.56",
+    "huggingface-hub==0.34.4",
+    "safetensors>=0.6,<0.7",
+    "accelerate>=1.12,<1.13",
+]
+
+[project.scripts]
+tsfm = "tsfm_lab.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"tsfm_lab.resources" = ["*.csv"]
+"tsfm_lab.tui" = ["*.tcss"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--strict-config --strict-markers"
+markers = ["chronos_smoke: explicit local checkpoint and installed runtime required; never downloads"]
+
+[tool.black]
+target-version = ["py311"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
