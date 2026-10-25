@@ -1,0 +1,67 @@
+Screen {
+    background: #0b1422;
+    color: #dce7f4;
+}
+Header, Footer {
+    background: #132239;
+}
+#home-body, #running-body {
+    padding: 1 2;
+}
+#home-brand, #running-title {
+    height: 2;
+    color: #51d7c7;
+    text-style: bold;
+}
+#home-subtitle {
+    height: 2;
+    color: #b4c7de;
+}
+#workspace-label {
+    height: 1;
+}
+#workspace-path {
+    height: 3;
+}
+#home-actions {
+    layout: grid;
+    grid-size: 2;
+    grid-columns: 1fr 1fr;
+    grid-rows: 3 3;
+    grid-gutter: 1 2;
+    height: 7;
+    margin: 1 0;
+}
+#home-actions Button {
+    width: 100%;
+    height: 3;
+}
+#home-description, #home-status {
+    height: auto;
+    margin-top: 1;
+    color: #b4c7de;
+}
+#execution-target {
+    height: auto;
+}
+#execution-stage {
+    height: 2;
+    margin-top: 1;
+}
+#execution-progress, #execution-count {
+    height: 1;
+}
+#execution-log {
+    height: 1fr;
+    min-height: 5;
+    margin-top: 1;
+    border: solid #29415f;
+}
+#running-actions {
+    height: 3;
+    margin: 0 2 1 2;
+}
+#running-actions Button {
+    width: 1fr;
+    margin-right: 1;
+}

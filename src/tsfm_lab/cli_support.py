@@ -20,6 +20,8 @@ def guard(function):
     def wrapped(*args, **kwargs):
         try:
             return function(*args, **kwargs)
+        except typer.Exit:
+            raise
         except (ConfigError, ComparisonError, ExportError) as exc:
             print(f"Error: {exc}", file=sys.stderr)
             raise typer.Exit(2) from exc

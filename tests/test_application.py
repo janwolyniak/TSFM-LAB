@@ -3,8 +3,8 @@ import json
 import pytest
 
 from tsfm_lab import application
-from tsfm_lab.application import RunExecutionError, run_from_config
-from tsfm_lab.config import ConfigError
+from tsfm_lab.application import RunExecutionError, run_config, run_from_config
+from tsfm_lab.config import ConfigError, load_config
 from tsfm_lab.experiments import ExperimentStore
 
 
@@ -89,3 +89,69 @@ def test_repeated_runs_get_new_ids_and_reproducible_scores(config_factory):
     assert first["run_id"] != second["run_id"]
     assert first["metrics"] == second["metrics"]
     assert first["metrics"]["mae"]["value"] == 1
+
+
+def test_created_callback_exposes_pending_identity_before_inference(config_factory):
+    config = load_config(config_factory())
+    identities = []
+
+    def created(run_id):
+        identities.append(run_id)
+        assert (
+            ExperimentStore(config.output_directory).get_manifest(run_id)["status"]
+            == "pending"
+        )
+
+    result = run_config(config, on_created=created)
+    assert identities == [result["run_id"]]
+
+
+def test_cancellation_before_preflight_creates_no_artifacts(config_factory):
+    config = load_config(config_factory())
+    with pytest.raises(KeyboardInterrupt):
+        run_config(config, should_cancel=lambda: True)
+    assert not config.output_directory.exists()
+
+
+def test_cancellation_immediately_after_creation_retains_cancelled_record(
+    config_factory,
+):
+    config = load_config(config_factory())
+    cancelled = False
+
+    def created(run_id):
+        nonlocal cancelled
+        cancelled = True
+
+    with pytest.raises(KeyboardInterrupt):
+        run_config(config, on_created=created, should_cancel=lambda: cancelled)
+    (record,) = ExperimentStore(config.output_directory).list_runs()
+    assert record["status"] == "cancelled"
+    assert record["error"]["stage"] == "pending"
+
+
+def test_cancellation_after_completed_manifest_preserves_truth(
+    config_factory, monkeypatch
+):
+    import tsfm_lab.experiments as records
+
+    original = records._atomic
+
+    def committed_then_interrupted(path, content):
+        original(path, content)
+        if (
+            path.name == "manifest.json"
+            and json.loads(content)["status"] == "completed"
+        ):
+            raise KeyboardInterrupt("late interrupt")
+
+    monkeypatch.setattr(records, "_atomic", committed_then_interrupted)
+    config = load_config(config_factory())
+    result = run_config(config)
+    assert result["status"] == "completed"
+    assert (
+        ExperimentStore(config.output_directory).get_manifest(result["run_id"])[
+            "status"
+        ]
+        == "completed"
+    )

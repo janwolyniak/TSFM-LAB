@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -c requirements-dev.txt -e '.[dev,cli,parquet]'
+      - run: python -m pip install -c requirements-dev.txt -c requirements-tui.txt -e '.[dev,cli,parquet,tui]'
       - run: python -m black --check src tests examples
       - run: python -m ruff check src tests examples
       - run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest

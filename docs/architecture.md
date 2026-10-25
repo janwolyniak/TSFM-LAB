@@ -1,8 +1,8 @@
 # TSFM Lab architecture proposal
 
 Status: initial direction agreed on 25 October 2026. The numerical core is
-implemented along with shell commands, local records, and the Chronos-Bolt adapter.
-Interactive terminal and additional pretrained-model sections describe later work.
+implemented along with shell commands, local records, the Chronos-Bolt adapter,
+and the interactive terminal. Additional pretrained models remain later work.
 
 TSFM Lab should make a local forecasting evaluation reproducible from dataset
 selection through exported predictions. The first engineering goal is a verified
@@ -109,26 +109,30 @@ consume validated predictions and their metadata through ordinary Python calls.
 
 ## Terminal execution and cancellation
 
-First run the numerical core synchronously. Add `tsfm run`, `models list`,
-`datasets inspect`, `experiments list/show`, `compare`, and `export` as the shell
-workflow matures. These are proposed command names, not current commands.
+The shell exposes `tsfm run`, `models list/info/pull`, `datasets inspect`,
+`experiments list/show`, `compare`, and `export`. The numerical and shell execution
+paths are synchronous. `tsfm ui --workspace results` opens the interactive workflow.
 
-Before the TUI is implemented, `tsfm` without arguments shows help. At the TUI
-milestone it launches the application only on an interactive terminal; redirected
-input/output must never launch a full-screen interface or ask an unexpected
-question. Use stdout for results, stderr for progress and errors, and `--json`
-for structured outputs. Proposed exit codes are 0 for success, 2 for invalid
-configuration, 1 for execution failure, and 130 for user cancellation.
+`tsfm` without arguments launches the application only when both input and output
+are terminals; otherwise it prints help. Explicit `tsfm ui` rejects redirected
+input/output. Named commands never enter the full-screen application. Shell
+commands use stdout for results, stderr for progress/errors, and `--json` for
+structured output. Exit codes are 0 for success, 2 for invalid configuration,
+1 for execution failure, and 130 for user cancellation.
 
 The TUI launches one local inference process using a spawn-compatible entry
-point. A queue carries small progress/status events, while result files carry
+point. A one-way pipe carries small progress/status events, while result files carry
 large arrays. The worker loads the model inside its process. Both terminal modes
 call the same orchestration code; the synchronous path remains useful for tests.
 
-Cancellation is cooperative between batches. The UI must distinguish a requested
-stop from a worker that has actually stopped. Allow process termination after a
-documented grace period and retain a cancelled/incomplete record. No background
-job server or resumable execution is required.
+Cancellation is cooperative around model loading, forecast windows, scoring, and
+artifact publication. The UI keeps a requested stop separate from a stopped
+worker. After three seconds it requests process termination, with a kill fallback
+after another 0.25 seconds. It reaps the child and reconciles its manifest before
+reporting a terminal state. A completed record wins a late cancellation race;
+otherwise known active runs become cancelled or failed. No background job server
+or resumable execution is required. Dataset inspection, saved-record reads, and
+exports run off the rendering thread. See [terminal usage](tui.md).
 [Textual workers](https://textual.textualize.io/guide/workers/) keep application
 work separate from rendering, but thread cancellation alone does not guarantee
 that native inference has stopped. A worker process also avoids sharing a loaded

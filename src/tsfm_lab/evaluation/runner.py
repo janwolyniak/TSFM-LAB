@@ -188,9 +188,18 @@ def run_experiment(
     spec: EvaluationSpec,
     *,
     progress: Callable[[str], None] | None = None,
+    window_progress: Callable[[int, int], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
 ) -> ExperimentResult:
     """Run every complete window; any inference/alignment failure aborts the run."""
-    start, _ = evaluation_bounds(dataset, spec)
+    start, end = evaluation_bounds(dataset, spec)
+    total = 1 + (end - start - spec.horizon) // spec.stride
+
+    def check_cancel() -> None:
+        if should_cancel and should_cancel():
+            raise KeyboardInterrupt("Experiment cancellation requested")
+
+    check_cancel()
     metadata = model.metadata()
     _check_capabilities(metadata, spec)
     model.validate(spec)
@@ -203,27 +212,38 @@ def run_experiment(
     try:
         if progress:
             progress("loading")
+        check_cancel()
         before = perf_counter()
         model.load()
         load_time = perf_counter() - before
+        check_cancel()
         if progress:
             progress("running")
-        for window in iter_windows(dataset, spec):
+        if window_progress:
+            window_progress(0, total)
+        for completed, window in enumerate(iter_windows(dataset, spec), start=1):
+            check_cancel()
             # pandas timestamp buffers remain mutable even inside frozen records.
             expected = ForecastRequest(**vars(window.request))
             before = perf_counter()
+            check_cancel()
             outputs = model.predict((window.request,))
             inference_time += perf_counter() - before
+            check_cancel()
             if len(outputs) != 1:
                 raise ValueError("adapter must return exactly one output per request")
             output = _aligned_output(outputs[0], expected, metadata, spec)
             rows.extend(_prediction_rows(window.actual, expected, output))
             actual.append(window.actual)
             predicted.append(output.point)
+            if window_progress:
+                window_progress(completed, total)
     finally:
         model.unload()
+    check_cancel()
     if progress:
         progress("evaluating")
+    check_cancel()
     before = perf_counter()
     scores = score_forecasts(
         np.stack(actual),
@@ -233,6 +253,7 @@ def run_experiment(
         metrics=spec.metrics,
     )
     evaluation_time = perf_counter() - before
+    check_cancel()
     predictions = pd.DataFrame(rows)
     return ExperimentResult(
         configuration=configuration,

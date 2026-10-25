@@ -22,7 +22,7 @@ import importlib.abc
 import sys
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        if fullname.split('.')[0] in {'typer', 'rich', 'yaml', 'pyarrow', 'torch', 'huggingface_hub'}:
+        if fullname.split('.')[0] in {'typer', 'rich', 'yaml', 'pyarrow', 'torch', 'huggingface_hub', 'textual'}:
             raise ModuleNotFoundError(fullname, name=fullname)
 sys.meta_path.insert(0, Block())
 from tsfm_lab.evaluation.runner import run_experiment
@@ -47,3 +47,26 @@ main()
     assert completed.stdout == ""
     assert "tsfm-lab[cli]" in completed.stderr
     assert "Traceback" not in completed.stderr
+
+
+def test_missing_tui_extra_is_explained_without_affecting_shell_commands():
+    completed = execute("""
+import importlib.abc
+import sys
+class Block(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path, target=None):
+        if fullname == 'textual':
+            raise ModuleNotFoundError(fullname, name=fullname)
+sys.meta_path.insert(0, Block())
+from typer.testing import CliRunner
+import tsfm_lab.cli as cli
+cli.interactive_terminal = lambda: True
+failed = CliRunner().invoke(cli.app, ['ui'])
+assert failed.exit_code == 2
+assert 'tsfm-lab[tui]' in failed.stderr
+assert 'Traceback' not in failed.stderr
+plain = CliRunner().invoke(cli.app, ['models', 'list', '--json'])
+assert plain.exit_code == 0
+assert 'last_value' in plain.stdout
+""")
+    assert completed.returncode == 0, completed.stderr

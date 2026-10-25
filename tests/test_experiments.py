@@ -436,3 +436,60 @@ def test_stored_scores_must_agree_with_saved_predictions(store, payload, boundar
         with pytest.raises(StoreError, match="metric value"):
             store.load_result(run_id)
         assert store.list_runs()[0]["status"] == "corrupt"
+
+
+def test_cancellation_between_artifact_writes_cannot_complete(
+    store, payload, monkeypatch
+):
+    cancelled = False
+    original = persistence._atomic
+
+    def write_then_cancel(path, content):
+        nonlocal cancelled
+        original(path, content)
+        if path.name == "result.json":
+            cancelled = True
+
+    monkeypatch.setattr(persistence, "_atomic", write_then_cancel)
+    run_id = create(store)
+    with pytest.raises(KeyboardInterrupt):
+        store.complete(run_id, *payload, cancel_check=lambda: cancelled)
+    assert store.get_manifest(run_id)["status"] == "saving"
+    assert not (store.root / run_id / "metrics.json").exists()
+
+
+def test_cancellation_at_final_completion_guard_leaves_saving_record(
+    store, payload, monkeypatch
+):
+    cancelled = False
+    original = store._result
+
+    def checked_then_cancel(*args):
+        nonlocal cancelled
+        result = original(*args)
+        cancelled = True
+        return result
+
+    monkeypatch.setattr(store, "_result", checked_then_cancel)
+    run_id = create(store)
+    with pytest.raises(KeyboardInterrupt):
+        store.complete(run_id, *payload, cancel_check=lambda: cancelled)
+    assert store.get_manifest(run_id)["status"] == "saving"
+    with pytest.raises(StoreError, match="completed"):
+        store.load_result(run_id)
+
+
+def test_process_summary_does_not_parse_prediction_artifacts(
+    store, payload, monkeypatch
+):
+    run_id = create(store)
+    store.complete(run_id, *payload)
+    monkeypatch.setattr(
+        store,
+        "load_result",
+        lambda *args: pytest.fail("Prediction parsing on process-monitor path"),
+    )
+    summary = store.result_summary(run_id)
+    assert summary["status"] == "completed"
+    assert summary["metrics"] == payload[0]["metrics"]["overall"]
+    assert summary["counts"] == payload[0]["counts"]

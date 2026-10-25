@@ -3,7 +3,10 @@
 The shell workflow runs local forecasting experiments synchronously. It provides
 validated YAML input, saved records, history, controlled comparisons, and exports.
 Normal experiments do not download models. Explicit `models pull` manages curated
-checkpoints. `tsfm` without arguments prints help; there is no full-screen UI yet.
+checkpoints. `tsfm` without arguments opens the optional [interactive terminal](tui.md)
+when both input and output are terminals, and prints help otherwise. Explicit
+`tsfm ui --workspace results` opens it on a terminal. Named shell commands remain
+noninteractive.
 
 ## Commands and output
 

@@ -5,6 +5,7 @@ import io
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -209,16 +210,27 @@ class ExperimentStore:
         except (KeyError, UnicodeError, ValueError, TypeError) as exc:
             raise StoreError(f"Cannot reload result: {exc}") from exc
 
-    def complete(self, run_id: str, result: dict, predictions: pd.DataFrame) -> dict:
+    def complete(
+        self,
+        run_id: str,
+        result: dict,
+        predictions: pd.DataFrame,
+        *,
+        cancel_check: Callable[[], bool] | None = None,
+    ) -> dict:
         manifest = self.get_manifest(run_id)
         if manifest["status"] in _TERMINAL:
             raise ValueError("Terminal experiments cannot be overwritten")
+        if cancel_check and cancel_check():
+            raise KeyboardInterrupt("Experiment cancellation requested before saving")
         try:
             result = _decode(_json(result))
         except (TypeError, ValueError) as exc:
             raise StoreError(f"Invalid result snapshot: {exc}") from exc
         result.pop("predictions", None)
         frame = validate_predictions(predictions, result)
+        if cancel_check and cancel_check():
+            raise KeyboardInterrupt("Experiment cancellation requested before saving")
         if manifest["status"] != "saving":
             manifest = self.set_status(run_id, "saving")
         artifacts = {
@@ -227,12 +239,50 @@ class ExperimentStore:
             "predictions.csv": frame.to_csv(index=False, float_format="%.17g").encode(),
         }
         for name, raw in artifacts.items():
+            if cancel_check and cancel_check():
+                raise KeyboardInterrupt(
+                    "Experiment cancellation requested while saving"
+                )
             _atomic(self._directory(run_id) / name, raw)
             manifest["artifacts"][name] = _identity(raw)
         self._result(run_id, manifest)
         manifest.update(status="completed", updated_at=datetime.now(UTC).isoformat())
+        if cancel_check and cancel_check():
+            raise KeyboardInterrupt(
+                "Experiment cancellation requested before completion"
+            )
         _atomic(self._directory(run_id) / "manifest.json", _json(manifest))
         return manifest
+
+    def result_summary(self, run_id: str) -> dict:
+        """Read only checked result metadata for process lifecycle notifications.
+
+        Prediction verification belongs to load_result; this avoids parsing large
+        forecast tables on the terminal's process-monitoring path.
+        """
+        manifest = self.get_manifest(run_id)
+        if manifest["status"] != "completed":
+            raise StoreError("Only completed experiments have result summaries")
+        raw = _read(self._directory(run_id) / "result.json")
+        if _identity(raw) != manifest["artifacts"]["result.json"]:
+            raise StoreError("Result metadata checksum or size mismatch")
+        result = _decode(raw)
+        try:
+            metrics = result["metrics"]["overall"]
+            counts = result["counts"]
+            if not isinstance(metrics, dict) or not isinstance(counts, dict):
+                raise ValueError("Invalid summary fields")
+            return {
+                "run_id": run_id,
+                "name": manifest["name"],
+                "status": "completed",
+                "workspace": str(self.workspace),
+                "directory": str(self._directory(run_id)),
+                "metrics": metrics,
+                "counts": counts,
+            }
+        except (KeyError, TypeError, ValueError) as exc:
+            raise StoreError(f"Invalid completed result summary: {exc}") from exc
 
     def load_result(self, run_id: str) -> tuple[dict, pd.DataFrame]:
         manifest = self.get_manifest(run_id)

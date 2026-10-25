@@ -1,8 +1,8 @@
 # TSFM Lab
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
-Python core, scriptable terminal commands, and an optional Chronos-Bolt adapter.
-An interactive terminal application and financial analysis are later extensions.
+Python core, scriptable commands, an interactive terminal, and an optional
+Chronos-Bolt adapter. Financial analysis remains a later extension.
 
 ## Project status
 
@@ -13,7 +13,9 @@ predictions. Scores include pooled/per-lead MAE, RMSE, and MASE. The `tsfm` comm
 uses optional terminal dependencies; the numerical core remains independent.
 Milestone 3 adds curated checkpoint selection, explicit pulls, exact revisions,
 verified local/cache-only Chronos-Bolt inference, and model-runtime provenance.
-The interactive TUI and other model families are later milestones.
+Milestone 4 adds a keyboard-driven experiment wizard, managed background inference,
+progress/cancellation, saved results, comparison, and export. Other model families
+remain later work.
 
 ## Run the offline example
 
@@ -32,6 +34,18 @@ the compatible dependency ranges declared in `pyproject.toml`. No model weights,
 credentials, or torch are required. Install only `.[cli]` for shell commands,
 add `[parquet]` for Parquet input/export, or use the base package for Python-only
 CSV evaluation. The commands above install the development checks as well.
+
+For the interactive terminal, add the optional UI dependencies:
+
+```sh
+python -m pip install -c requirements-tui.txt -e '.[tui,parquet]'
+tsfm ui --workspace results
+```
+
+`requirements-tui.txt` pins Textual and its additional Markdown dependencies.
+In a terminal, `tsfm` without arguments also opens the application. With redirected
+input or output it prints help; named shell commands remain scriptable. See the
+[keyboard walkthrough](docs/tui.md) for the bundled offline demo and cancellation.
 
 If NumPy and pandas are already available, the example can run from source
 without an installation:
@@ -144,12 +158,15 @@ python3 -m pip wheel --no-deps --no-build-isolation --no-index --wheel-dir /tmp/
 ```
 
 The wheel command uses an already available setuptools 77+ build backend; it
-does not install dependencies. The configured CI matrix covers Python 3.11,
+does not install dependencies. Install `[tui]` with the constraints above to
+include the headless UI tests; those tests skip when Textual is unavailable.
+CI installs the UI extra and runs them without model downloads. The configured CI matrix covers Python 3.11,
 3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
 remote CI and a fresh dependency installation have not been run. See the
 [Milestone 1 record](docs/verification.md) and
 [Milestone 2 record](docs/milestone2-verification.md), plus the
-[Chronos CPU record](docs/milestone3-verification.md), for evidence and limits.
+[Chronos CPU record](docs/milestone3-verification.md) and
+[interactive terminal record](docs/milestone4-verification.md), for evidence and limits.
 
 ## Design and implementation plan
 

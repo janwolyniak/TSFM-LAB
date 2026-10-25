@@ -8,6 +8,13 @@ and persistent results through `run_from_config`. Milestone 3 adds verified
 checkpoint identities and the Chronos-Bolt adapter. Probabilistic outputs below
 remain a design for later milestones.
 
+Milestone 4 adds `config_from_mapping(mapping, base_directory=...)` for the same
+strict validation of in-memory selections; relative paths use the explicit base
+directory and no configuration file is created. Both entry points delegate to
+`run_config(ExperimentConfig)`. Optional stage, completed-window, cancellation,
+and record-created callbacks support the managed terminal process without
+changing prediction or metric semantics. See the [terminal guide](tui.md).
+
 The first numerical core handles one regular series, one numeric target, fixed
 context length, one forecast horizon, and point forecasts. It preserves explicit
 identities and time alignment so later adapters do not change scoring semantics.

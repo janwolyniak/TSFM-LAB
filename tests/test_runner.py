@@ -239,3 +239,69 @@ def test_zero_scale_serializes_as_null_with_reason(dataset, spec):
         "reason": "zero_scale",
     }
     assert '"value": null' in json.dumps(result, allow_nan=False)
+
+
+def test_window_progress_reports_the_planned_total_and_each_completed_window(
+    dataset, spec
+):
+    progress = []
+    run_experiment(
+        dataset,
+        LastValue(),
+        spec,
+        window_progress=lambda done, total: progress.append((done, total)),
+    )
+    assert progress == [(0, 3), (1, 3), (2, 3), (3, 3)]
+
+
+def test_cancellation_before_loading_never_initializes_model(dataset, spec):
+    model = RecordingModel()
+    with pytest.raises(KeyboardInterrupt, match="cancellation"):
+        run_experiment(dataset, model, spec, should_cancel=lambda: True)
+    assert not model.loaded
+
+
+def test_cancellation_after_native_predict_stops_before_accepting_forecasts(
+    dataset, spec
+):
+    cancellation = False
+
+    class CancellingModel(RecordingModel):
+        def predict(self, requests):
+            nonlocal cancellation
+            result = super().predict(requests)
+            cancellation = True
+            return result
+
+    model = CancellingModel()
+    with pytest.raises(KeyboardInterrupt, match="cancellation"):
+        run_experiment(dataset, model, spec, should_cancel=lambda: cancellation)
+    assert model.loaded and model.unloaded
+    assert len(model.requests) == 1
+
+
+def test_final_window_cancellation_prevents_metric_calculation(
+    dataset, spec, monkeypatch
+):
+    import tsfm_lab.evaluation.runner as runner_module
+
+    cancellation = False
+
+    def progress(done, total):
+        nonlocal cancellation
+        if done == total:
+            cancellation = True
+
+    monkeypatch.setattr(
+        runner_module,
+        "score_forecasts",
+        lambda *args, **kwargs: pytest.fail("Metrics after cancellation"),
+    )
+    with pytest.raises(KeyboardInterrupt):
+        run_experiment(
+            dataset,
+            LastValue(),
+            spec,
+            window_progress=progress,
+            should_cancel=lambda: cancellation,
+        )

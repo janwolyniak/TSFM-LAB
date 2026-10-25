@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tsfm_lab.config import ConfigError, load_config
+from tsfm_lab.config import ConfigError, config_from_mapping, load_config
 
 
 @pytest.fixture
@@ -585,3 +585,44 @@ def test_checkpoint_validation_imports_no_runtime_and_opens_only_yaml(
     config = load_config(path)
     assert opened == [path]
     assert not config.output_directory.exists()
+
+
+def test_mapping_configuration_matches_the_yaml_boundary_without_writing(
+    tmp_path, valid_config, monkeypatch
+):
+    valid_config["name"] = "Selected in terminal"
+    path = write_config(tmp_path, valid_config)
+    expected = load_config(path)
+
+    def no_open(*args, **kwargs):
+        raise AssertionError("Mapping validation must not read or write files")
+
+    monkeypatch.setattr(Path, "open", no_open)
+    result = config_from_mapping(valid_config, base_directory=tmp_path)
+    assert result.resolved_dict() == expected.resolved_dict()
+    assert result.source_path == tmp_path / "interactive.yaml"
+    assert yaml.safe_load(result.source_yaml) == valid_config
+
+
+@pytest.mark.parametrize(
+    "mapping", [None, [], {"schema_version": True}, {"extra": object()}]
+)
+def test_mapping_configuration_rejects_invalid_or_unserializable_values(
+    tmp_path, mapping
+):
+    with pytest.raises(ConfigError):
+        config_from_mapping(mapping, base_directory=tmp_path)
+
+
+def test_mapping_configuration_snapshot_is_detached(tmp_path, valid_config):
+    original = copy.deepcopy(valid_config)
+    config = config_from_mapping(valid_config, base_directory=tmp_path)
+    valid_config["dataset"]["path"] = "changed.csv"
+    assert yaml.safe_load(config.source_yaml) == original
+    assert config.dataset["path"] != "changed.csv"
+
+
+def test_mapping_configuration_rejects_oversized_snapshot(tmp_path, valid_config):
+    valid_config["name"] = "x" * (1024 * 1024)
+    with pytest.raises(ConfigError, match="1 MiB"):
+        config_from_mapping(valid_config, base_directory=tmp_path)

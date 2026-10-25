@@ -312,3 +312,30 @@ def load_config(path: str | Path) -> ExperimentConfig:
         OverflowError,
     ) as exc:
         raise ConfigError(f"Invalid configuration {source_name}: {exc}") from exc
+
+
+def config_from_mapping(mapping: dict, *, base_directory: Path) -> ExperimentConfig:
+    """Validate an in-memory selection through the same strict YAML boundary.
+
+    ``interactive.yaml`` is a logical source location used for relative paths and
+    the persisted input snapshot. This function never reads or writes that file.
+    """
+    try:
+        directory = Path(base_directory).expanduser().resolve()
+        source_yaml = yaml.safe_dump(mapping, sort_keys=False, allow_unicode=True)
+        if len(source_yaml.encode("utf-8")) > MAX_CONFIG_BYTES:
+            raise ConfigError("Configuration exceeds the 1 MiB limit")
+        raw = yaml.load(source_yaml, Loader=_ConfigLoader)
+        return _validate(raw, directory / "interactive.yaml", source_yaml)
+    except ConfigError:
+        raise
+    except (
+        OSError,
+        UnicodeError,
+        yaml.YAMLError,
+        ValueError,
+        TypeError,
+        RuntimeError,
+        OverflowError,
+    ) as exc:
+        raise ConfigError(f"Invalid interactive configuration: {exc}") from exc

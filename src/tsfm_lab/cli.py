@@ -16,6 +16,7 @@ from tsfm_lab.config import ConfigError
 from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.exports import export_predictions
 from tsfm_lab.model_commands import models
+from tsfm_lab.terminal import interactive_terminal, launch_tui
 
 app = typer.Typer(
     help="Evaluate time-series forecasts locally.", invoke_without_command=True
@@ -39,6 +40,7 @@ def _metric(value: dict) -> str:
 
 
 @app.callback()
+@_guard
 def home(
     ctx: typer.Context, version: bool = typer.Option(False, "--version", is_eager=True)
 ):
@@ -46,7 +48,21 @@ def home(
         typer.echo(__version__)
         raise typer.Exit()
     if ctx.invoked_subcommand is None:
-        typer.echo(ctx.get_help())
+        if interactive_terminal():
+            launch_tui()
+        else:
+            typer.echo(ctx.get_help())
+
+
+@app.command("ui")
+@_guard
+def interactive(workspace: Workspace = Path("results")):
+    """Open the interactive terminal; automation should use shell commands."""
+    if not interactive_terminal():
+        raise ConfigError(
+            "The interactive UI needs terminal input and output; use shell commands when redirecting"
+        )
+    launch_tui(workspace)
 
 
 @app.command("run")

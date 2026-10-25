@@ -9,8 +9,8 @@ their acceptance criteria.
 
 The repository now contains the numerical Python package, scriptable CLI,
 YAML configuration, local records, Parquet support, tests, synthetic examples,
-and configured checks/CI. Chronos-Bolt Tiny has passed a pinned local CPU
-integration on synthetic data. The pre-existing local `PLAN.md` remains the product brief;
+and configured checks/CI, plus an interactive terminal. Chronos-Bolt Tiny has
+passed a pinned local CPU integration on synthetic data. The pre-existing local `PLAN.md` remains the product brief;
 these tracked documents make the actionable proposal usable without relying on
 that untracked file.
 
@@ -34,8 +34,9 @@ The owner agreed to the following initial direction on 25 October 2026:
 The contribution workflow requires discussion of architecture, interfaces,
 dependencies, and evaluation methodology before implementation. The agreed
 proposal establishes the implementation direction. The owner's continuation
-requests authorized Milestones 2 and 3; the owner separately authorized the
-pinned Tiny download and brief CPU test. Continuation does not by itself authorize
+requests authorized Milestones 2 through 4; the owner separately authorized the
+pinned Tiny download, brief CPU test, and isolated UI dependency installation.
+Continuation does not by itself authorize
 dependency installation, model downloads, publication, merging, or cloud compute.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the maintained permission and Git
 workflow rules.
@@ -123,6 +124,10 @@ marked real CPU smoke test records checkpoint SHA, dependency versions, device,
 shapes, and finite aligned outputs. This proves integration, not model advantage.
 
 ## Milestone 4 Interactive terminal
+
+Implemented and verified locally. See the [keyboard guide](tui.md) and
+[verification record](milestone4-verification.md). Remote CI and other platforms
+remain unexecuted.
 
 Add model/dataset selection, a validated experiment wizard, progress and errors,
 results, history, comparison, and cancellation. Use the same configuration objects

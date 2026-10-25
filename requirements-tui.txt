@@ -1,0 +1,4 @@
+# Optional terminal UI constraints; install in an isolated environment.
+textual==8.2.8
+mdit-py-plugins==0.6.1
+linkify-it-py==2.2.0

@@ -17,6 +17,7 @@ dev = ["pytest>=8,<10", "ruff>=0.15,<0.16", "black>=26,<27"]
 cli = ["typer>=0.24,<0.25", "rich>=14,<15", "PyYAML>=6,<7"]
 parquet = ["pyarrow>=23,<24"]
 hub = ["huggingface-hub==0.34.4"]
+tui = ["tsfm-lab[cli]", "textual==8.2.8"]
 chronos = [
     "chronos-forecasting==2.2.0",
     "torch>=2.8,<2.9",
@@ -31,6 +32,10 @@ tsfm = "tsfm_lab.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"tsfm_lab.resources" = ["*.csv"]
+"tsfm_lab.tui" = ["*.tcss"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
