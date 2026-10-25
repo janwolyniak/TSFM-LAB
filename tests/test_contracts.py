@@ -10,6 +10,7 @@ from tsfm_lab.contracts import (
     ForecastOutput,
     ForecastRequest,
     ModelCapabilities,
+    fixed_interval,
 )
 
 
@@ -31,6 +32,14 @@ def test_dataset_requires_positive_fixed_frequency(frequency):
             [1, 2],
             frequency,
         )
+
+
+@pytest.mark.parametrize(
+    "frequency", ["100000000000000000000000h", "9999999999999999999ns", "9999999999D"]
+)
+def test_oversized_fixed_duration_has_a_validation_error(frequency):
+    with pytest.raises(ValueError, match="frequency must be a positive fixed duration"):
+        fixed_interval(frequency)
 
 
 @pytest.mark.parametrize(

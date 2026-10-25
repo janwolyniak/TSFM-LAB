@@ -3,8 +3,9 @@
 The numerical core implements `Dataset`, `EvaluationSpec`, `ForecastRequest`,
 `ForecastOutput`, `EvaluationWindow`, model metadata/capabilities, and an
 `ExperimentResult`. Built-in model constructors supply their options directly.
-Model selection, runtime resolution, YAML, probabilistic outputs, and persistent
-records below are extension designs for later milestones.
+Milestone 2 adds validated YAML selections, recorded baseline runtime settings,
+and persistent results through `run_from_config`. Checkpoint-specific identities
+and probabilistic outputs below remain designs for later milestones.
 
 The first numerical core handles one regular series, one numeric target, fixed
 context length, one forecast horizon, and point forecasts. It preserves explicit
@@ -24,7 +25,9 @@ Boundary validation rejects unknown options and unsupported features.
 | `timezone` | Aware inputs normalize to UTC; naive inputs require a declared source timezone. Mixed awareness and ambiguous/nonexistent local times fail. |
 | `provenance` | Source URI/path, source-byte SHA-256, selected columns, parsing policy, and canonical-content SHA-256. |
 
-CSV is the first loader. Parquet follows when its dependency is introduced.
+CSV and optional Parquet loaders implement this contract. Format-specific parser
+policy is included in the canonical identity; importing equivalent values from
+different formats does not automatically establish the same comparison task.
 The CSV parser accepts ISO dates or timestamps with optional UTC offsets;
 relative expressions and ambiguous slash-formatted dates are rejected.
 Rows arrive in timestamp order; the first version rejects unordered rows rather
@@ -60,6 +63,10 @@ Insufficient pre-evaluation history for MASE yields an undefined metric with a
 reason; invalid bounds or lengths fail before calling a model.
 
 ## Model identities and capabilities
+
+The current configuration boundary validates built-in adapter/source/options as
+dictionaries. `ModelSpec` below describes the intended checkpoint-aware extension;
+it is not a current dataclass or an accepted arbitrary-repository loader.
 
 Input configuration supplies adapter/source/options and, for a Hub checkpoint,
 the requested repository/revision. The catalog derives family and adapter version;
@@ -161,13 +168,13 @@ when callers need to distinguish error classes.
 
 ## ExperimentConfig
 
-The first Python caller constructs validated objects directly. The later YAML
+Python callers can construct validated objects directly. The implemented YAML
 boundary has `schema_version: 1`, a name, a `ModelSpec`, a dataset import spec,
 an `EvaluationSpec`, a `RuntimeSpec`, and an output directory. Resolve relative
 paths against the configuration file's directory, preserve the input snapshot,
 and also persist resolved configuration.
 
-This YAML illustrates the proposed shell schema; it cannot be run yet:
+This YAML illustrates the shell schema when saved in `examples/configurations`:
 
 ```yaml
 schema_version: 1
@@ -176,7 +183,7 @@ model:
   source: builtin
   adapter_id: seasonal_naive
   options:
-    seasonal_period: 24
+    seasonal_period: 4
 dataset:
   path: ../datasets/seasonal.csv
   timestamp_column: timestamp
@@ -185,12 +192,12 @@ dataset:
   frequency: 1h
   units: synthetic_units
 evaluation:
-  context_length: 48
-  horizon: 12
-  stride: 12
-  evaluation_start: "2026-01-05T00:00:00Z"
-  evaluation_end: "2026-01-07T00:00:00Z"
-  seasonal_period: 24
+  context_length: 8
+  horizon: 4
+  stride: 4
+  evaluation_start: "2026-01-01T16:00:00Z"
+  evaluation_end: "2026-01-02T08:00:00Z"
+  seasonal_period: 4
   metrics: [mae, rmse, mase]
   point_statistic: median
 runtime:
@@ -198,7 +205,7 @@ runtime:
   batch_size: 1
   seed: 0
 output:
-  directory: ./results
+  directory: ../../results
 ```
 
 The baseline's seasonal period and MASE's seasonal period have different roles.
@@ -217,17 +224,20 @@ Use a random UUID for run identity. A repeated run gets a new UUID even when its
 deterministic forecasts match. Reproducibility tests compare numerical outputs and
 method metadata, excluding elapsed time, creation time, paths, and run IDs.
 
-At persistence milestones, record source Git revision and dirty state, package
+Persisted baseline experiments record source Git revision and dirty state, package
 version, Python and dependency versions, operating system, hardware/backend,
-seed/determinism settings, dataset fingerprints, checkpoint revision, adapter
+seed/determinism settings, dataset fingerprints, adapter
 version, metric version, and file checksums. An unversioned/dirty source tree must
 be identified explicitly, not represented as an exact clean source snapshot.
+Checkpoint revisions will be required when remote/local weight adapters exist.
 
 `run_experiment` currently returns an in-memory numerical result with JSON
 conversion through `to_dict()`. It validates dataset identity and snapshots
-configuration before loading the adapter. UUIDs, artifact files, runtime seed
-configuration, and persisted lifecycle states belong to Milestone 2; it raises
-on failures and does not create a partial run record yet.
+configuration before loading the adapter. `run_from_config` adds UUIDs, artifact
+files, recorded seed settings, and persisted lifecycle states. It validates data
+before creating a record, retains failures/cancellations after creation, and
+uses the same numerical runner. See [CLI records](cli.md#saved-artifacts-and-failure-behavior)
+for the current files and validation rules.
 
 Use states `pending`, `preparing`, `loading`, `running`, `evaluating`, `saving`,
 `completed`, `failed`, and `cancelled`. Permit forward stage transitions and

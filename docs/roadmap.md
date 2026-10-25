@@ -7,8 +7,9 @@ their acceptance criteria.
 
 ## Current state and review decisions
 
-The repository now contains the numerical Python package, tests, a synthetic
-demonstration, and configured checks/CI. It has no pretrained-model evaluation
+The repository now contains the numerical Python package, scriptable CLI,
+YAML configuration, local records, Parquet support, tests, synthetic examples,
+and configured checks/CI. It has no pretrained-model evaluation
 yet. The pre-existing local `PLAN.md` remains the product brief;
 these tracked documents make the actionable proposal usable without relying on
 that untracked file.
@@ -32,7 +33,8 @@ The owner agreed to the following initial direction on 25 October 2026:
 
 The contribution workflow requires discussion of architecture, interfaces,
 dependencies, and evaluation methodology before implementation. The agreed
-proposal establishes the scope for Milestone 1. It does not authorize
+proposal establishes the implementation direction. The owner's continuation
+request authorized Milestone 2. It does not authorize
 dependency installation, model downloads, publication, merging, or cloud compute.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the maintained permission and Git
 workflow rules.
@@ -75,6 +77,9 @@ core imports without any terminal or model runtime. A hand-worked fixture verifi
 that reported metrics mean what the documentation says.
 
 ## Milestone 2 Shell workflow and experiment records
+
+Implemented and verified locally; see [CLI usage](cli.md) and the
+[verification record](milestone2-verification.md). Remote CI remains unexecuted.
 
 Add Typer/Rich, safe YAML configuration, Parquet ingestion/export, UUID run
 directories, configuration snapshots, JSON manifests/metrics, prediction export,

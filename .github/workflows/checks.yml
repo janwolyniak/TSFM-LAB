@@ -20,9 +20,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -c requirements-dev.txt -e '.[dev]'
+      - run: python -m pip install -c requirements-dev.txt -e '.[dev,cli,parquet]'
       - run: python -m black --check src tests examples
       - run: python -m ruff check src tests examples
       - run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest
       - run: python -m pip wheel --no-deps --no-build-isolation --no-index --wheel-dir /tmp/tsfm-wheels .
       - run: python examples/baseline.py
+      - run: tsfm --help
+      - run: tsfm run examples/configurations/last-value.yaml --json
+      - run: tsfm experiments list --workspace results --json

@@ -1,17 +1,18 @@
 # TSFM Lab
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
-Python core. The planned terminal application will evaluate pretrained
-time-series models on user datasets. Financial analysis will be a later extension.
+Python core and scriptable terminal commands. Pretrained time-series model
+adapters and an interactive terminal application are planned. Financial analysis
+will be a later extension.
 
 ## Project status
 
-Milestone 1 implements an offline Python workflow: load one regular numeric series
-from CSV, generate rolling forecasts with last-value and seasonal-naive baselines,
-and return aligned predictions, pooled/per-lead MAE, RMSE, and MASE, configuration,
-and provenance. The repository includes packaging, tests, and a small synthetic
-example. CLI/TUI, Parquet, persistence, and pretrained adapters are later milestones;
-there is no `tsfm` command yet.
+Milestones 1 and 2 provide an offline Python and shell workflow: load one regular
+numeric series from CSV or Parquet, configure rolling baseline forecasts in YAML,
+save experiment records, inspect history, compare compatible runs, and export
+predictions. Scores include pooled/per-lead MAE, RMSE, and MASE. The `tsfm` command
+uses optional terminal dependencies; the numerical core remains independent.
+Pretrained adapters and the interactive TUI are later milestones.
 
 ## Run the offline example
 
@@ -21,13 +22,15 @@ core with development tools when you are ready to install dependencies:
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -c requirements-dev.txt -e '.[dev]'
+python -m pip install -c requirements-dev.txt -e '.[dev,cli,parquet]'
 python examples/baseline.py
 ```
 
 `requirements-dev.txt` records exact development constraints; the library allows
 the compatible dependency ranges declared in `pyproject.toml`. No model weights,
-credentials, torch, or terminal frameworks are required.
+credentials, or torch are required. Install only `.[cli]` for shell commands,
+add `[parquet]` for Parquet input/export, or use the base package for Python-only
+CSV evaluation. The commands above install the development checks as well.
 
 If NumPy and pandas are already available, the example can run from source
 without an installation:
@@ -48,6 +51,36 @@ Each run has context 8, horizon 4 observations, stride 4, four windows, and 16
 forecast cases in `synthetic_units`. The scaling history precedes evaluation.
 These are arithmetic checks on [original synthetic data](examples/datasets/README.md),
 not results for pretrained models or real-world demand.
+
+## Use the shell workflow
+
+```sh
+tsfm models list
+tsfm run examples/configurations/last-value.yaml --json
+tsfm run examples/configurations/seasonal-naive.yaml --json
+tsfm experiments list --workspace results --json
+```
+
+The two run commands return new UUIDs and write under `results/experiments/`.
+Use those UUIDs in place of `RUN_ID`, `FIRST_ID`, and `SECOND_ID` below:
+
+```sh
+tsfm experiments show RUN_ID --workspace results --json
+tsfm compare FIRST_ID SECOND_ID --workspace results --json
+tsfm export RUN_ID --workspace results --output predictions.parquet --json
+```
+
+Exports support CSV, JSON, and optional Parquet and refuse existing destinations.
+Comparisons require the same dataset/import identity, forecast cases, context,
+horizon, stride, scaling convention, and metric definitions. Saved artifacts
+are checked before showing completed scores, comparing, or exporting.
+
+Relative dataset/output paths resolve against the YAML file's directory.
+`--workspace` on history/show/compare/export resolves against the current working
+directory; the examples use `results` from the repository root. Use
+`python -m tsfm_lab` in place of `tsfm`, or `PYTHONPATH=src python3 -m tsfm_lab` when the CLI
+dependencies are already available and you are working without installation.
+See [CLI and configuration](docs/cli.md) for validation, records, and exit codes.
 
 ## Use the Python core
 
@@ -79,7 +112,8 @@ print(result.scores.overall)
 print(result.predictions)
 ```
 
-CSV timestamps must be ISO dates or timestamps. Supply `timezone="UTC"` (or an
+CSV timestamps must be ISO dates or timestamps; Parquet also accepts typed Arrow
+datetimes. Supply `timezone="UTC"` (or an
 explicit source timezone) for naive timestamps. Aware timestamps normalize to
 UTC. Input must be strictly ordered, unique, finite, and follow the declared
 fixed frequency. Gaps, ambiguous DST timestamps, and missing values fail without
@@ -99,7 +133,8 @@ The wheel command uses an already available setuptools 77+ build backend; it
 does not install dependencies. The configured CI matrix covers Python 3.11,
 3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
 remote CI and a fresh dependency installation have not been run. See the
-[verification record](docs/verification.md) for evidence and limits.
+[Milestone 1 record](docs/verification.md) and
+[Milestone 2 record](docs/milestone2-verification.md) for evidence and limits.
 
 ## Design and implementation plan
 

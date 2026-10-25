@@ -3,6 +3,7 @@
 import json
 import platform
 import subprocess
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from importlib.metadata import version
 from pathlib import Path
@@ -163,7 +164,11 @@ def _configuration(dataset, metadata, model, spec) -> dict:
 
 
 def run_experiment(
-    dataset: Dataset, model: ForecastModel, spec: EvaluationSpec
+    dataset: Dataset,
+    model: ForecastModel,
+    spec: EvaluationSpec,
+    *,
+    progress: Callable[[str], None] | None = None,
 ) -> ExperimentResult:
     """Run every complete window; any inference/alignment failure aborts the run."""
     start, _ = evaluation_bounds(dataset, spec)
@@ -177,9 +182,13 @@ def run_experiment(
     rows, actual, predicted = [], [], []
     load_time, inference_time = 0.0, 0.0
     try:
+        if progress:
+            progress("loading")
         before = perf_counter()
         model.load()
         load_time = perf_counter() - before
+        if progress:
+            progress("running")
         for window in iter_windows(dataset, spec):
             # pandas timestamp buffers remain mutable even inside frozen records.
             expected = ForecastRequest(**vars(window.request))
@@ -194,6 +203,8 @@ def run_experiment(
             predicted.append(output.point)
     finally:
         model.unload()
+    if progress:
+        progress("evaluating")
     before = perf_counter()
     scores = score_forecasts(
         np.stack(actual),

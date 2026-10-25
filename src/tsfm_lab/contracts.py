@@ -20,11 +20,11 @@ def fixed_interval(frequency: str) -> pd.Timedelta:
     try:
         offset = pd.tseries.frequencies.to_offset(frequency)
         nanos = offset.nanos
-    except (TypeError, ValueError, AttributeError) as exc:
+        if nanos <= 0:
+            raise ValueError("frequency must be positive")
+        return pd.Timedelta(nanos, unit="ns")
+    except (TypeError, ValueError, AttributeError, OverflowError) as exc:
         raise ValueError("frequency must be a positive fixed duration") from exc
-    if nanos <= 0:
-        raise ValueError("frequency must be a positive fixed duration")
-    return pd.Timedelta(nanos, unit="ns")
 
 
 def utc_timestamp(value: str | pd.Timestamp, name: str) -> pd.Timestamp:

@@ -5,7 +5,7 @@ from dataclasses import asdict
 import numpy as np
 import pytest
 
-from tsfm_lab.evaluation.metrics import score_forecasts
+from tsfm_lab.evaluation.metrics import score_forecasts, score_with_scale
 
 
 def test_unrequested_mase_does_not_trigger_scale_overflow():
@@ -122,3 +122,91 @@ def test_large_finite_errors_do_not_overflow_intermediate_squares_or_sums():
 def test_nonfinite_arithmetic_is_explicit_error(actual, predicted, history):
     with pytest.raises(ValueError, match="Nonfinite arithmetic"):
         score_forecasts(actual, predicted, history)
+
+
+@pytest.mark.parametrize(
+    "history,period,metrics",
+    [
+        ([1, 2, 3, 4], 1, ("mae", "rmse", "mase")),
+        ([1, 4, 2, 7, 4, 10], 2, ("mase",)),
+        ([5, 5, 5], 1, ("mae", "mase")),
+        ([1], 2, ("mae", "rmse", "mase")),
+        ([1, 2, 3, 4], 1, ("rmse",)),
+    ],
+)
+def test_recorded_scale_rescoring_matches_original_algorithm(history, period, metrics):
+    actual = [[0.1, -3.1], [2.7, -0.0]]
+    predicted = [[np.nextafter(0.1, 1), 2.3], [1.1, -0.0]]
+    original = score_forecasts(
+        actual, predicted, history, seasonal_period=period, metrics=metrics
+    )
+    rescored = score_with_scale(
+        actual,
+        predicted,
+        scale=original.scale,
+        scale_reason=original.scale_reason,
+        scale_count=original.scale_count,
+        metrics=metrics,
+    )
+    assert asdict(rescored) == asdict(original)
+
+
+@pytest.mark.parametrize(
+    "scale,reason,count,metrics",
+    [
+        (-1, None, 1, ("mase",)),
+        (np.inf, None, 1, ("mase",)),
+        (np.nan, None, 1, ("mase",)),
+        (True, None, 1, ("mase",)),
+        ("1", None, 1, ("mase",)),
+        (1j, None, 1, ("mase",)),
+        (1, "unknown", 1, ("mase",)),
+        (1, [], 1, ("mase",)),
+        (1, None, True, ("mase",)),
+        (1, None, -1, ("mase",)),
+        (1, None, 1.0, ("mase",)),
+        (1, None, 0, ("mase",)),
+        (1, "zero_scale", 1, ("mase",)),
+        (1, "insufficient_scale_history", 1, ("mase",)),
+        (1, "not_requested", 1, ("mase",)),
+        (0, None, 1, ("mase",)),
+        (0, "zero_scale", 0, ("mase",)),
+        (None, None, 0, ("mase",)),
+        (None, "zero_scale", 0, ("mase",)),
+        (None, "insufficient_scale_history", 1, ("mase",)),
+        (None, "not_requested", 0, ("mase",)),
+        (1, None, 1, ("mae",)),
+        (None, "insufficient_scale_history", 0, ("mae",)),
+        (None, "not_requested", 1, ("mae",)),
+    ],
+)
+def test_invalid_recorded_scale_metadata_is_rejected(scale, reason, count, metrics):
+    with pytest.raises(ValueError):
+        score_with_scale(
+            [[0]],
+            [[1]],
+            scale=scale,
+            scale_reason=reason,
+            scale_count=count,
+            metrics=metrics,
+        )
+
+
+@pytest.mark.parametrize("metrics", [(), ("unknown",), ("mae", "mae"), "mae", None])
+def test_recorded_scale_path_reuses_metric_name_validation(metrics):
+    with pytest.raises(ValueError):
+        score_with_scale(
+            [[0]],
+            [[1]],
+            scale=None,
+            scale_reason="not_requested",
+            scale_count=0,
+            metrics=metrics,
+        )
+
+
+def test_recorded_scale_path_rejects_bad_forecast_arrays():
+    with pytest.raises(ValueError, match="same nonempty"):
+        score_with_scale([[0, 1]], [[1]], scale=1.0, scale_reason=None, scale_count=1)
+    with pytest.raises(ValueError, match="finite"):
+        score_with_scale([[0]], [[np.inf]], scale=1.0, scale_reason=None, scale_count=1)

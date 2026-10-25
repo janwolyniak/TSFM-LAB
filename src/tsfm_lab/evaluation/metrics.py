@@ -1,7 +1,7 @@
 """Point metrics with explicit pooling and a fixed pre-evaluation MASE scale."""
 
 from dataclasses import dataclass
-from numbers import Integral
+from numbers import Integral, Real
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -91,6 +91,82 @@ def _metrics(
     return results
 
 
+def _metric_names(metrics: tuple[str, ...]) -> tuple[str, ...]:
+    if isinstance(metrics, str):
+        raise ValueError("metrics must be a sequence of metric names")
+    try:
+        names = tuple(metrics)
+    except TypeError as exc:
+        raise ValueError("metrics must be a sequence of metric names") from exc
+    if any(not isinstance(name, str) for name in names):
+        raise ValueError("metrics must contain string names")
+    if not names or len(set(names)) != len(names):
+        raise ValueError("metrics must be nonempty and contain no duplicates")
+    if any(name not in SUPPORTED_METRICS for name in names):
+        raise ValueError(f"Unsupported metric; choose from {SUPPORTED_METRICS}")
+    return names
+
+
+def _forecast_errors(actual: ArrayLike, predicted: ArrayLike) -> NDArray[np.float64]:
+    observed = _numeric_array(actual, name="actual", ndim=2)
+    forecasts = _numeric_array(predicted, name="predicted", ndim=2)
+    if observed.shape != forecasts.shape or 0 in observed.shape:
+        raise ValueError("actual and predicted must have the same nonempty [W,H] shape")
+    return _difference(forecasts, observed)
+
+
+def _validate_scale(scale, reason, count, *, requested: bool) -> float | None:
+    if isinstance(count, bool) or not isinstance(count, Integral) or count < 0:
+        raise ValueError("scale_count must be a nonnegative integer")
+    reasons = {None, "zero_scale", "insufficient_scale_history", "not_requested"}
+    if (reason is not None and not isinstance(reason, str)) or reason not in reasons:
+        raise ValueError("Unsupported scale_reason")
+    if scale is not None:
+        if isinstance(scale, bool) or not isinstance(scale, Real):
+            raise ValueError("scale must be a finite nonnegative number or None")
+        scale = float(scale)
+        if not np.isfinite(scale) or scale < 0:
+            raise ValueError("scale must be a finite nonnegative number or None")
+    if not requested:
+        valid = scale is None and reason == "not_requested" and count == 0
+    elif scale is None:
+        valid = reason == "insufficient_scale_history" and count == 0
+    elif scale == 0:
+        valid = reason == "zero_scale" and count > 0
+    else:
+        valid = reason is None and count > 0
+    if not valid:
+        raise ValueError("Inconsistent recorded MASE scale metadata")
+    return scale
+
+
+def score_with_scale(
+    actual: ArrayLike,
+    predicted: ArrayLike,
+    *,
+    scale: float | None,
+    scale_reason: str | None,
+    scale_count: int,
+    metrics: tuple[str, ...] = SUPPORTED_METRICS,
+) -> Scores:
+    """Rescore saved forecasts using their recorded scale, without model inference."""
+    names = _metric_names(metrics)
+    validated_scale = _validate_scale(
+        scale, scale_reason, scale_count, requested="mase" in names
+    )
+    errors = _forecast_errors(actual, predicted)
+    return Scores(
+        overall=_metrics(errors, names, validated_scale, scale_reason),
+        by_lead={
+            lead + 1: _metrics(errors[:, lead], names, validated_scale, scale_reason)
+            for lead in range(errors.shape[1])
+        },
+        scale=validated_scale,
+        scale_reason=scale_reason,
+        scale_count=int(scale_count),
+    )
+
+
 def score_forecasts(
     actual: ArrayLike,
     predicted: ArrayLike,
@@ -106,33 +182,18 @@ def score_forecasts(
         or seasonal_period <= 0
     ):
         raise ValueError("seasonal_period must be a positive integer")
-    if isinstance(metrics, str):
-        raise ValueError("metrics must be a sequence of metric names")
-    names = tuple(metrics)
-    if any(not isinstance(name, str) for name in names):
-        raise ValueError("metrics must contain string names")
-    if not names or len(set(names)) != len(names):
-        raise ValueError("metrics must be nonempty and contain no duplicates")
-    if any(name not in SUPPORTED_METRICS for name in names):
-        raise ValueError(f"Unsupported metric; choose from {SUPPORTED_METRICS}")
-    observed = _numeric_array(actual, name="actual", ndim=2)
-    forecasts = _numeric_array(predicted, name="predicted", ndim=2)
+    names = _metric_names(metrics)
     past = _numeric_array(history, name="history", ndim=1)
-    if observed.shape != forecasts.shape or 0 in observed.shape:
-        raise ValueError("actual and predicted must have the same nonempty [W,H] shape")
-    errors = _difference(forecasts, observed)
     scale, reason = (
         _scale(past, int(seasonal_period))
         if "mase" in names
         else (None, "not_requested")
     )
-    return Scores(
-        overall=_metrics(errors, names, scale, reason),
-        by_lead={
-            lead + 1: _metrics(errors[:, lead], names, scale, reason)
-            for lead in range(errors.shape[1])
-        },
+    return score_with_scale(
+        actual,
+        predicted,
         scale=scale,
         scale_reason=reason,
         scale_count=max(len(past) - int(seasonal_period), 0) if "mase" in names else 0,
+        metrics=names,
     )
