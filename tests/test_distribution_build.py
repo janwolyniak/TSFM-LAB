@@ -77,6 +77,7 @@ def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
             f"{prefix}/licenses/LICENSE",
             f"{prefix}/licenses/NOTICE",
             f"{prefix}/licenses/licenses/mlstm-kernels-2.0.6.txt",
+            *BUILDER["CONNECTION_MODULES"],
         ):
             if omit_license and name.endswith("/" + omit_license):
                 continue

@@ -2,6 +2,13 @@
 
 ## Next feature release in development
 
+- Add four explicit assistant connection routes, hidden credential prompts,
+  session/native-vault storage, discovery/selection, and a confirmed fixed
+  connection check. Qualification uses fake credentials and simulated providers;
+  natural-language setup and explanations remain P7.
+- Isolate managed numerical workers from arbitrary parent environment variables
+  before interpreter startup, preserving progress, cancellation, and saved records.
+
 - Add Generic, Finance, Energy, Temperature, and Weather usage profiles to
   configuration, both guided terminal interfaces, checked saved metadata,
   history, and result wording. Profile-only changes preserve numerical identity.

@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.clipboard import DummyClipboard
 from prompt_toolkit.completion import (
     CompleteEvent,
     Completer,
@@ -28,6 +29,7 @@ COMMANDS = {
     "/new": "Set up an experiment one question at a time",
     "/run": "Run a saved YAML configuration",
     "/models": "Browse the local model catalog",
+    "/connections": "Manage optional assistant connections",
     "/history": "List saved experiments",
     "/show": "Read a saved result",
     "/compare": "Compare matching experiments",
@@ -138,9 +140,27 @@ class TerminalInput:
         self.questions = PromptSession(
             history=DummyHistory(), style=style, key_bindings=keys
         )
+        self.secrets = PromptSession(
+            history=DummyHistory(),
+            style=style,
+            key_bindings=keys,
+            completer=DummyCompleter(),
+            auto_suggest=None,
+            clipboard=DummyClipboard(),
+        )
 
     def read(self) -> str:
         return self.session.prompt([("class:prompt", "› ")])
+
+    def ask_secret(self, label: str) -> str:
+        try:
+            return self.secrets.prompt(
+                [("class:hint", literal(label)), ("class:prompt", " › ")],
+                is_password=True,
+                enable_history_search=False,
+            )
+        finally:
+            self.secrets.default_buffer.reset(append_to_history=False)
 
     def ask(self, label: str, default: str = "", choices=()) -> str:
         suffix = f" [{default}]" if default else ""

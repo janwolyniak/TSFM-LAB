@@ -14,6 +14,26 @@ from contextlib import redirect_stdout
 from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 
+CONNECTION_MODULES = {
+    f"tsfm_lab/connections/{name}.py"
+    for name in (
+        "__init__",
+        "contracts",
+        "credentials",
+        "identity",
+        "manager",
+        "oauth",
+        "oauth_callback",
+        "providers",
+        "sign_in",
+        "state",
+        "streams",
+        "transport",
+        "ui",
+        "vault",
+    )
+} | {"tsfm_lab/connection_commands.py", "tsfm_lab/worker_entry.py"}
+
 SOURCE_FILES = {
     "LICENSE",
     "NOTICE",
@@ -42,6 +62,12 @@ SOURCE_FILES = {
     "docs/p4-ttm-verification.md",
     "docs/usage-profiles.md",
     "docs/p5-profiles-verification.md",
+    "docs/connections.md",
+    "docs/p6-connections-verification.md",
+    "src/tsfm_lab/connections/manager.py",
+    "src/tsfm_lab/connections/oauth.py",
+    "src/tsfm_lab/connections/transport.py",
+    "src/tsfm_lab/connection_commands.py",
     "docs/p3-tirex2-verification.md",
     "docs/finance-extension.md",
     "docs/model-catalog.md",
@@ -87,6 +113,7 @@ SOURCE_FILES |= (
     }
     | {"examples/datasets/finance-demo-ohlc.csv"}
 )
+SOURCE_FILES |= {f"src/{name}" for name in CONNECTION_MODULES}
 
 
 def _allowed(names):
@@ -158,6 +185,7 @@ def inspect_wheel(path, *, name, version):
             f"tsfm_lab/resources/{profile}-demo.csv"
             for profile in ("finance", "energy", "temperature", "weather")
         }
+        required |= CONNECTION_MODULES
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")
         if not required <= names:

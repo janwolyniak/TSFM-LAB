@@ -494,28 +494,16 @@ finally:
     assert json.loads(result.stdout)["type"] == "completed"
 
 
-def test_event_creation_failure_cleans_pipe_and_temporary_log(
-    config_factory, monkeypatch
-):
-    context = multiprocessing.get_context("spawn")
-    connections = []
+def test_process_creation_failure_cleans_temporary_log(config_factory, monkeypatch):
+    import tsfm_lab.worker_entry as launcher
 
-    class BrokenContext:
-        def Pipe(self, **kwargs):
-            pair = context.Pipe(**kwargs)
-            connections.extend(pair)
-            return pair
+    def fail(*args, **kwargs):
+        raise OSError("worker process unavailable")
 
-        def Event(self):
-            raise OSError("resource tracker unavailable")
-
-    monkeypatch.setattr(
-        execution_module.multiprocessing, "get_context", lambda method: BrokenContext()
-    )
+    monkeypatch.setattr(launcher.subprocess, "Popen", fail)
     worker = ManagedRun(load_config(config_factory()))
-    with pytest.raises(OSError, match="tracker unavailable"):
+    with pytest.raises(OSError, match="process unavailable"):
         worker.start()
-    assert all(connection.closed for connection in connections)
     assert not worker.log_path.exists()
     assert not worker.is_running
     worker.close()

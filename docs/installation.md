@@ -1,5 +1,9 @@
 # Installing TSFM Lab
 
+Optional assistant connections have a separate `[connections]` extra; see the
+[connection guide](connections.md). Forecasting and saved-record operations do
+not require provider packages or credentials.
+
 Install a supplied source checkout, source archive, or wheel into a dedicated
 Python environment. The current package version is `0.1.0`; it has not been
 published to PyPI. Commands such as `pip install tsfm-lab==0.1.0` from a package

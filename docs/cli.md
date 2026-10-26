@@ -25,6 +25,7 @@ noninteractive.
 | `tsfm finance backtest ID --source-config CONFIG --ohlc CSV ... --output REPORT.json` | Derive an OHLC report from checked saved forecasts with explicit price, timing, capital, and cost assumptions. |
 | `tsfm finance show REPORT.json` | Recompute a self-contained finance report without its original sources or model runtime. |
 | `tsfm finance export REPORT.json --output equity.csv` | Export strategy, cash, and buy-and-hold equity at each target close. |
+| `tsfm connections list --json` | Read nonsecret connection metadata without vault access or network requests. |
 
 All these commands support `--json` for plain JSON on stdout. Progress and error
 messages go to stderr, including during a JSON run. There are no interactive
@@ -35,6 +36,11 @@ Finance input/report contract errors use exit code 2. See the
 [finance guide](finance-extension.md) for its required options and strict
 lead-1/stride-1 timing policy. Finance commands are shell commands; they have not
 been added to the interactive prompt.
+
+`tsfm connections manage` is a separate interactive menu requiring terminal input
+and output for hidden credential prompts. It is also available as `/connections`
+in the terminal and during `/new`. See [connections](connections.md) for explicit
+authentication, billing, storage, discovery, and checks.
 
 Model entries include checkpoint variants and declared runtime requirements.
 Each variant adds `max_context` and `max_horizon`; repository information refines

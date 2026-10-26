@@ -21,7 +21,13 @@ from tsfm_lab.workflows import PROFILE_NAMES, workflow_summary
 
 class TerminalSession:
     def __init__(
-        self, workspace=Path("results"), *, console=None, editor=None, runner=execute
+        self,
+        workspace=Path("results"),
+        *,
+        console=None,
+        editor=None,
+        runner=execute,
+        connection_manager=None,
     ):
         self.workspace = Path(workspace).expanduser().resolve()
         self.console = console or Console(markup=False, highlight=False)
@@ -34,6 +40,7 @@ class TerminalSession:
         self.last_run = None
         self.known_ids = []
         self.closed = False
+        self.connection_manager = connection_manager
 
     def emit(self, value, style=None):
         self.console.print(Text(literal(value), style=style))
@@ -86,6 +93,7 @@ class TerminalSession:
                 "/new": self._new,
                 "/run": self._run,
                 "/models": self._models,
+                "/connections": self._connections,
                 "/history": self._history,
                 "/show": self._show,
                 "/compare": self._compare,
@@ -147,8 +155,13 @@ class TerminalSession:
             ),
             "bold",
         )
+        if not demo:
+            self.emit(
+                "Enter /connections at any setup question to manage optional assistant connections.",
+                "dim",
+            )
         config = build_experiment(
-            self.editor.ask,
+            self._setup_ask,
             self.emit,
             workspace=self.workspace,
             demo_path=self.demo_path,
@@ -206,6 +219,22 @@ class TerminalSession:
         self._count(arguments, 0, 0, "/models")
         self.records.models()
 
+    def _connections(self, arguments):
+        self._count(arguments, 0, 0, "/connections")
+        from tsfm_lab.connections.manager import ConnectionManager
+        from tsfm_lab.connections.ui import ConnectionMenu
+
+        if self.connection_manager is None:
+            self.connection_manager = ConnectionManager()
+        ConnectionMenu(self.editor, self.emit, manager=self.connection_manager).run()
+
+    def _setup_ask(self, label, default="", choices=()):
+        while True:
+            answer = self.editor.ask(label, default, choices)
+            if answer.strip() != "/connections":
+                return answer
+            self._connections([])
+
     def _history(self, arguments):
         self._count(arguments, 0, 0, "/history")
         records = self.records.history()
@@ -240,7 +269,20 @@ class TerminalSession:
         self._count(arguments, 0, 0, "/status")
         self.emit(f"Workspace  {self.workspace}")
         self.emit(f"Last run   {self.last_run or 'none in this session'}")
-        self.emit("Local commands · CPU inference · no AI service", "dim")
+        self.emit(
+            "Local commands · Forecasts run locally · Optional assistant connections",
+            "dim",
+        )
+        if self.connection_manager is not None:
+            from tsfm_lab.connections.contracts import ConnectionError
+
+            try:
+                item = self.connection_manager.status()
+                self.emit(
+                    f"Assistant {item['provider']} · {item['usage']} · model {item['model'] or 'not selected'}"
+                )
+            except ConnectionError:
+                self.emit("No active assistant connection.", "dim")
 
     def _exit(self, arguments):
         self._count(arguments, 0, 0, "/exit")
