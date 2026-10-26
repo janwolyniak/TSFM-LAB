@@ -32,12 +32,12 @@ def _runtime():
         if (
             versions["chronos-forecasting"] != "2.2.0"
             or not versions["torch"].startswith("2.8.")
-            or not versions["transformers"].startswith("4.55.")
+            or not versions["transformers"].startswith("4.56.")
             or versions["huggingface-hub"] != "0.35.3"
         ):
             raise ImportError(
                 "Chronos-Bolt requires chronos-forecasting 2.2.0, torch 2.8.x, "
-                "transformers 4.55.x, and huggingface-hub 0.35.3; use tsfm-lab[chronos]"
+                "transformers 4.56.x, and huggingface-hub 0.35.3; use tsfm-lab[chronos]"
             )
         return importlib.import_module("torch"), importlib.import_module("chronos")
     except (PackageNotFoundError, ModuleNotFoundError) as exc:
@@ -172,8 +172,10 @@ class ChronosBolt:
             )
         if not 0 < spec.horizon <= self._max_horizon:
             raise ValueError("Chronos-Bolt horizon exceeds its native prediction limit")
-        if spec.point_statistic != "median":
-            raise ValueError("Chronos-Bolt point forecasts require the median task")
+        if spec.point_statistic not in {"median", "native_point"}:
+            raise ValueError(
+                "Chronos-Bolt point forecasts require a median or native_point task"
+            )
 
     def load(self) -> None:
         if self._pipeline is not None:

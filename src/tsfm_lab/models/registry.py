@@ -13,6 +13,7 @@ class CheckpointVariant:
     parameter_count: int | None = None
     max_context: int | None = None
     max_horizon: int | None = None
+    min_context: int | None = None
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,10 @@ class AdapterProfile:
     runtime_requirements: tuple[tuple[str, str], ...]
     variants: tuple[CheckpointVariant, ...]
     runtime_notices: tuple[str, ...] = ()
+    min_context: int = 1
+    point_statistic: str = "median"
+    supported_tasks: tuple[str, ...] = ("median", "native_point")
+    frequency_policy: str = "any_fixed"
 
 
 ADAPTER_PROFILES = (
@@ -49,7 +54,7 @@ ADAPTER_PROFILES = (
         (
             ("chronos-forecasting", "==2.2.0"),
             ("torch", ">=2.8,<2.9"),
-            ("transformers", ">=4.55,<4.56"),
+            ("transformers", ">=4.56,<4.57"),
             ("huggingface-hub", "==0.35.3"),
             ("safetensors", ">=0.6,<0.7"),
             ("accelerate", ">=1.12,<1.13"),
@@ -125,7 +130,7 @@ ADAPTER_PROFILES = (
         (
             ("chronos-forecasting", "==2.2.0"),
             ("torch", ">=2.8,<2.9"),
-            ("transformers", ">=4.55,<4.56"),
+            ("transformers", ">=4.56,<4.57"),
             ("huggingface-hub", "==0.35.3"),
             ("safetensors", ">=0.6,<0.7"),
             ("accelerate", ">=1.12,<1.13"),
@@ -220,6 +225,69 @@ ADAPTER_PROFILES = (
             "https://github.com/NX-AI/mlstm_kernels/blob/v2.0.6/LICENSE",
         ),
     ),
+    AdapterProfile(
+        "ttm_r2",
+        "ttm",
+        "IBM Granite TTM R2",
+        "tsfm_lab.models.ttm",
+        "TTM",
+        "TinyTimeMixerForPrediction",
+        "TinyTimeMixerForPrediction",
+        "tinytimemixer",
+        1536,
+        96,
+        0,
+        (
+            ("granite-tsfm", "==0.3.4"),
+            ("torch", ">=2.8,<2.9"),
+            ("transformers", "==4.56.0"),
+            ("tokenizers", "==0.22.0"),
+            ("scikit-learn", "==1.7.2"),
+            ("filelock", "==3.20.3"),
+            ("huggingface-hub", "==0.35.3"),
+            ("safetensors", ">=0.6,<0.7"),
+            ("accelerate", ">=1.12,<1.13"),
+        ),
+        (
+            CheckpointVariant(
+                "ibm-granite/granite-timeseries-ttm-r2",
+                "512-96-r2",
+                "R2 512 context / 96 horizon",
+                "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f",
+                3240592,
+                805280,
+                512,
+                96,
+                512,
+            ),
+            CheckpointVariant(
+                "ibm-granite/granite-timeseries-ttm-r2",
+                "1024-96-r2",
+                "R2 1024 context / 96 horizon",
+                "1a382618f3c5b63836281ad632e54724e55e85a5",
+                11879480,
+                None,
+                1024,
+                96,
+                1024,
+            ),
+            CheckpointVariant(
+                "ibm-granite/granite-timeseries-ttm-r2",
+                "1536-96-r2",
+                "R2 1536 context / 96 horizon",
+                "f6ed09d67cf42e4877f7fa33d98326911385693d",
+                12344144,
+                None,
+                1536,
+                96,
+                1536,
+            ),
+        ),
+        min_context=512,
+        point_statistic="native_point",
+        supported_tasks=("native_point",),
+        frequency_policy="minutely_hourly",
+    ),
 )
 
 
@@ -230,9 +298,15 @@ def adapter_profile(adapter_id: str) -> AdapterProfile:
     raise ValueError(f"Unsupported checkpoint adapter: {adapter_id!r}")
 
 
-def checkpoint_variant(repository: str) -> tuple[AdapterProfile, CheckpointVariant]:
+def checkpoint_variant(
+    repository: str, variant: str | None = None
+) -> tuple[AdapterProfile, CheckpointVariant]:
     for profile in ADAPTER_PROFILES:
-        for variant in profile.variants:
-            if variant.repository == repository:
-                return profile, variant
+        for choice in profile.variants:
+            if choice.repository == repository and (
+                variant is None or choice.variant == variant
+            ):
+                return profile, choice
+    if variant is not None:
+        raise ValueError("Select a curated checkpoint profile for this repository")
     raise ValueError("Only curated checkpoint repositories are supported")

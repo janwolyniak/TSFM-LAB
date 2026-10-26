@@ -132,8 +132,10 @@ class TimesFM:
             raise ValueError("TimesFM context_length exceeds its supported limit")
         if not 0 < spec.horizon <= self._max_horizon:
             raise ValueError("TimesFM horizon exceeds one native prediction patch")
-        if spec.point_statistic != "median":
-            raise ValueError("TimesFM point forecasts require the median task")
+        if spec.point_statistic not in {"median", "native_point"}:
+            raise ValueError(
+                "TimesFM point forecasts require a median or native_point task"
+            )
 
     def load(self) -> None:
         if self._pipeline is not None:

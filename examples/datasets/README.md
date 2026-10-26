@@ -33,3 +33,18 @@ context 4, seasonal-naive lag 2, horizon 1, stride 1, eight evaluation bars, and
 [OHLC timing and accounting contract](../../docs/finance-extension.md).
 Constructed signals and returns demonstrate implementation behavior and provide
 no evidence of predictive ability or investment returns.
+
+## Longer synthetic TTM example
+
+`ttm-seasonal.csv` is original synthetic data under Apache-2.0, with 1,600
+hourly UTC observations starting at 2026-01-01 00:00 UTC. It is duplicated as a
+packaged resource for guided setup and supports all three exact-context profiles.
+Values are rounded to eight decimal places:
+
+```text
+y[i] = 50 + 0.01*i + 5*sin(2*pi*i/24) + 2*cos(2*pi*i/168)
+```
+
+The [512-profile example](../configurations/ttm-512-96.yaml) scores positions
+512–527 in four windows, with horizon/stride 4 and MASE lag 24. It checks the
+workflow only; it provides no model ranking or domain-performance evidence.

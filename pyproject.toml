@@ -24,7 +24,7 @@ tui = ["tsfm-lab[cli]", "textual==8.2.8"]
 chronos = [
     "chronos-forecasting==2.2.0",
     "torch>=2.8,<2.9",
-    "transformers>=4.55,<4.56",
+    "transformers>=4.56,<4.57",
     "huggingface-hub==0.35.3",
     "safetensors>=0.6,<0.7",
     "accelerate>=1.12,<1.13",
@@ -46,6 +46,17 @@ tirex2 = [
     "ninja==1.13.2",
     "narwhals==2.13.0",
 ]
+ttm = [
+    "granite-tsfm==0.3.4",
+    "torch>=2.8,<2.9",
+    "transformers==4.56.0",
+    "tokenizers==0.22.0",
+    "scikit-learn==1.7.2",
+    "filelock==3.20.3",
+    "huggingface-hub==0.35.3",
+    "safetensors>=0.6,<0.7",
+    "accelerate>=1.12,<1.13",
+]
 
 [project.scripts]
 tsfm = "tsfm_lab.__main__:main"
@@ -66,6 +77,7 @@ markers = [
     "chronos2_smoke: explicit local or cached Chronos-2 checkpoint and installed runtime required; never downloads",
     "timesfm_smoke: explicit local TimesFM 2.5 checkpoint and installed runtime required; never downloads",
     "tirex2_smoke: explicit local or cached TiRex-2 checkpoint and installed runtime required; never downloads",
+    "ttm_smoke: explicit local or cached TTM checkpoint and installed runtime required; never downloads",
 ]
 
 [tool.black]

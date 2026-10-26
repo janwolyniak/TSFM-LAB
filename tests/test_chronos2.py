@@ -198,7 +198,7 @@ def fake_runtime(monkeypatch):
     state.versions = {
         "chronos-forecasting": "2.2.0",
         "torch": "2.8.0",
-        "transformers": "4.55.0",
+        "transformers": "4.56.0",
         "huggingface-hub": "0.35.3",
         "safetensors": "0.6.2",
         "accelerate": "1.12.0",
@@ -283,6 +283,14 @@ def test_environment_versions_do_not_import_runtime(
         SimpleNamespace(import_module=lambda name: pytest.fail(name)),
     )
     assert Chronos2(checkpoint).environment_metadata() == fake_runtime.versions
+
+
+def test_native_point_task_accepts_the_adapters_fixed_median(checkpoint, fake_runtime):
+    model = Chronos2(checkpoint)
+    model.validate(spec(point_statistic="native_point"))
+    model.load()
+    assert model.predict((request(),))[0].point_statistic == "median"
+    model.unload()
 
 
 @pytest.mark.parametrize("stage", ["load", "predict"])
@@ -610,6 +618,7 @@ def test_native_context_and_horizon_are_preserved_without_extension(
     [
         ("chronos-forecasting", "2.3.0"),
         ("torch", "2.9.0"),
+        ("transformers", "4.55.0"),
         ("transformers", "5.0.0"),
         ("huggingface-hub", "1.0.0"),
         ("safetensors", "0.7.0"),

@@ -87,6 +87,8 @@ def backtest_run(
     validate_price_alignment(dataset, ohlc)
     store = ExperimentStore(workspace)
     result, forecasts = store.load_result(run_id)
+    if result["configuration"]["evaluation"]["point_statistic"] != "median":
+        raise FinanceError("Finance reports require the saved median task")
     fingerprint = canonical_fingerprint(dataset)
     if fingerprint != result["provenance"]["dataset"]["canonical_sha256"]:
         raise FinanceError("The original dataset identity does not match the saved run")

@@ -21,6 +21,8 @@ guided setup. See the [terminal guide](tui.md) and [CLI guide](cli.md) for the
 complete workflow. Last value and seasonal naive remain available as baselines.
 
 The Python API keeps `catalog_info(identifier)` for adapter or repository lookup.
+Its optional `variant` argument and `checkpoint_info(repository, variant=None)`
+select a particular curated branch when one repository contains several profiles.
 Adapter entries add `variants`, `runtime_requirements`, and `runtime_notices`.
 Each variant carries its effective `max_context` and `max_horizon`. Repository lookup
 preserves the adapter's `display_name` and adds `variant_display_name`;
@@ -45,6 +47,9 @@ adapter's limits.
 | `tirex_2` | FEV benchmark: `NX-AI/TiRex-2-fevbench` | 2,048 / 320 | 330,038,640 | Metadata/API compatibility checked; individual inference not run. |
 | `tirex_2` | GiftEval zero-shot: `NX-AI/TiRex-2-gifteval-zs` | 8,192 / 928 | 330,038,640 | Metadata/API compatibility checked; individual inference not run. |
 | `tirex_2` | GiftEval pretrain: `NX-AI/TiRex-2-gifteval-pretrain` | 8,192 / 928 | 330,038,640 | Metadata/API compatibility checked; individual inference not run. |
+| `ttm_r2` | `ibm-granite/granite-timeseries-ttm-r2`, `512-96-r2` | exactly 512 / 96 | 3,240,592 | Representative CPU check recorded. |
+| `ttm_r2` | Same repository, `1024-96-r2` | exactly 1,024 / 96 | 11,879,480 | Compatibility checked; individual inference not run. |
+| `ttm_r2` | Same repository, `1536-96-r2` | exactly 1,536 / 96 | 12,344,144 | Compatibility checked; individual inference not run. |
 
 Weight-file size describes stored bytes, not required runtime memory. Catalog
 status applies to its listed reference revision. A different requested revision
@@ -52,12 +57,15 @@ or standalone local checkpoint is inspected separately before execution.
 `parameter_count` is the stored parameter total, including additional heads;
 TimesFM's 200M model name is retained even though its stored total is larger.
 
-The pretrained adapters currently support CPU float32 median forecasts, with
+Chronos, TimesFM, and TiRex adapters support CPU float32 median forecasts, with
 batch size one. TimesFM records its native context of 16,384, while the adapter
 reserves room for its output patch and accepts at most 16,256 historical values.
 Its native quantile head does not expand the adapter's 128-step horizon.
 See the [Bolt guide](chronos.md), [Chronos-2 guide](chronos2.md),
-[TimesFM guide](timesfm.md), and [TiRex-2 guide](tirex2.md).
+[TimesFM guide](timesfm.md), [TiRex-2 guide](tirex2.md), and [TTM guide](ttm.md).
+TTM uses a native-point task, exact context, and minute-to-hour declared cadence.
+Use `models info ibm-granite/granite-timeseries-ttm-r2 --variant 1024-96-r2`
+to inspect a nondefault branch. YAML records its repository and pinned SHA.
 
 TiRex-2's choices are training profiles of the same architecture, not size tiers.
 The model-weight license remains Apache-2.0. Its separate optional runtime
@@ -173,16 +181,17 @@ See the [pinned runtime requirements](https://github.com/NX-AI/tirex-2/blob/614f
 
 **TTM (P4).** `granite-tsfm==0.3.4` admits Python 3.11–3.13/Torch <2.9 but pins
 Transformers 4.56.0. Audited release `0.3.11` requires Torch ≥2.10/<2.12 and
-Transformers ≥4.57.6/<6. Settle runtime isolation or a coordinated dependency
-change, then explicit native context/horizon/frequency, causal scaling, and
-native-point task semantics. Do not relabel a point head as a verified median.
+Transformers ≥4.57.6/<6. The owner approved the coordinated 0.3.4 runtime with
+Transformers 4.56, Tokenizers 0.22, scikit-learn 1.7.2, and Filelock 3.20.3.
+P4 implements three explicit context profiles, causal scaling, and native-point
+task semantics; see the [P4 record](p4-ttm-verification.md). Do not relabel a point head as a verified median.
 See the [pinned 0.3.4 requirements](https://github.com/ibm-granite/granite-tsfm/blob/4d4c6cf0e345c985d84f6292a4f397caf5e2ba78/pyproject.toml)
 and [pinned 0.3.11 requirements](https://github.com/ibm-granite/granite-tsfm/blob/dfe846e6c1f1b0086b4a7b0831249ac8aeb7dcd7/pyproject.toml).
 
 P1 introduced no environment manager. P2's original verification used an isolated
 pristine Chronos package. P3 retains one managed inference interpreter and
-coordinates the shared Hub pin with existing-adapter regression checks. Settle
-TTM's remaining runtime conflict and output semantics before P4. TimesFM 2.0 and 3.0 are separate model
+coordinates the shared Hub pin with existing-adapter regression checks. P4
+retains that interpreter design and qualifies the shared Transformers update. TimesFM 2.0 and 3.0 are separate model
 generations outside the current 2.5 adapter, rather than larger variants covered
 by its verification. Follow the [next release plan](next-release-plan.md) for
 the remaining scope and acceptance gates.

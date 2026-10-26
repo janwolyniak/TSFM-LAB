@@ -66,6 +66,7 @@ class RecordCommands:
         self._print(
             f"Horizon: {evaluation['horizon']} observations · Context: {evaluation['context_length']} · Stride: {evaluation['stride']}"
         )
+        self._print(f"Forecast task: {evaluation['point_statistic']}")
         self._print(
             f"Targets: {evaluation['evaluation_start']} to {evaluation['evaluation_end']} (end excluded)"
         )
@@ -96,8 +97,15 @@ class RecordCommands:
             variants = entry.get("variants", [])
             for variant in variants:
                 self._print(f"{variant['display_name']} · {variant['repository']}")
+                if len(entry["repositories"]) < len(variants):
+                    self._print(f"  Checkpoint profile: {variant['variant']}")
+                context = (
+                    f"Context exactly {variant['min_context']}"
+                    if variant["min_context"] == variant["max_context"]
+                    else f"Context up to {variant['max_context']}"
+                )
                 self._print(
-                    f"  Context up to {variant['max_context']} · Horizon up to {variant['max_horizon']} observations"
+                    f"  {context} · Horizon up to {variant['max_horizon']} observations"
                 )
                 if variant["weight_bytes"] is not None:
                     self._print(
@@ -210,6 +218,9 @@ class RecordCommands:
         configuration = result["configuration"]
         self._print(f"{manifest['name']} · {resolved}")
         self._task(configuration["dataset"], configuration["evaluation"])
+        self._print(
+            f"Forecast output: {', '.join(sorted(predictions['point_statistic'].unique()))}"
+        )
         model, runtime = configuration["model"], configuration["runtime"]
         self._print(
             f"Model: {model['adapter_id']} · {runtime['device']} · {runtime['dtype']} · Completed"
@@ -278,13 +289,23 @@ class RecordCommands:
             "Controlled comparison · matching forecast tasks and observed cases"
         )
         self._task(result["task"]["dataset"], result["task"]["evaluation"])
+        native = "point_semantics" in result
+        if native:
+            self._print(result["point_semantics"])
         names = list(result["runs"][0]["metrics"])
         self._table(
-            ("Experiment", "Model", "Precision", *(name.upper() for name in names)),
+            (
+                "Experiment",
+                "Model",
+                *(("Output",) if native else ()),
+                "Precision",
+                *(name.upper() for name in names),
+            ),
             (
                 (
                     run["name"],
                     run["model"]["adapter_id"],
+                    *((", ".join(run["output_statistics"]),) if native else ()),
                     run["runtime"]["dtype"],
                     *(_metric(run["metrics"][name]) for name in names),
                 )

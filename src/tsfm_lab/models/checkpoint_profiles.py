@@ -5,7 +5,9 @@ import math
 from tsfm_lab.models.registry import ADAPTER_PROFILES
 
 CHECKPOINT_REPOSITORIES = {
-    profile.adapter_id: tuple(variant.repository for variant in profile.variants)
+    profile.adapter_id: tuple(
+        dict.fromkeys(variant.repository for variant in profile.variants)
+    )
     for profile in ADAPTER_PROFILES
 }
 ADAPTER_LIMITS = {
@@ -74,7 +76,7 @@ def _bolt_bounds(context, horizon):
 
 
 def config_metadata(config: dict) -> dict:
-    """Validate runtime-compatible architecture and return schema-1 native fields."""
+    """Validate runtime-compatible architecture and return native checkpoint fields."""
     if "stack_config" in config or "act_func" in config:
         from tsfm_lab.models.tirex2_profile import QUANTILES, validated_profile
 
@@ -95,6 +97,19 @@ def config_metadata(config: dict) -> dict:
     architecture, pipeline, model_type = _IDENTITIES[adapter]
     if config.get("model_type") != model_type:
         raise ValueError("Checkpoint model_type disagrees with its architecture")
+    if adapter == "ttm_r2":
+        from tsfm_lab.models.ttm_profile import validated_profile
+
+        profile = validated_profile(config)
+        return {
+            "architecture": architecture,
+            "pipeline_class": pipeline,
+            "model_type": model_type,
+            "native_context_length": profile["context"],
+            "native_prediction_length": profile["horizon"],
+            "quantiles": [],
+            "point_forecast": profile["point_forecast"],
+        }
     if adapter in {"chronos_bolt", "chronos_2"}:
         if config.get("chronos_pipeline_class") != pipeline:
             raise ValueError("Checkpoint is not a supported Chronos pipeline")
@@ -134,6 +149,16 @@ def validate_record_profile(record: dict) -> str:
     _, pipeline, model_type = _IDENTITIES[adapter]
     if record["pipeline_class"] != pipeline or record["model_type"] != model_type:
         raise ValueError("Unsupported checkpoint record architecture")
+    if (record["schema_version"] == 2) != (adapter == "ttm_r2"):
+        raise ValueError("Checkpoint schema disagrees with its output representation")
+    if adapter == "ttm_r2":
+        from tsfm_lab.models.ttm_profile import validate_native
+
+        validate_native(record)
+        if record["source"] == "huggingface":
+            if repository_adapter(record["repository"]) != adapter:
+                raise ValueError("Checkpoint repository and architecture disagree")
+        return adapter
     context, horizon = (
         record["native_context_length"],
         record["native_prediction_length"],

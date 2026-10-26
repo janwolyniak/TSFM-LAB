@@ -98,10 +98,11 @@ working array. Treat historical and timestamp buffers as immutable. These
 contracts prevent accidental leakage by conforming adapters; they do not isolate
 hostile local Python code.
 
-The initial task requests a median point forecast. Deterministic outputs such as
-the drift example are admissible and must retain `point_statistic="deterministic"`.
-For probabilistic models, use the requested statistic and label it accurately;
-never relabel a median as a mean. Quantile/sample scoring and output contracts
+The default `median` task accepts median and deterministic outputs. The explicit
+`native_point` task accepts declared native point, mean, median, or deterministic
+outputs for point-accuracy comparisons. Outputs retain their actual labels;
+TTM's MSE head is `native_point`, not a verified mean or median. Deterministic
+outputs such as the drift example retain `point_statistic="deterministic"`. Quantile/sample scoring and output contracts
 remain later work. See [evaluation methodology](evaluation.md) and
 [core contracts](contracts.md) for chronology, metric pooling, and undefined MASE.
 
@@ -134,8 +135,11 @@ The runner also recognizes optional hooks outside the required protocol:
 
 - A `source` attribute/property can supply the model source. Ordinary local Python
   adapters can use `local_python`. The `local` and `huggingface` checkpoint-source
-  schemas have explicit per-family validation for Chronos-Bolt and TimesFM 2.5.
+  schemas have explicit validation for every curated checkpoint family.
   An adapter/repository mismatch is rejected before loading weights.
+- `validate_frequency(frequency: str) -> None` may reject an unsupported declared
+  cadence before loading. It receives only the cadence string, never dataset
+  values or future actuals. TTM uses it to enforce its R2 minute-to-hour policy.
 - `runtime_configuration() -> dict` records actual device, dtype, batch size, and
   relevant seed/determinism choices. Without it, the current defaults are CPU,
   float64, and batch size 1. Describe the actual model arithmetic dtype, even when

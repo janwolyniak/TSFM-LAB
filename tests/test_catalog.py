@@ -25,6 +25,7 @@ def test_catalog_metadata_is_json_compatible_and_has_cpu_only_verified_bounds():
         "timesfm_2p5",
         "chronos_2",
         "tirex_2",
+        "ttm_r2",
     ]
     assert json.loads(json.dumps(entries, allow_nan=False)) == entries
     bolt = catalog_info("chronos_bolt")
@@ -141,7 +142,7 @@ def test_catalog_and_checkpoint_metadata_import_without_optional_runtimes():
     script = (
         "import sys; import tsfm_lab.models.catalog; import tsfm_lab.models.checkpoints; "
         "assert not ({'torch', 'chronos', 'timesfm', 'huggingface_hub', "
-        "'safetensors', 'transformers', 'tirex2', 'flashrnn', 'mlstm_kernels'} & set(sys.modules))"
+        "'safetensors', 'transformers', 'tirex2', 'flashrnn', 'mlstm_kernels', 'tsfm_public'} & set(sys.modules))"
     )
     result = subprocess.run(
         [sys.executable, "-c", script],

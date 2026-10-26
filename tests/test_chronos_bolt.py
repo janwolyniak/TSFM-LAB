@@ -122,7 +122,7 @@ def fake_runtime(monkeypatch):
     state.versions = {
         "chronos-forecasting": "2.2.0",
         "torch": "2.8.0",
-        "transformers": "4.55.0",
+        "transformers": "4.56.0",
         "huggingface-hub": "0.35.3",
         "safetensors": "0.6.2",
         "accelerate": "1.10.0",
@@ -221,6 +221,14 @@ def test_unsupported_runtime_rejected(checkpoint, options):
 def test_native_limits_rejected_before_loading(checkpoint, changes):
     with pytest.raises(ValueError, match="native"):
         ChronosBolt(checkpoint).validate(spec(**changes))
+
+
+def test_native_point_task_accepts_the_adapters_fixed_median(checkpoint, fake_runtime):
+    model = ChronosBolt(checkpoint)
+    model.validate(spec(point_statistic="native_point"))
+    model.load()
+    assert model.predict((request(),))[0].point_statistic == "median"
+    model.unload()
 
 
 def test_load_is_local_safe_strict_and_idempotent(checkpoint, fake_runtime):
@@ -348,6 +356,7 @@ def test_bad_quantile_shape_or_values_are_rejected(checkpoint, fake_runtime, qua
         ("chronos-forecasting", "2.3.0"),
         ("torch", "2.9.0"),
         ("transformers", "5.0.0"),
+        ("transformers", "4.55.0"),
         ("huggingface-hub", "1.0.0"),
     ],
 )

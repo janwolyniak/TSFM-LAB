@@ -16,10 +16,12 @@ from tsfm_lab.models.catalog import (
     catalog_info,
 )
 from tsfm_lab.models.factory import build_model
+from tsfm_lab.point_tasks import validate_model_frequency
 
 _DEFAULTS = {
     "name": "New experiment",
     "adapter": "last_value",
+    "point_statistic": "median",
     "seasonal_period": "4",
     "source": "huggingface",
     "repository": CHECKPOINT_REPOSITORIES["chronos_bolt"][0],
@@ -52,8 +54,14 @@ def default_fields(initial_adapter: str = "last_value") -> dict[str, str]:
     if initial_adapter not in {entry["adapter_id"] for entry in catalog_entries()}:
         raise ConfigError("Choose a supported model adapter")
     fields = {**_DEFAULTS, "adapter": initial_adapter}
+    info = catalog_info(initial_adapter)
+    if info["point_statistic"] in info["supported_tasks"]:
+        fields["point_statistic"] = info["point_statistic"]
     if initial_adapter in CHECKPOINT_REPOSITORIES:
         fields["repository"] = CHECKPOINT_REPOSITORIES[initial_adapter][0]
+        variant = info["variants"][0]
+        if variant["min_context"] == variant["max_context"]:
+            fields["context_length"] = str(variant["min_context"])
     return fields
 
 
@@ -139,7 +147,7 @@ def _mapping(fields: dict[str, str], workspace: Path) -> dict:
             "evaluation_start": fields["evaluation_start"],
             "evaluation_end": fields["evaluation_end"],
             "metrics": ["mae", "rmse", "mase"],
-            "point_statistic": "median",
+            "point_statistic": fields["point_statistic"],
         },
         "output": {"directory": str(workspace)},
     }
@@ -163,6 +171,7 @@ def validate_model_fields(
     fields = _draft(fields)
     mapping = _minimal_mapping(workspace)
     mapping["name"], mapping["model"] = fields["name"], _model(fields)
+    mapping["evaluation"]["point_statistic"] = fields["point_statistic"]
     if fields["adapter"] == "seasonal_naive":
         mapping["evaluation"]["context_length"] = _integer(fields, "seasonal_period")
     config_from_mapping(mapping, base_directory=base_directory)
@@ -229,6 +238,7 @@ class PreparedExperiment:
             f"{config.name}\n\nModel: {display_name}\nTarget: {config.dataset['target_column']} "
             f"({config.dataset['units']}) · Frequency: {config.dataset['frequency']}\n"
             f"Context: {spec.context_length} observations · Horizon: {spec.horizon} observations\n"
+            f"Forecast task: {spec.point_statistic}\n"
             f"Stride: {spec.stride} · MASE seasonal lag: {spec.seasonal_period}{baseline}\n"
             f"Windows: {self.windows} · Forecast cases: {self.forecast_cases}\n"
             f"Observations: {self.observations}\n\n"
@@ -250,6 +260,7 @@ def prepare_experiment(
         dataset = load_dataset(config.dataset)
         start, end = evaluation_bounds(dataset, config.evaluation)
         model = build_model(config.model, config.runtime)
+        validate_model_frequency(model, dataset.frequency)
         model.validate(config.evaluation)
     except (ValueError, OSError, ImportError) as exc:
         raise ConfigError(str(exc)) from exc

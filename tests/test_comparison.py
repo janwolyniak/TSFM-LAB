@@ -12,6 +12,10 @@ def test_distinct_baselines_compare_on_the_same_task(config_factory, tmp_path):
     assert value["compatible"] is True
     assert [r["metrics"]["mae"]["value"] for r in value["runs"]] == [2.5, 1.0]
     assert value["task"]["evaluation"]["context_length"] == 8
+    assert value["comparison_policy"] == "controlled_point_v1"
+    assert "mixed_point_statistics" not in value
+    assert "point_semantics" not in value
+    assert all("output_statistics" not in run for run in value["runs"])
 
 
 @pytest.mark.parametrize(
@@ -22,6 +26,7 @@ def test_distinct_baselines_compare_on_the_same_task(config_factory, tmp_path):
         {"evaluation": {"seasonal_period": 1}},
         {"evaluation": {"horizon": 2}},
         {"evaluation": {"metrics": ["mae"]}},
+        {"evaluation": {"point_statistic": "native_point"}},
         {"dataset": {"units": "other_units"}},
     ],
 )

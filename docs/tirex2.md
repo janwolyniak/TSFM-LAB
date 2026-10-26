@@ -58,7 +58,8 @@ accelerator packages even when choosing CPU inference; use the platform's
 explicit constrained environment and inspect its dependencies before installing.
 
 P3 updates the shared Hub pin from 0.34.4 to 0.35.3 for all checkpoint adapters;
-it retains Torch 2.8 and Transformers 4.55. Existing-family CPU regressions and
+it retained Torch 2.8 and Transformers 4.55. P4 subsequently qualifies
+Transformers 4.56 in the [shared runtime record](p4-ttm-verification.md). Existing-family CPU regressions and
 the exact verification environment belong in the [P3 record](p3-tirex2-verification.md).
 This does not upgrade an existing global installation automatically. Model
 listing, configuration validation, and saved-result inspection require none of

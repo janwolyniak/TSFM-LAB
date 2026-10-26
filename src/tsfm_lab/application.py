@@ -10,6 +10,7 @@ from tsfm_lab.evaluation.runner import run_experiment
 from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.models.factory import build_model
+from tsfm_lab.point_tasks import validate_model_frequency
 
 
 class RunExecutionError(RuntimeError):
@@ -64,6 +65,7 @@ def run_config(
         model = build_model(config.model, config.runtime)
         evaluation_bounds(dataset, config.evaluation)
         model.validate(config.evaluation)
+        validate_model_frequency(model, dataset.frequency)
         canonical_fingerprint(dataset)
     except (OSError, ValueError, ImportError) as exc:
         raise ConfigError(str(exc)) from exc

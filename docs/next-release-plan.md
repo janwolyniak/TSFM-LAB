@@ -2,7 +2,7 @@
 
 Working target: **v0.2.0**, following the prepared v0.1.0 release.
 Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and verified
-locally. P3 TiRex-2 is also implemented and verified locally; P4–P8 remain
+locally. P3 TiRex-2 and P4 TTM are also implemented and verified locally; P5–P8 remain
 future work. The existing package version and publication
 status remain unchanged.
 
@@ -105,7 +105,8 @@ no-runtime saved-result reload/export. Initial integrations are univariate and
 CPU-first. Multivariate and covariate features advertised upstream are not
 implicitly added to the product.
 
-TTM needs a specific contract step before its adapter is coded:
+P4 completed the following contract step before its adapter was coded, under
+the [approved TTM contract](ttm-contract.md):
 
 - Select and pin release profile, training loss, context, horizon, and frequency
   variants explicitly; prevent automatic substitution, padding, rolling horizon
@@ -267,16 +268,18 @@ inference work. Integrate through the [contribution workflow](../CONTRIBUTING.md
 | P7 Natural-language setup and explanations | Implement the versioned draft, clarification, normal validators/review, and grounded explanations in the terminal. | End-to-end fake-provider tests cover intent preservation, missing fields, unsupported future targets, invalid responses, explanations, and manual fallback. |
 | P8 Release qualification | Update guides/examples, build source and wheel, and run the installed workflow and configured CI. | Current release checklist passes with exact source/artifact identities and documented representative/variant verification status. |
 
-**P1, P2, and P3 are complete locally.** TiRex-2 adds its adapter and four
-profiles with a recorded representative CPU check. The agreed shared Hub
-update avoids a new environment manager. **P4 TTM** still requires its runtime,
-native-point task, and scaling decisions before implementation.
+**P1–P4 are complete locally.** TTM adds three exact-context R2 MSE profiles,
+history-only scaling, explicit native-point comparisons, and a representative
+CPU check under the approved shared runtime. See the [contract](ttm-contract.md)
+and [P4 evidence](p4-ttm-verification.md). P5 usage profiles and guided workflows
+are next; connections and language assistance follow in P6/P7. Publication of
+this milestone remains separate from implementation and package publication.
 
 ## Release acceptance
 
-- [ ] Users can select all five forecasting families and their approved variants
+- [x] Users can select all five forecasting families and their approved variants
   through `/new`, with metadata also available through model listing/help.
-- [ ] Each new adapter has one recorded representative real inference check.
+- [x] Each new adapter has one recorded representative real inference check.
   Larger compatible variants are selectable without mandatory individual
   inference runs and are labelled accurately.
 - [ ] Manual and assisted setup both expose all five usage profiles and produce

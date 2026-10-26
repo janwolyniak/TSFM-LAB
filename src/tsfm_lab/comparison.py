@@ -4,6 +4,7 @@ from pathlib import Path
 
 from tsfm_lab.contracts import fixed_interval
 from tsfm_lab.experiments import ExperimentStore, StoreError
+from tsfm_lab.point_tasks import output_statistics
 
 
 class ComparisonError(ValueError):
@@ -57,16 +58,18 @@ def compare_runs(run_ids: list[str], workspace: str | Path) -> dict:
             raise ComparisonError(
                 f"Experiment {run_id} has different forecast cases or actuals"
             )
-        if not set(predictions.point_statistic) <= {
-            "deterministic",
-            signature["evaluation"]["point_statistic"],
-        }:
+        if not set(predictions.point_statistic) <= output_statistics(
+            signature["evaluation"]["point_statistic"]
+        ):
             raise ComparisonError(
                 f"Experiment {run_id} has an incompatible point statistic"
             )
-    return {
+    native = first_signature["evaluation"]["point_statistic"] == "native_point"
+    comparison = {
         "compatible": True,
-        "comparison_policy": "controlled_point_v1",
+        "comparison_policy": (
+            "controlled_native_point_v1" if native else "controlled_point_v1"
+        ),
         "task": first_signature,
         "runs": [
             {
@@ -81,3 +84,18 @@ def compare_runs(run_ids: list[str], workspace: str | Path) -> dict:
             for run_id, result, _ in loaded
         ],
     }
+    if native:
+        labels = [
+            sorted(set(predictions.point_statistic)) for _, _, predictions in loaded
+        ]
+        for row, statistics in zip(comparison["runs"], labels, strict=True):
+            row["output_statistics"] = statistics
+        comparison["mixed_point_statistics"] = (
+            len({statistic for statistics in labels for statistic in statistics}) > 1
+        )
+        comparison["point_semantics"] = (
+            "Compare model-native point accuracy on identical cases and metrics. "
+            "Output labels retain their actual semantics; different labels do not "
+            "establish a common conditional mean or median."
+        )
+    return comparison

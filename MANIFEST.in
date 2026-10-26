@@ -1,8 +1,8 @@
 include CONTRIBUTING.md CHANGELOG.md NOTICE
-include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt requirements-tirex2.txt
+include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt requirements-tirex2.txt requirements-ttm.txt
 include docs/*.md
 include examples/baseline.py examples/custom_adapter.py
-include examples/datasets/README.md examples/datasets/seasonal.csv examples/datasets/ohlc.csv
+include examples/datasets/README.md examples/datasets/seasonal.csv examples/datasets/ohlc.csv examples/datasets/ttm-seasonal.csv
 include examples/configurations/*.yaml
 include scripts/*.py
 recursive-include tests *.py

@@ -184,8 +184,10 @@ class TiRex2:
             raise ValueError("TiRex-2 context_length exceeds its native context limit")
         if not 0 < spec.horizon <= self._max_horizon:
             raise ValueError("TiRex-2 horizon exceeds its native prediction limit")
-        if spec.point_statistic != "median":
-            raise ValueError("TiRex-2 point forecasts require the median task")
+        if spec.point_statistic not in {"median", "native_point"}:
+            raise ValueError(
+                "TiRex-2 point forecasts require a median or native_point task"
+            )
 
     def load(self):
         if self._model is not None:

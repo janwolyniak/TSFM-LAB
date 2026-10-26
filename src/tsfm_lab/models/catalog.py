@@ -19,11 +19,11 @@ CURATED_REPOSITORIES = tuple(
 )
 
 
-def checkpoint_info(repository: str) -> dict:
+def checkpoint_info(repository: str, variant: str | None = None) -> dict:
     """Describe a curated reference without inspecting local files or runtimes."""
     from tsfm_lab.models._verification_evidence import PROJECT_CHECKS
 
-    profile, variant = checkpoint_variant(repository)
+    profile, variant = checkpoint_variant(repository, variant)
     checks = [
         item for item in PROJECT_CHECKS if item["adapter_id"] == profile.adapter_id
     ]
@@ -36,6 +36,7 @@ def checkpoint_info(repository: str) -> dict:
         **asdict(variant),
         "max_context": variant.max_context or profile.max_context,
         "max_horizon": variant.max_horizon or profile.max_horizon,
+        "min_context": variant.min_context or profile.min_context,
         "project_inference_status": "recorded" if recorded else "not_recorded",
         "verification_label": (
             "Reference checkpoint inference check recorded"
@@ -61,6 +62,8 @@ def catalog_entries() -> list[dict]:
                 "license": "Apache-2.0",
                 "dtypes": ["float64"],
                 "point_statistic": "deterministic",
+                "supported_tasks": ["median", "native_point"],
+                "frequency_policy": "any_fixed",
                 "repositories": [],
                 "variants": [],
                 "runtime_requirements": {},
@@ -79,14 +82,20 @@ def catalog_entries() -> list[dict]:
                 "source": "huggingface",
                 "license": "apache-2.0",
                 "dtypes": ["float32"],
-                "point_statistic": "median",
+                "point_statistic": profile.point_statistic,
+                "supported_tasks": list(profile.supported_tasks),
+                "frequency_policy": profile.frequency_policy,
                 "capabilities": asdict(
-                    ModelCapabilities(max_context=context, max_horizon=horizon)
+                    ModelCapabilities(
+                        min_context=profile.min_context,
+                        max_context=context,
+                        max_horizon=horizon,
+                    )
                 ),
                 "repositories": list(CHECKPOINT_REPOSITORIES[adapter]),
                 "variants": [
-                    checkpoint_info(repository)
-                    for repository in CHECKPOINT_REPOSITORIES[adapter]
+                    checkpoint_info(variant.repository, variant.variant)
+                    for variant in profile.variants
                 ],
                 "runtime_requirements": dict(profile.runtime_requirements),
                 "runtime_notices": list(profile.runtime_notices),
@@ -99,13 +108,15 @@ def catalog_entries() -> list[dict]:
     return entries
 
 
-def catalog_info(identifier: str) -> dict:
+def catalog_info(identifier: str, variant: str | None = None) -> dict:
     """Look up an adapter or curated repository without probing arbitrary models."""
     for entry in catalog_entries():
         if identifier == entry["adapter_id"]:
+            if variant is not None:
+                raise ValueError("Select a repository before its checkpoint profile")
             return entry
         if identifier in entry["repositories"]:
-            variant = checkpoint_info(identifier)
+            variant = checkpoint_info(identifier, variant)
             return {
                 **entry,
                 **{
@@ -116,6 +127,7 @@ def catalog_info(identifier: str) -> dict:
                 "variant_display_name": variant["display_name"],
                 "capabilities": {
                     **entry["capabilities"],
+                    "min_context": variant["min_context"],
                     "max_context": variant["max_context"],
                     "max_horizon": variant["max_horizon"],
                 },

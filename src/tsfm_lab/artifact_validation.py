@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
+from tsfm_lab.point_tasks import output_statistics
 
 PREDICTION_IDENTITIES = ("request_id", "series_id", "adapter_id", "point_statistic")
 _COLUMNS = (
@@ -100,7 +101,7 @@ def _metrics(metrics, spec):
                     raise StoreError("Defined metrics cannot have an undefined reason")
 
 
-def _checkpoint_identity(model, runtime, spec, environment):
+def _checkpoint_identity(model, runtime, spec, environment, frequency):
     adapter = model["adapter_id"]
     from tsfm_lab.models.checkpoint_profiles import CHECKPOINT_REPOSITORIES
     from tsfm_lab.models.registry import adapter_profile
@@ -133,6 +134,23 @@ def _checkpoint_identity(model, runtime, spec, environment):
     ):
         raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
     distributions = tuple(name for name, _ in profile.runtime_requirements)
+    if adapter == "ttm_r2":
+        from tsfm_lab.models.ttm_profile import (
+            validate_frequency,
+            validate_runtime_options,
+        )
+
+        context = record["native_context_length"]
+        if (
+            caps["min_context"] != context
+            or caps["max_context"] != context
+            or spec.context_length != context
+            or spec.point_statistic != "native_point"
+            or runtime.get("torch_compile") is not False
+        ):
+            raise StoreError("TTM requires its fixed context and native_point task")
+        validate_frequency(frequency)
+        validate_runtime_options(runtime.get("forecast_options"), record)
     if adapter == "tirex_2":
         from tsfm_lab.models.tirex2_profile import forecast_options_for_record
 
@@ -208,7 +226,7 @@ def _schema(result):
     environment = _object(provenance["environment"], "environment provenance")
     for key in ("python", "numpy", "pandas", "os", "machine"):
         _text(environment[key], f"environment {key}")
-    _checkpoint_identity(model, runtime, spec, environment)
+    _checkpoint_identity(model, runtime, spec, environment, dataset["frequency"])
     if "project_verification" in provenance:
         from tsfm_lab.models.verification import validate_verification_record
 
@@ -305,8 +323,26 @@ def _grid(frame, result, config, spec, interval):
         raise StoreError(
             "Prediction series or adapter identity disagrees with metadata"
         )
-    if not set(frame.point_statistic) <= {"deterministic", spec.point_statistic}:
+    if not set(frame.point_statistic) <= output_statistics(spec.point_statistic):
         raise StoreError("Prediction statistic disagrees with the configured task")
+    if spec.point_statistic == "native_point":
+        from tsfm_lab.models.registry import ADAPTER_PROFILES
+
+        declared = {
+            "last_value": "deterministic",
+            "seasonal_naive": "deterministic",
+            **{
+                profile.adapter_id: profile.point_statistic
+                for profile in ADAPTER_PROFILES
+            },
+        }
+        expected_statistic = declared.get(config["model"]["adapter_id"])
+        if expected_statistic is not None and set(frame.point_statistic) != {
+            expected_statistic
+        }:
+            raise StoreError(
+                "Native output statistic disagrees with the adapter semantics"
+            )
     if frame.duplicated(["series_id", "origin", "target_timestamp", "lead"]).any():
         raise StoreError("Predictions contain duplicate forecast keys")
     duration = spec.evaluation_end.value - spec.evaluation_start.value

@@ -7,6 +7,8 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
+from tsfm_lab.point_tasks import output_statistics
+
 
 def positive_int(value: int, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
@@ -117,8 +119,7 @@ class EvaluationSpec:
             raise ValueError("metrics must be nonempty and unique")
         if not set(metrics) <= {"mae", "rmse", "mase"}:
             raise ValueError("unsupported metric; choose mae, rmse, or mase")
-        if self.point_statistic != "median":
-            raise ValueError("the initial point task supports only median")
+        output_statistics(self.point_statistic)
         if self.aggregation != "forecast_case_micro_v1":
             raise ValueError("unsupported metric aggregation")
         object.__setattr__(self, "evaluation_start", start)
@@ -164,7 +165,9 @@ class ForecastOutput:
     target_timestamps: pd.DatetimeIndex
     point: np.ndarray
     adapter_id: str
-    point_statistic: Literal["deterministic", "median", "mean"] = "deterministic"
+    point_statistic: Literal["deterministic", "median", "mean", "native_point"] = (
+        "deterministic"
+    )
 
     def __post_init__(self) -> None:
         for name in ("request_id", "series_id", "adapter_id"):
@@ -174,7 +177,7 @@ class ForecastOutput:
         point = _values(self.point, "point forecasts")
         if len(targets) != len(point) or targets[0] <= origin:
             raise ValueError("forecast length and target timestamps must align")
-        if self.point_statistic not in {"deterministic", "median", "mean"}:
+        if self.point_statistic not in output_statistics("native_point"):
             raise ValueError("unsupported forecast point statistic")
         object.__setattr__(self, "origin", origin)
         object.__setattr__(self, "target_timestamps", targets)
