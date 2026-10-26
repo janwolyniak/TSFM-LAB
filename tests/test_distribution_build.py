@@ -46,6 +46,12 @@ def wheel(tmp_path, dependency):
             "tsfm_lab/resources/seasonal.csv",
             "tsfm_lab/repl/session.py",
             "tsfm_lab/terminal.py",
+            "tsfm_lab/finance_commands.py",
+            "tsfm_lab/finance/backtest.py",
+            "tsfm_lab/finance/reports.py",
+            "tsfm_lab/finance/ledger.py",
+            "tsfm_lab/finance/ohlc.py",
+            "tsfm_lab/finance/exports.py",
             f"{prefix}/licenses/LICENSE",
         ):
             archive.writestr(name, "fixture")

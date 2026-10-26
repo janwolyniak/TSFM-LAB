@@ -22,12 +22,19 @@ noninteractive.
 | `tsfm experiments show ID --workspace results` | Show a manifest; completed scores are displayed only after artifact validation. |
 | `tsfm compare ID1 ID2 --workspace results` | Refuse mismatched forecasting tasks and compare validated completed records. |
 | `tsfm export ID --workspace results --output forecasts.csv` | Export checked predictions as CSV, JSON, or Parquet. Existing files are never replaced. |
+| `tsfm finance backtest ID --source-config CONFIG --ohlc CSV ... --output REPORT.json` | Derive an OHLC report from checked saved forecasts with explicit price, timing, capital, and cost assumptions. |
+| `tsfm finance show REPORT.json` | Recompute a self-contained finance report without its original sources or model runtime. |
+| `tsfm finance export REPORT.json --output equity.csv` | Export strategy, cash, and buy-and-hold equity at each target close. |
 
 All these commands support `--json` for plain JSON on stdout. Progress and error
 messages go to stderr, including during a JSON run. There are no interactive
 prompts. Exit codes are 0 for success, 2 for invalid configuration/arguments or an
 incompatible comparison, 1 for execution/storage failures, and 130 for cancellation.
 An existing export destination is a failed file operation with exit code 1.
+Finance input/report contract errors use exit code 2. See the
+[finance guide](finance-extension.md) for its required options and strict
+lead-1/stride-1 timing policy. Finance commands are shell commands; they have not
+been added to the interactive prompt.
 
 Human-readable tables use [Rich](https://rich.readthedocs.io/en/stable/tables.html),
 with [Typer](https://typer.tiangolo.com/tutorial/testing/) handling shell arguments.

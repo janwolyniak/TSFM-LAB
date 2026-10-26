@@ -111,6 +111,10 @@ configuration-driven execution, history/reload, compatible comparison, and
 exports without a pretrained model or network request. It must fail rather than
 fall back to importing this repository's `src` directory. Record its actual
 checks and output with the artifact hashes.
+It also runs a small OHLC fixture through finance backtest, checks independent
+costed accounting, then moves the sources and verifies detached report reload,
+CSV equity export, and overwrite refusal. This bounded check uses no model
+weights and does not establish a profitable trading rule.
 
 `pip check` verifies dependency metadata compatibility; it does not execute the
 application. The installed smoke test verifies its exercised workflows; it does

@@ -52,8 +52,8 @@ and managed worker remain shared with the shell. See [the rework](terminal-rewor
 The owner selected TimesFM for the second family and authorized a bounded Small
 download/CPU test and an isolated TimesFM runtime installation. The broader
 benchmarking compatibility study is authorized in a separate temporary runtime;
-finance implementation awaits agreement on trading rules. These decisions do
-not authorize publishing a package release.
+the first finance timing, position, and cost rules are now agreed below.
+These decisions do not authorize publishing a package release.
 
 ## Milestone 0 Architecture review
 
@@ -208,7 +208,9 @@ state exact identities and evidence.
 - [x] Verify real cached TimesFM CPU inference/replay and the approved Small
   workflow, without a real-data forecasting advantage claim.
 - [x] Complete routine, package, and installed-wheel checks for the preparation tree.
-- [ ] Review/integrate this milestone and verify its current remote CI.
+- [x] Review/integrate this milestone and verify its current remote CI:
+  [PR #2](https://github.com/janwolyniak/TSFM-LAB/pull/2), merged `b8d5647`,
+  [six-job post-merge run](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40240609625).
 
 Acceptance: a baseline and TimesFM use identical forecast cases and metric
 definitions; saved records remain usable without either model's weights/runtime;
@@ -216,13 +218,27 @@ wrong-family identities, unsupported limits, unsafe files, and unverified runtim
 versions fail explicitly. Routine CI needs no weights. Larger device/model claims
 require separate verification; Chronos-2 remains a later adapter.
 
-## Next-stage contracts
+## Milestone 7 Explicit OHLC finance reports
 
-Agree the [finance rules](finance-extension.md) before finance coding. The owner
-chose to settle execution/position/cost conventions first, rather than begin
-with diagnostics alone. The proposal separates return diagnostics from executable
-trading, preserving forecast metrics and requiring explicit timing, fills, costs,
-capital accounting, and comparison benchmarks.
+The owner agreed to the [finance contract](finance-extension.md) before coding:
+positive close-price targets, lead 1 and stride 1; signal from forecasted close
+relative to origin close; next-bar open entry and that bar's close exit;
+unit long/flat/short exposure with full liquidation every bar. Capital, threshold,
+fees, slippage, per-held-bar short financing, and signal latency are required
+inputs. Explicit open/close timestamps must permit entry strictly after the
+origin close plus latency. Continuous touching bars are ineligible even at zero
+latency.
+
+The separate extension consumes validated saved forecasts and exact original
+prices without inference. It preserves core forecast metrics, adds close-return
+and three-way direction diagnostics, and reconstructs strategy/cash/costed
+buy-and-hold equity, return, period-end drawdown, turnover, and sample volatility.
+Checked self-contained JSON reports support independent reload and CSV export.
+See the [verification record](milestone7-verification.md) for current evidence
+and publication status. Live orders, margin simulation, irregular trading
+calendars, and selection/parameter tuning remain outside this contract.
+
+## Benchmarking compatibility study
 
 The bounded [fev compatibility study](benchmarking-extension.md) is authorized.
 Assess reuse before panels, covariates, or probability scoring. Its isolated
@@ -231,11 +247,10 @@ automatically add a mandatory dependency or replace the numerical scorer.
 
 ## Later work
 
-Finance can consume the generic aligned output after its data timing, target,
-signal availability, execution prices, costs, capital, and risk conventions have
-been specified separately. Forecast accuracy and trading performance remain
-different evaluations. A second domain must be possible without importing
-finance into the core.
+Forecast accuracy and trading performance remain different evaluations. A second
+domain must remain possible without importing finance into the numerical core.
+The bounded finance simulator does not establish a profitable trading rule or
+real-data generalization. Further execution policies require separate agreement.
 
 SQLite indexing, resumability, forecast caches, environment isolation, advanced
 terminal charts, and performance telemetry require a demonstrated need.

@@ -1,0 +1,28 @@
+schema_version: 1
+name: hypothetical-ohlc-seasonal-naive
+model:
+  source: builtin
+  adapter_id: seasonal_naive
+  options:
+    seasonal_period: 2
+dataset:
+  path: ../datasets/ohlc.csv
+  timestamp_column: close_timestamp
+  target_column: close
+  frequency: 1D
+  units: toy_quote_per_asset
+  series_id: synthetic_asset
+evaluation:
+  context_length: 4
+  horizon: 1
+  stride: 1
+  evaluation_start: "2026-01-05T16:00:00Z"
+  evaluation_end: "2026-01-13T16:00:00Z"
+  seasonal_period: 2
+  metrics: [mae, rmse, mase]
+runtime:
+  device: cpu
+  batch_size: 1
+  seed: 0
+output:
+  directory: ../../results

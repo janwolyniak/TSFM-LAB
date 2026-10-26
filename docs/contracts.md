@@ -269,3 +269,22 @@ Use states `pending`, `preparing`, `loading`, `running`, `evaluating`, `saving`,
 failure/cancellation from active stages; terminal states cannot become completed
 later. See the [evaluation rules](evaluation.md) and
 [implementation acceptance criteria](roadmap.md).
+
+## Derived finance reports
+
+The separate `tsfm_lab.finance` modules consume checked completed point forecasts,
+the original declared positive close-price dataset, and aligned six-column OHLC
+data. They do not alter forecast metrics, construct models, or execute orders.
+`BacktestRules` requires all capital, threshold, cost, financing, and latency
+inputs. `backtest_run` retains lead 1 from every stride-1 origin and enforces
+strictly causal next-open timing. Full original closing data must match the
+saved canonical identity and execution closes before analysis.
+
+Reports preserve copied parent metadata/artifact identities, original and
+execution data identities, implementation/environment provenance, resolved
+rules, raw selected cases, diagnostics, and three independently reconstructed
+capital paths. `save_report` publishes strict checked JSON to a new destination;
+`load_report` recomputes accounting without resolving recorded source paths.
+`export_equity` writes one CSV row per target close. Hashes and consistency
+checks are not signatures. See the [finance contract](finance-extension.md)
+for formulas, report checks, and the exact scope of this hypothetical simulator.

@@ -106,3 +106,31 @@ def test_rich_box_command_help_is_accepted_without_plain_commands_colon(tmp_path
     verifier.command = command
     verifier.entry_points({"version": "0.1.0"})
     assert verifier.passed == ["installed_entry_points_and_redirected_routing"]
+
+
+def test_finance_stage_runs_real_commands_without_model_imports_or_original_sources(
+    tmp_path,
+):
+    pytest.importorskip("typer")
+    definitions = runpy.run_path(str(SCRIPT), run_name="finance_verifier_test")
+    source = SCRIPT.parents[1] / "src"
+    launcher = tmp_path / "tsfm"
+    # The test explicitly selects source; the installed verifier itself forbids this.
+    launcher.write_text(
+        f"#!{sys.executable}\n"
+        + definitions["_BLOCK_OPTIONAL"]
+        + f"\nsys.path.insert(0, {str(source)!r})\n"
+        + "import runpy\nrunpy.run_module('tsfm_lab', run_name='__main__')\n"
+    )
+    launcher.chmod(0o755)
+    verifier = definitions["Verifier"](launcher, tmp_path)
+    verifier.finance()
+    assert verifier.passed == [
+        "finance_backtest_self_contained_reload_export_and_overwrite_refusal"
+    ]
+    assert not (tmp_path / "finance-inputs").exists()
+    assert (tmp_path / "finance-sources-unavailable/workspace/experiments").is_dir()
+    report = json.loads((tmp_path / "finance-report.json").read_text())
+    assert report["evaluation"]["cases"] == 4
+    assert report["evaluation"]["signal_positions"] == [-1, 1, -1, 0]
+    assert (tmp_path / "finance-equity.csv").is_file()
