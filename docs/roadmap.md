@@ -269,6 +269,18 @@ Its isolated prototype records where contracts agree or differ; it does not add
 a mandatory dependency or replace the numerical scorer. Production integration
 and larger benchmark comparisons are deferred from the next feature release.
 
+## v0.3.0: Guided setup to finished forecast
+
+On 26 October 2026, the owner agreed to the separate
+[v0.3.0 release plan](release-v0.3.0-plan.md), with staged acceptance criteria for
+first-launch onboarding, model-specific setup, integrated checkpoint preparation
+and live progress, finished outputs, future forecasting, additional assistant
+connections, bounded model expansion, and public documentation/GEO.
+The [v0.2.0 plan](next-release-plan.md) remains unchanged. v0.3.0 implementation
+and release qualification are pending; scope agreement does not establish
+completion or authorize publication. Public static documentation is covered by
+this plan; the exclusion of hosted application infrastructure remains in force.
+
 ## Later work
 
 Forecast accuracy and trading performance remain different evaluations. A second
