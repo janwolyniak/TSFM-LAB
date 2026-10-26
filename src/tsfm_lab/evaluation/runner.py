@@ -25,6 +25,7 @@ from tsfm_lab.evaluation.metrics import Scores, score_forecasts
 from tsfm_lab.evaluation.windows import evaluation_bounds, iter_windows
 from tsfm_lab.models.base import ForecastModel
 from tsfm_lab.point_tasks import output_statistics, validate_model_frequency
+from tsfm_lab.workflows import normalize_workflow, validate_workflow_dataset
 
 
 @dataclass(frozen=True)
@@ -188,11 +189,14 @@ def run_experiment(
     model: ForecastModel,
     spec: EvaluationSpec,
     *,
+    workflow: dict | None = None,
     progress: Callable[[str], None] | None = None,
     window_progress: Callable[[int, int], None] | None = None,
     should_cancel: Callable[[], bool] | None = None,
 ) -> ExperimentResult:
     """Run every complete window; any inference/alignment failure aborts the run."""
+    workflow = normalize_workflow(workflow)
+    validate_workflow_dataset(workflow, dataset)
     start, end = evaluation_bounds(dataset, spec)
     total = 1 + (end - start - spec.horizon) // spec.stride
 
@@ -208,6 +212,8 @@ def run_experiment(
     configuration = json.loads(
         json.dumps(_configuration(dataset, metadata, model, spec), allow_nan=False)
     )
+    if workflow is not None:
+        configuration["workflow"] = workflow
     project_verification = None
     verification_hook = getattr(model, "verification_metadata", None)
     if verification_hook is not None:

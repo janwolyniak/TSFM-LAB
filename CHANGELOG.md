@@ -2,6 +2,13 @@
 
 ## Next feature release in development
 
+- Add Generic, Finance, Energy, Temperature, and Weather usage profiles to
+  configuration, both guided terminal interfaces, checked saved metadata,
+  history, and result wording. Profile-only changes preserve numerical identity.
+- Add original domain examples, explicit measurement/units questions, and an
+  OHLC report command handoff preserving all existing execution inputs/rules.
+- Preserve full native-point output labels in CLI and screen comparisons.
+
 - Add Granite TTM R2 with three pinned exact-context profiles, native 96-step
   prefix forecasts, causal external standardization, and terminal selection.
 - Add explicit native-point comparisons preserving actual output labels and

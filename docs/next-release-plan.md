@@ -2,7 +2,8 @@
 
 Working target: **v0.2.0**, following the prepared v0.1.0 release.
 Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and verified
-locally. P3 TiRex-2 and P4 TTM are also implemented and verified locally; P5–P8 remain
+locally. P3 TiRex-2, P4 TTM, and P5 usage profiles are implemented and verified locally;
+P6–P8 remain
 future work. The existing package version and publication
 status remain unchanged.
 
@@ -268,11 +269,13 @@ inference work. Integrate through the [contribution workflow](../CONTRIBUTING.md
 | P7 Natural-language setup and explanations | Implement the versioned draft, clarification, normal validators/review, and grounded explanations in the terminal. | End-to-end fake-provider tests cover intent preservation, missing fields, unsupported future targets, invalid responses, explanations, and manual fallback. |
 | P8 Release qualification | Update guides/examples, build source and wheel, and run the installed workflow and configured CI. | Current release checklist passes with exact source/artifact identities and documented representative/variant verification status. |
 
-**P1–P4 are complete locally.** TTM adds three exact-context R2 MSE profiles,
+**P1–P5 are complete locally.** TTM adds three exact-context R2 MSE profiles,
 history-only scaling, explicit native-point comparisons, and a representative
 CPU check under the approved shared runtime. See the [contract](ttm-contract.md)
-and [P4 evidence](p4-ttm-verification.md). P5 usage profiles and guided workflows
-are next; connections and language assistance follow in P6/P7. Publication of
+and [P4 evidence](p4-ttm-verification.md). P5 adds the five usage profiles across
+configuration, guided setup, and saved presentation; see its [guide](usage-profiles.md)
+and [verification](p5-profiles-verification.md). P6 connections and credential
+boundaries are next, followed by P7 language assistance. Publication of
 this milestone remains separate from implementation and package publication.
 
 ## Release acceptance

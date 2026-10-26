@@ -345,12 +345,14 @@ class Verifier:
         self.invalid_configuration(dataset)
         self.finance()
         self.native_point_fixture()
+        self.usage_profiles()
         self.optional_boundaries()
         return {
             "baseline_run_ids": identifiers,
             "forecast_cases_per_run": 16,
             "finance_cases": 4,
             "native_point_fixture_cases": 16,
+            "usage_profiles": 5,
             "checks": self.passed,
         }
 
@@ -1076,6 +1078,131 @@ print(json.dumps({'run_ids': identifiers, 'optional_loaded': sorted(blocked.inte
         )
         self.finance_export(report_path, report)
         self.done("finance_backtest_self_contained_reload_export_and_overwrite_refusal")
+
+    def usage_profiles(self):
+        self.check = "usage_profiles"
+        directory = self.root / "usage-profiles"
+        probe = _BLOCK_OPTIONAL + """
+from importlib.resources import files
+from pathlib import Path
+root = Path(sys.argv[1])
+root.mkdir()
+for profile in ('generic', 'finance', 'energy', 'temperature', 'weather'):
+    name = 'seasonal.csv' if profile == 'generic' else profile + '-demo.csv'
+    raw = files('tsfm_lab.resources').joinpath(name).read_bytes()
+    (root / (profile + '.csv')).write_bytes(raw)
+print(json.dumps({'copied': 5, 'optional_loaded': sorted(blocked.intersection(sys.modules))}))
+"""
+        identity = strict_json(
+            self.command("-c", probe, str(directory), python=True).stdout
+        )
+        require(
+            identity == {"copied": 5, "optional_loaded": []},
+            "Usage examples required optional runtimes",
+        )
+        choices = {
+            "generic": ("demand", "synthetic_units", {}),
+            "finance": ("close", "toy_quote_per_asset", {"target_kind": "close_price"}),
+            "energy": ("power", "kW", {"measurement": "power"}),
+            "temperature": ("temperature", "degC", {}),
+            "weather": (
+                "wind_speed",
+                "m/s",
+                {
+                    "variable": "wind_speed",
+                    "station": "synthetic-station",
+                    "measurement_semantics": "instantaneous",
+                },
+            ),
+        }
+        workspace = directory / "workspace"
+        identifiers = {}
+        temperature_config = None
+        for profile, (column, units, options) in choices.items():
+            configuration = self.config(
+                "last_value", directory / f"{profile}.csv", workspace
+            )
+            configuration["workflow"] = {
+                "schema_version": 1,
+                "profile": profile,
+                "options": options,
+            }
+            configuration["dataset"].update(target_column=column, units=units)
+            path = self.save_config(f"usage-{profile}", configuration)
+            summary = self.json_command("run", path)
+            identifiers[profile] = summary["run_id"]
+            result = self.json_command(
+                "experiments", "show", summary["run_id"], "--workspace", workspace
+            )["result"]
+            require(
+                result["configuration"]["workflow"] == configuration["workflow"],
+                "Saved usage metadata changed",
+            )
+            require(
+                result["counts"]["forecast_cases"] == 16,
+                "Usage example dropped forecast cases",
+            )
+            if profile == "temperature":
+                temperature_config = configuration
+                output = directory / "temperature-predictions.json"
+                self.json_command(
+                    "export",
+                    summary["run_id"],
+                    "--workspace",
+                    workspace,
+                    "--output",
+                    output,
+                )
+                rows = strict_json(output.read_text())
+                temperature_rows = rows
+                with (directory / "temperature.csv").open(newline="") as source:
+                    source_actuals = [
+                        float(row["temperature"]) for row in csv.DictReader(source)
+                    ][16:32]
+                require(
+                    [row["actual"] for row in rows] == source_actuals
+                    and any(row["actual"] < 0 for row in rows),
+                    "Temperature values were clipped or transformed",
+                )
+        # Relabel the exact same input as Generic: point values and eligibility stay equal.
+        temperature_config["workflow"] = {
+            "schema_version": 1,
+            "profile": "generic",
+            "options": {},
+        }
+        generic = self.json_command(
+            "run", self.save_config("usage-relabelled", temperature_config)
+        )
+        comparison = self.json_command(
+            "compare",
+            identifiers["temperature"],
+            generic["run_id"],
+            "--workspace",
+            workspace,
+        )
+        require(
+            comparison["compatible"]
+            and comparison["runs"][0]["metrics"] == comparison["runs"][1]["metrics"],
+            "Usage metadata changed numerical comparison",
+        )
+        output = directory / "generic-temperature-predictions.json"
+        self.json_command(
+            "export", generic["run_id"], "--workspace", workspace, "--output", output
+        )
+        relabelled_rows = strict_json(output.read_text())
+        require(
+            [(row["actual"], row["prediction"]) for row in relabelled_rows]
+            == [(row["actual"], row["prediction"]) for row in temperature_rows],
+            "Relabelling a profile changed individual forecast values",
+        )
+        for profile in choices:
+            (directory / f"{profile}.csv").rename(
+                directory / f"{profile}-unavailable.csv"
+            )
+            self.json_command(
+                "experiments", "show", identifiers[profile], "--workspace", workspace
+            )
+        self.done("five_usage_profiles_saved_reload_and_metadata_only_comparison")
 
     def optional_boundaries(self):
         self.check = "optional_dependency_boundaries"

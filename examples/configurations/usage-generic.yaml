@@ -1,0 +1,28 @@
+schema_version: 1
+name: usage-generic-demo
+workflow:
+  schema_version: 1
+  profile: generic
+  options: {}
+model:
+  source: builtin
+  adapter_id: last_value
+dataset:
+  path: ../datasets/seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+evaluation:
+  context_length: 8
+  horizon: 4
+  stride: 4
+  evaluation_start: '2026-01-01T16:00:00Z'
+  evaluation_end: '2026-01-02T08:00:00Z'
+  seasonal_period: 4
+  metrics:
+  - mae
+  - rmse
+  - mase
+output:
+  directory: ../../results

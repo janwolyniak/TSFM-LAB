@@ -15,6 +15,7 @@
 [TimesFM](docs/timesfm.md) ·
 [TiRex-2](docs/tirex2.md) ·
 [TTM](docs/ttm.md) ·
+[Usage profiles](docs/usage-profiles.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
 [Contributing](CONTRIBUTING.md)
@@ -37,6 +38,9 @@ hypothetical OHLC strategies from saved price forecasts.
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
   experiments, and recorded runtime provenance. TTM uses explicit context profiles
   and a native-point evaluation task.
+- **Choose a workflow:** select Generic, Finance, Energy, Temperature, or Weather
+  in `/new`. Profile-specific questions preserve declared units and measurement
+  semantics; history and reports show the selected usage without changing scores.
 - **Evaluate price decisions:** derive long/flat/short signals from saved lead-1
   forecasts, require explicit OHLC timing and costs, and inspect verified
   strategy, cash, and buy-and-hold reports without rerunning a model.

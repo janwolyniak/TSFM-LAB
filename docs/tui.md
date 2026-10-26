@@ -70,7 +70,8 @@ input history, so they do not pollute command recall.
 
 ## Guided setup
 
-`/new` asks for a model and any checkpoint details, then a dataset, mapping fields
+`/new` first asks for a usage profile, then a model and any checkpoint details,
+then a dataset, profile-specific measurements/units, mapping fields
 when using your own file, name, evaluation settings, and explicit timestamp bounds.
 Empty answers accept the displayed default. Validation errors reprompt the field
 or step. `/back` returns to the previous setup step; `/cancel`, Escape, or Ctrl+C
@@ -89,6 +90,18 @@ The runtime must use Torch's float32 default dtype; an incompatible process
 setting fails without being changed. Use the [Chronos guide](chronos.md) or
 [TimesFM guide](timesfm.md) for the optional runtime, explicit pulls, and checkpoint
 rules. The offline `/demo` command remains limited to the bundled baselines.
+
+Use Generic, Finance, Energy, Temperature, or Weather. Domain examples are
+original synthetic data, with negative temperatures preserved. Custom data paths
+and deliberate numeric settings survive back navigation; switching from an
+example clears fictional measurement declarations. Hourly seasonal examples
+are shown as suggestions, with lag choices left explicit. The original quick
+`/demo` keeps its existing configuration and numbers.
+
+History and results show profile, measurement context, and error units. An
+eligible close-price Finance result offers the existing OHLC command with every
+required input named, without executing a report or supplying trading rules.
+See [usage profiles](usage-profiles.md) for exact metadata and examples.
 
 ## Interrupts and saved results
 

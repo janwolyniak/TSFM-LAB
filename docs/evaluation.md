@@ -160,3 +160,14 @@ The following tests precede a pretrained adapter:
 The numerical test suite covers these cases. See the
 [verification record](verification.md) for executed checks and their limits, and
 the [roadmap](roadmap.md) for implementation order.
+
+## Usage labels and numerical identity
+
+Usage profiles guide measurement terminology, units, examples, and reporting.
+They are validated workflow metadata, outside numerical comparison keys. On the
+same valid input with unchanged units/task/settings, changing only a profile
+preserves individual predictions, pooled/per-lead scores, MASE scale, canonical
+dataset fingerprint, and controlled-comparison eligibility. Domain checks can
+refuse an invalid declaration such as nonpositive close-price observations;
+they never transform a value to make it admissible. Existing measurement-unit
+and task differences still prevent controlled comparison.

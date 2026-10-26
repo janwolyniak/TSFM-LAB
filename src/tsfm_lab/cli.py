@@ -17,7 +17,9 @@ from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.exports import export_predictions
 from tsfm_lab.finance_commands import finance
 from tsfm_lab.model_commands import models
+from tsfm_lab.repl.text import literal
 from tsfm_lab.terminal import interactive_terminal, launch_tui
+from tsfm_lab.workflow_views import history_profile, ohlc_handoff, profile_context
 
 app = typer.Typer(
     help="Evaluate time-series forecasts locally.", invoke_without_command=True
@@ -79,12 +81,21 @@ def run(config: Path, json_output: bool = typer.Option(False, "--json")):
         _emit(result)
     else:
         console.print(f"Completed experiment {result['run_id']}")
+        saved, predictions = ExperimentStore(result["workspace"]).load_result(
+            result["run_id"]
+        )
+        for line in profile_context(saved["configuration"]):
+            typer.echo(line)
         _table(
             result["name"],
             ["Metric", "Value"],
             [[key.upper(), _metric(value)] for key, value in result["metrics"].items()],
         )
         typer.echo(f"Saved to {result['directory']}")
+        for line in ohlc_handoff(
+            saved, predictions, result["workspace"], result["run_id"]
+        ):
+            typer.echo(line)
 
 
 @datasets.command("inspect")
@@ -145,14 +156,23 @@ def list_experiments(
     json_output: JsonOutput = False,
 ):
     """List completed, failed, cancelled, and incomplete records."""
-    items = ExperimentStore(workspace).list_runs()
+    store = ExperimentStore(workspace)
+    items = store.list_runs()
     if json_output:
         _emit(items)
     else:
         _table(
             "Experiment history",
-            ["ID", "Name", "Status"],
-            [[item["run_id"], item.get("name", ""), item["status"]] for item in items],
+            ["ID", "Name", "Profile", "Status"],
+            [
+                [
+                    item["run_id"],
+                    item.get("name", ""),
+                    history_profile(store, item),
+                    item["status"],
+                ]
+                for item in items
+            ],
         )
 
 
@@ -168,7 +188,7 @@ def show_experiment(
     manifest = store.get_manifest(run_id)
     value = {"manifest": manifest}
     if manifest["status"] == "completed":
-        value["result"], _ = store.load_result(run_id)
+        value["result"], predictions = store.load_result(run_id)
     if json_output:
         _emit(value)
     else:
@@ -181,6 +201,8 @@ def show_experiment(
             ],
         )
         if "result" in value:
+            for line in profile_context(value["result"]["configuration"]):
+                typer.echo(line)
             _table(
                 "Metrics",
                 ["Metric", "Value"],
@@ -189,8 +211,12 @@ def show_experiment(
                     for key, metric in value["result"]["metrics"]["overall"].items()
                 ],
             )
-        elif manifest.get("error"):
-            typer.echo(str(manifest["error"]))
+            for line in ohlc_handoff(value["result"], predictions, workspace, run_id):
+                typer.echo(line)
+        else:
+            typer.echo(f"Usage profile: {history_profile(store, manifest)}")
+            if manifest.get("error"):
+                typer.echo(str(manifest["error"]))
 
 
 @app.command("compare")
@@ -205,14 +231,32 @@ def compare(
     if json_output:
         _emit(value)
     else:
+        native = "point_semantics" in value
+        if native:
+            typer.echo(literal(value["point_semantics"]))
+            for run in value["runs"]:
+                typer.echo(
+                    f"Forecast output {run['run_id'][:8]}: {', '.join(run['output_statistics'])}"
+                )
+        store = ExperimentStore(workspace)
         metric_names = list(value["runs"][0]["metrics"])
         _table(
             "Controlled comparison",
-            ["Experiment", "Model", *[name.upper() for name in metric_names]],
+            [
+                "Experiment",
+                "Profile",
+                "Model",
+                *(("Output",) if native else ()),
+                *[name.upper() for name in metric_names],
+            ],
             [
                 [
                     run["run_id"],
+                    history_profile(
+                        store, {"run_id": run["run_id"], "status": "completed"}
+                    ),
                     run["model"]["adapter_id"],
+                    *((", ".join(run["output_statistics"]),) if native else ()),
                     *[_metric(run["metrics"][name]) for name in metric_names],
                 ]
                 for run in value["runs"]

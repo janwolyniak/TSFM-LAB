@@ -11,6 +11,7 @@ from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.models.factory import build_model
 from tsfm_lab.point_tasks import validate_model_frequency
+from tsfm_lab.workflows import validate_workflow_dataset
 
 
 class RunExecutionError(RuntimeError):
@@ -62,6 +63,7 @@ def run_config(
     check_cancel()
     try:
         dataset = load_dataset(config.dataset)
+        validate_workflow_dataset(config.workflow, dataset)
         model = build_model(config.model, config.runtime)
         evaluation_bounds(dataset, config.evaluation)
         model.validate(config.evaluation)
@@ -90,6 +92,7 @@ def run_config(
             dataset,
             model,
             config.evaluation,
+            workflow=config.workflow,
             progress=update,
             window_progress=window_progress,
             should_cancel=should_cancel,

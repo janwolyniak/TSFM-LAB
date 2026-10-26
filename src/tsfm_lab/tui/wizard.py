@@ -32,9 +32,12 @@ from tsfm_lab.tui.forms import (
     demo_fields,
     inspect_data,
     prepare_experiment,
+    profile_example_fields,
+    profile_guidance,
     suggested_bounds,
     validate_model_fields,
 )
+from tsfm_lab.workflows import PROFILE_NAMES
 
 _PAGES = ("model", "data", "evaluation", "review")
 
@@ -49,6 +52,13 @@ def _selection(label: str, key: str, choices, value: str) -> Vertical:
     control = Select(choices, value=value, allow_blank=False, id=f"wizard-{key}")
     control.tooltip = label
     return Vertical(Label(label), control, classes="wizard-field")
+
+
+def _same_path(value: str, path: Path) -> bool:
+    try:
+        return Path(value).expanduser().resolve() == path.expanduser().resolve()
+    except (OSError, ValueError, RuntimeError):
+        return False
 
 
 class WizardScreen(Screen[ExperimentConfig | None]):
@@ -73,12 +83,21 @@ class WizardScreen(Screen[ExperimentConfig | None]):
     """
 
     def __init__(
-        self, workspace: Path, demo_path: Path, initial_adapter: str = "last_value"
+        self,
+        workspace: Path,
+        demo_path: Path,
+        initial_adapter: str = "last_value",
+        profile_demo_paths: dict[str, Path] | None = None,
     ) -> None:
         super().__init__()
         self.workspace, self.demo_path = Path(workspace), Path(demo_path)
+        self._ordinary_demo_path = self.demo_path
+        self._profile_demo_paths = {
+            profile: Path(path) for profile, path in (profile_demo_paths or {}).items()
+        }
         self.base_directory = Path.cwd().resolve()
         self._defaults = default_fields(initial_adapter)
+        self._defaults["usage_profile"] = "generic"
         self._step_index = 0
         self._busy = False
         self._cancelled = False
@@ -86,6 +105,8 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         self._review_snapshot: dict[str, str] | None = None
         self._adapter_reference = initial_adapter
         self._profile_reference: tuple[str, str] | None = None
+        self._usage_profile_reference = "generic"
+        self._example_declarations: dict[str, str] = {}
 
     @property
     def step(self) -> str:
@@ -121,6 +142,12 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                         ]
                     ],
                     self._defaults["point_statistic"],
+                )
+                yield _selection(
+                    "Usage profile",
+                    "usage-profile",
+                    [(profile.title(), profile) for profile in PROFILE_NAMES],
+                    self._defaults["usage_profile"],
                 )
                 with Vertical(
                     id="wizard-seasonal-fields", classes="wizard-conditional"
@@ -172,6 +199,61 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                         yield _field("Local checkpoint directory", "checkpoint-path")
             with VerticalScroll(id="wizard-data", classes="wizard-page"):
                 yield Button("Use demo dataset", id="wizard-use-demo")
+                yield Static("", id="wizard-usage-guidance", markup=False)
+                with Vertical(id="wizard-finance-usage", classes="wizard-conditional"):
+                    yield _selection(
+                        "Finance target kind",
+                        "finance-target-kind",
+                        [
+                            ("Choose target", ""),
+                            ("Close price", "close_price"),
+                            ("Return", "return"),
+                            ("Other", "other"),
+                        ],
+                        "",
+                    )
+                    with Vertical(
+                        id="wizard-finance-other", classes="wizard-conditional"
+                    ):
+                        yield _field("Finance measurement", "finance-measurement")
+                with Vertical(id="wizard-energy-usage", classes="wizard-conditional"):
+                    yield _selection(
+                        "Energy measurement",
+                        "energy-measurement",
+                        [
+                            ("Choose measurement", ""),
+                            ("Power", "power"),
+                            ("Energy", "energy"),
+                            ("Other", "other"),
+                        ],
+                        "",
+                    )
+                    with Vertical(
+                        id="wizard-energy-other", classes="wizard-conditional"
+                    ):
+                        yield _field("Energy quantity", "energy-quantity")
+                with Vertical(id="wizard-weather-usage", classes="wizard-conditional"):
+                    yield _field("Weather variable", "weather-variable")
+                    yield _field("Weather station", "weather-station")
+                    yield _selection(
+                        "Weather measurement semantics",
+                        "weather-measurement-semantics",
+                        [
+                            ("Choose semantics", ""),
+                            ("Instantaneous", "instantaneous"),
+                            ("Interval mean", "interval_mean"),
+                            ("Interval total", "interval_total"),
+                            ("Interval maximum", "interval_max"),
+                            ("Other", "other"),
+                        ],
+                        "",
+                    )
+                    with Vertical(
+                        id="wizard-weather-other", classes="wizard-conditional"
+                    ):
+                        yield _field(
+                            "Weather semantics description", "weather-description"
+                        )
                 for label, key in (
                     ("CSV or Parquet path", "dataset_path"),
                     ("Timestamp column", "timestamp_column"),
@@ -212,6 +294,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
     def on_mount(self) -> None:
         self._sync_checkpoint_profiles()
         self._update_model_visibility()
+        self._update_usage_visibility()
         self._show_step()
 
     def _fields(self) -> dict[str, str]:
@@ -243,6 +326,93 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         )
         self.query_one("#wizard-hub-fields").display = source == "huggingface"
         self.query_one("#wizard-local-fields").display = source == "local"
+
+    def _update_usage_visibility(self) -> None:
+        profile = str(self.query_one("#wizard-usage-profile", Select).value)
+        for name in ("finance", "energy", "weather"):
+            self.query_one(f"#wizard-{name}-usage").display = profile == name
+        for name, key in (
+            ("finance", "finance-target-kind"),
+            ("energy", "energy-measurement"),
+            ("weather", "weather-measurement-semantics"),
+        ):
+            self.query_one(f"#wizard-{name}-other").display = (
+                self.query_one(f"#wizard-{key}", Select).value == "other"
+            )
+        frequency = self.query_one("#wizard-frequency", Input).value
+        try:
+            guidance = profile_guidance(profile, frequency)
+        except ValueError:
+            guidance = profile_guidance(profile)
+        self.query_one("#wizard-usage-guidance", Static).update(guidance)
+        self.query_one("#wizard-use-demo", Button).label = (
+            "Use profile example" if profile != "generic" else "Use demo dataset"
+        )
+
+    def _sync_usage_profile(self) -> None:
+        profile = str(self.query_one("#wizard-usage-profile", Select).value)
+        previous_demo = self.demo_path
+        self.demo_path = self._profile_demo_paths.get(profile, self._ordinary_demo_path)
+        path = self.query_one("#wizard-dataset-path", Input).value
+        if (
+            profile != self._usage_profile_reference
+            and path.strip()
+            and _same_path(path, previous_demo)
+        ):
+            self._apply_demo_fields()
+        self._usage_profile_reference = profile
+
+    def _apply_demo_fields(self) -> None:
+        profile = str(self.query_one("#wizard-usage-profile", Select).value)
+        defaults = (
+            profile_example_fields(profile, self.demo_path)
+            if profile in self._profile_demo_paths
+            else demo_fields(self.demo_path)
+        )
+        for key in (
+            "dataset_path",
+            "timestamp_column",
+            "target_column",
+            "frequency",
+            "timezone",
+            "units",
+        ):
+            self.query_one(f"#wizard-{key.replace('_', '-')}", Input).value = defaults[
+                key
+            ]
+        for key in (
+            "finance_target_kind",
+            "energy_measurement",
+            "weather_variable",
+            "weather_station",
+            "weather_measurement_semantics",
+        ):
+            control = self.query_one(f"#wizard-{key.replace('_', '-')}")
+            if defaults[key]:
+                control.value = defaults[key]
+        self._example_declarations = {
+            key: defaults[key]
+            for key in (
+                "units",
+                "finance_target_kind",
+                "energy_measurement",
+                "weather_variable",
+                "weather_station",
+                "weather_measurement_semantics",
+            )
+            if defaults[key] and profile in self._profile_demo_paths
+        }
+        self._update_usage_visibility()
+
+    def _clear_example_declarations(self) -> None:
+        path = self.query_one("#wizard-dataset-path", Input).value
+        if not path.strip() or _same_path(path, self.demo_path):
+            return
+        declarations, self._example_declarations = self._example_declarations, {}
+        for key, value in declarations.items():
+            control = self.query_one(f"#wizard-{key.replace('_', '-')}")
+            if str(control.value) == value:
+                control.value = "unspecified" if key == "units" else ""
 
     def _sync_checkpoint_profiles(self) -> None:
         adapter = str(self.query_one("#wizard-adapter", Select).value)
@@ -325,8 +495,12 @@ class WizardScreen(Screen[ExperimentConfig | None]):
             self.query_one("#wizard-run", Button).disabled = True
 
     @on(Input.Changed)
-    def input_changed(self) -> None:
+    def input_changed(self, event: Input.Changed) -> None:
         self._invalidate()
+        if self.is_mounted:
+            if event.input.id == "wizard-dataset-path":
+                self._clear_example_declarations()
+            self._update_usage_visibility()
 
     @on(Select.Changed)
     def selection_changed(self, event: Select.Changed) -> None:
@@ -366,7 +540,10 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                 }
                 if event.value in names and len(names) > 1:
                     self._select_checkpoint_profile(repository, str(event.value))
+            elif event.select.id == "wizard-usage-profile":
+                self._sync_usage_profile()
             self._update_model_visibility()
+            self._update_usage_visibility()
 
     @on(Input.Submitted)
     def input_submitted(self, event: Input.Submitted) -> None:
@@ -435,18 +612,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
     def _use_demo(self) -> None:
         if self._busy:
             return
-        defaults = demo_fields(self.demo_path)
-        for key in (
-            "dataset_path",
-            "timestamp_column",
-            "target_column",
-            "frequency",
-            "timezone",
-            "units",
-        ):
-            self.query_one(f"#wizard-{key.replace('_', '-')}", Input).value = defaults[
-                key
-            ]
+        self._apply_demo_fields()
         self._inspect(False)
 
     @work(exclusive=True, group="wizard-validation", exit_on_error=False)

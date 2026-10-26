@@ -257,7 +257,10 @@ def test_seasonal_adapter_argument_sets_the_default_and_keeps_lags_distinct(setu
         {"Baseline seasonal period": ["0", "4"], "MASE seasonal lag": "2", _RUN: "yes"}
     )
     config = build(setup, questions, adapter="seasonal_naive")
-    assert questions.calls[0][1] == "seasonal_naive"
+    assert (
+        next(call[1] for call in questions.calls if call[0] == "Model adapter")
+        == "seasonal_naive"
+    )
     assert questions.count("Baseline seasonal period") == 2
     assert config.model["options"]["seasonal_period"] == 4
     assert config.evaluation.seasonal_period == 2
