@@ -19,9 +19,9 @@ JsonOutput = Annotated[bool, typer.Option("--json")]
 CacheDirectory = Annotated[Path | None, typer.Option("--cache-dir")]
 
 
-def _selection(identifier):
+def _selection(identifier, variant=None):
     try:
-        return catalog_info(identifier)
+        return catalog_info(identifier, variant)
     except ValueError as exc:
         raise ConfigError(str(exc)) from exc
 
@@ -35,6 +35,7 @@ def _variant_information(variant):
     for key, label in (
         ("parameter_count", "Parameters"),
         ("weight_bytes", "Weight bytes"),
+        ("min_context", "Minimum context"),
         ("max_context", "Maximum context"),
         ("max_horizon", "Maximum horizon"),
     ):
@@ -105,10 +106,14 @@ def list_models(json_output: JsonOutput = False):
 
 @models.command("info")
 @guard
-def model_info(identifier: str, json_output: JsonOutput = False):
+def model_info(
+    identifier: str,
+    json_output: JsonOutput = False,
+    variant: str | None = typer.Option(None, "--variant"),
+):
     """Show curated adapter/checkpoint metadata without network access."""
-    value = _selection(identifier)
-    selected = checkpoint_info(identifier) if "repository" in value else None
+    value = _selection(identifier, variant)
+    selected = checkpoint_info(identifier, variant) if "repository" in value else None
     if json_output:
         emit({**value, "selected_checkpoint": selected} if selected else value)
     else:
@@ -122,6 +127,8 @@ def model_info(identifier: str, json_output: JsonOutput = False):
                     "family",
                     "license",
                     "point_statistic",
+                    "supported_tasks",
+                    "frequency_policy",
                     "repositories",
                 )
                 if key in value
@@ -136,7 +143,8 @@ def model_info(identifier: str, json_output: JsonOutput = False):
 @guard
 def pull_model(
     repository: str,
-    revision: str = typer.Option("main", "--revision"),
+    revision: str | None = typer.Option(None, "--revision"),
+    variant: str | None = typer.Option(None, "--variant"),
     cache_dir: CacheDirectory = None,
     json_output: JsonOutput = False,
 ):
@@ -144,6 +152,11 @@ def pull_model(
     selected = _selection(repository)
     if repository not in selected["repositories"]:
         raise ConfigError("Select a curated Hugging Face repository, not an adapter ID")
+    if revision is not None and variant is not None:
+        raise ConfigError("Choose --revision or --variant, not both")
+    if variant is not None:
+        revision = checkpoint_info(repository, variant)["reference_revision"]
+    revision = revision if revision is not None else "main"
     console = Console(stderr=True, markup=False, highlight=False)
     console.print(f"Resolving and pulling {repository} at {revision}")
     checkpoint = pull_checkpoint(repository, revision, cache_dir=cache_dir)

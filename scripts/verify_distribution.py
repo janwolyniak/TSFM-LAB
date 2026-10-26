@@ -33,6 +33,7 @@ _OPTIONAL = (
     "tirex2",
     "flashrnn",
     "mlstm_kernels",
+    "tsfm_public",
 )
 _COLUMNS = {
     "request_id",
@@ -67,7 +68,7 @@ _BLOCK_OPTIONAL = """import importlib.abc
 import json
 import sys
 
-blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual', 'tirex2', 'flashrnn', 'mlstm_kernels'}
+blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual', 'tirex2', 'flashrnn', 'mlstm_kernels', 'tsfm_public'}
 
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -343,11 +344,13 @@ class Verifier:
         self.exports(workspace, identifiers, start, values)
         self.invalid_configuration(dataset)
         self.finance()
+        self.native_point_fixture()
         self.optional_boundaries()
         return {
             "baseline_run_ids": identifiers,
             "forecast_cases_per_run": 16,
             "finance_cases": 4,
+            "native_point_fixture_cases": 16,
             "checks": self.passed,
         }
 
@@ -403,9 +406,28 @@ class Verifier:
                 "timesfm_2p5",
                 "chronos_2",
                 "tirex_2",
+                "ttm_r2",
             },
             "Installed model catalog differs from supported adapters",
         )
+        for entry in catalog:
+            adapter = entry["adapter_id"]
+            expected = (
+                "deterministic"
+                if adapter in {"last_value", "seasonal_naive"}
+                else "native_point" if adapter == "ttm_r2" else "median"
+            )
+            require(
+                entry["point_statistic"] == expected
+                and entry["supported_tasks"]
+                == (
+                    ["native_point"]
+                    if adapter == "ttm_r2"
+                    else ["median", "native_point"]
+                ),
+                "Installed catalog changed task or actual output semantics",
+                adapter=adapter,
+            )
         for identifier, adapter in (
             ("last_value", "last_value"),
             ("amazon/chronos-bolt-tiny", "chronos_bolt"),
@@ -493,6 +515,35 @@ class Verifier:
                 "Installed TiRex-2 profile bounds, verification, or runtime notices are incorrect",
                 repository=repository,
             )
+        for variant, revision, context, weight_bytes in (
+            ("512-96-r2", "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f", 512, 3240592),
+            ("1024-96-r2", "1a382618f3c5b63836281ad632e54724e55e85a5", 1024, 11879480),
+            ("1536-96-r2", "f6ed09d67cf42e4877f7fa33d98326911385693d", 1536, 12344144),
+        ):
+            value = self.json_command(
+                "models",
+                "info",
+                "ibm-granite/granite-timeseries-ttm-r2",
+                "--variant",
+                variant,
+            )
+            selected = value["selected_checkpoint"]
+            require(
+                value["adapter_id"] == "ttm_r2"
+                and value["capabilities"]["min_context"]
+                == value["capabilities"]["max_context"]
+                == context
+                and value["capabilities"]["max_horizon"] == 96
+                and value["point_statistic"] == "native_point"
+                and value["supported_tasks"] == ["native_point"]
+                and value["frequency_policy"] == "minutely_hourly"
+                and selected["variant"] == variant
+                and selected["reference_revision"] == revision
+                and selected["weight_bytes"] == weight_bytes
+                and value["runtime_requirements"]["granite-tsfm"] == "==0.3.4",
+                "Installed TTM variant, native semantics, or pinned metadata is incorrect",
+                variant=variant,
+            )
         cache = self.root / "empty-cache"
         require(
             self.json_command("models", "cache", "--cache-dir", cache) == []
@@ -529,6 +580,117 @@ class Verifier:
         self.done("bundled_resource_and_independent_fixture_arithmetic")
 
         return dataset, start, values
+
+    def native_point_fixture(self):
+        self.check = "native_point_artifact_fixture"
+        # Inert weights and a last-value stand-in exercise packaging and records only.
+        probe = _BLOCK_OPTIONAL + """
+from importlib.resources import files
+from pathlib import Path
+import numpy as np
+from tsfm_lab.contracts import EvaluationSpec, ForecastOutput, fixed_interval
+from tsfm_lab.data import load_csv
+from tsfm_lab.evaluation.runner import run_experiment
+from tsfm_lab.experiments import ExperimentStore
+from tsfm_lab.models.baselines import LastValue
+from tsfm_lab.models.checkpoints import inspect_local_checkpoint
+from tsfm_lab.models.registry import adapter_profile
+from tsfm_lab.models.ttm import TTM
+from tsfm_lab.models.ttm_profile import _configuration
+
+root = Path(sys.argv[1])
+root.mkdir()
+source = root / 'ttm-seasonal.csv'
+source.write_bytes(files('tsfm_lab.resources').joinpath('ttm-seasonal.csv').read_bytes())
+dataset = load_csv(source, timestamp_column='timestamp', target_column='demand',
+                   frequency='1h', units='synthetic_units')
+assert len(dataset.values) == 1600 and dataset.values[0] == 52.0
+checkpoint_path = root / 'inert-checkpoint'
+checkpoint_path.mkdir()
+(checkpoint_path / 'config.json').write_text(json.dumps(_configuration(512)))
+(checkpoint_path / 'model.safetensors').write_bytes(b'inert packaging fixture only')
+checkpoint = inspect_local_checkpoint(checkpoint_path)
+
+class FixtureTTM(TTM):
+    def load(self):
+        pass
+
+    def predict(self, requests):
+        return tuple(ForecastOutput(
+            request_id=item.request_id, series_id=item.series_id, origin=item.origin,
+            target_timestamps=item.target_timestamps,
+            point=np.full(len(item.target_timestamps), item.context_values[-1]),
+            adapter_id=self.adapter_id, point_statistic='native_point',
+        ) for item in requests)
+
+    def environment_metadata(self):
+        return {name: 'packaging_fixture' for name, _ in
+                adapter_profile('ttm_r2').runtime_requirements}
+
+spec = EvaluationSpec(512, 4, dataset.timestamps[-16],
+                      dataset.timestamps[-1] + fixed_interval(dataset.frequency),
+                      stride=4, seasonal_period=24, point_statistic='native_point')
+store = ExperimentStore(root / 'workspace')
+identifiers = []
+for name, model in [('TTM metadata fixture only', FixtureTTM(checkpoint)),
+                    ('Native deterministic fixture', LastValue())]:
+    result = run_experiment(dataset, model, spec)
+    identifier = store.create(name, result.configuration, '# No model inference')
+    store.complete(identifier, result.to_dict(), result.predictions)
+    reloaded, frame = store.load_result(identifier)
+    assert reloaded['configuration']['evaluation']['point_statistic'] == 'native_point'
+    assert len(frame) == 16
+    identifiers.append(identifier)
+record = store.load_result(identifiers[0])[0]['configuration']['model']['options']['checkpoint']
+assert record['schema_version'] == 2 and record['quantiles'] == []
+assert record['point_forecast']['statistic'] == 'native_point'
+assert record['point_forecast']['training_loss'] == 'mse'
+checkpoint_path.rename(root / 'checkpoint-unavailable')
+source.rename(root / 'source-unavailable.csv')
+print(json.dumps({'run_ids': identifiers, 'optional_loaded': sorted(blocked.intersection(sys.modules))}))
+"""
+        directory = self.root / "native-point-fixture"
+        identity = strict_json(
+            self.command("-c", probe, str(directory), python=True).stdout
+        )
+        identifiers = identity["run_ids"]
+        require(
+            len(identifiers) == 2 and identity["optional_loaded"] == [],
+            "Native-point fixture required optional model runtimes",
+        )
+        workspace = directory / "workspace"
+        saved = self.json_command(
+            "experiments", "show", identifiers[0], "--workspace", workspace
+        )["result"]
+        checkpoint = saved["configuration"]["model"]["options"]["checkpoint"]
+        require(
+            checkpoint["schema_version"] == 2
+            and checkpoint["point_forecast"]["statistic"] == "native_point"
+            and saved["configuration"]["evaluation"]["point_statistic"]
+            == "native_point",
+            "Saved TTM metadata fixture lost its schema or point semantics",
+        )
+        exported = directory / "native-predictions.json"
+        response = self.json_command(
+            "export", identifiers[0], "--workspace", workspace, "--output", exported
+        )
+        rows = canonical_rows(strict_json(exported.read_text()))
+        require(
+            response["rows"] == len(rows) == 16
+            and all(row[1] == "ttm_r2" and row[7] == "native_point" for row in rows),
+            "Native-point export changed case counts or output semantics",
+        )
+        comparison = self.json_command(
+            "compare", *identifiers, "--workspace", workspace
+        )
+        require(
+            comparison["comparison_policy"] == "controlled_native_point_v1"
+            and comparison["mixed_point_statistics"] is True
+            and [item["output_statistics"] for item in comparison["runs"]]
+            == [["native_point"], ["deterministic"]],
+            "Installed generic comparison lost explicit mixed output meanings",
+        )
+        self.done("schema2_native_point_fixture_reload_export_without_model_runtime")
 
     def baselines(self, dataset, workspace):
         self.check = "baseline_runs"
@@ -929,7 +1091,7 @@ print(json.dumps({'optional_loaded': sorted(blocked.intersection(sys.modules))})
         )
         runtime_probe = _BLOCK_OPTIONAL + """
 from importlib import import_module
-for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos'), ('tirex2', 'tirex2')]:
+for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos'), ('tirex2', 'tirex2'), ('ttm', 'ttm')]:
     try:
         import_module('tsfm_lab.models.' + module)._runtime()
     except ImportError as exc:

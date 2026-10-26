@@ -17,6 +17,7 @@ from tsfm_lab.models.catalog import (
 )
 from tsfm_lab.models.factory import build_model
 from tsfm_lab.models.verification import checkpoint_verification, verification_label
+from tsfm_lab.point_tasks import validate_model_frequency
 from tsfm_lab.tui.forms import (
     config_from_fields,
     default_fields,
@@ -85,13 +86,17 @@ def _question(ask, emit, label, default="", choices=(), validate=None) -> str:
 
 
 class _Guide:
-    def __init__(self, ask, emit, workspace, demo_path, adapter):
+    def __init__(self, ask, emit, workspace, demo_path, adapter, ttm_demo_path=None):
         self.ask, self.emit = ask, emit
         self.workspace, self.demo_path = Path(workspace), Path(demo_path).resolve()
         self.arguments = {"workspace": self.workspace, "base_directory": Path.cwd()}
         self.fields = default_fields(adapter or "last_value")
         self.fields["dataset_path"] = str(self.demo_path)
+        self._ordinary_demo_path = self.demo_path
+        self._ttm_demo_path = Path(ttm_demo_path).resolve() if ttm_demo_path else None
+        self._checkpoint_profile = None
         self.dataset = self.capabilities = None
+        self._model = None
         self._evaluation_started = False
 
     def set(self, key, label, *, choices=(), validate=None, default=None):
@@ -105,8 +110,18 @@ class _Guide:
         )
 
     def model(self):
+        previous_adapter = self.fields["adapter"]
         self.set("adapter", "Model adapter", choices=_ADAPTERS)
-        for notice in catalog_info(self.fields["adapter"])["runtime_notices"]:
+        information = catalog_info(self.fields["adapter"])
+        if self.fields["adapter"] != previous_adapter:
+            statistic = information["point_statistic"]
+            self.fields["point_statistic"] = (
+                statistic if statistic in information["supported_tasks"] else "median"
+            )
+        self.set(
+            "point_statistic", "Forecast task", choices=information["supported_tasks"]
+        )
+        for notice in information["runtime_notices"]:
             self.emit(notice)
         if self.fields["adapter"] == "seasonal_naive":
             self.set("seasonal_period", "Baseline seasonal period", validate=_positive)
@@ -127,22 +142,56 @@ class _Guide:
             self.fields["source"] = "huggingface" if source == "cached" else "local"
             if source == "cached":
                 self.emit("Curated checkpoint variants:")
-                for repository in repositories:
-                    variant = checkpoint_info(repository)
-                    self.emit(f"  {variant['variant']} · {repository}")
+                for variant in information["variants"]:
+                    self.emit(f"  {variant['variant']} · {variant['repository']}")
+                    context = (
+                        f"exactly {variant['min_context']}"
+                        if variant["min_context"] == variant["max_context"]
+                        else f"up to {variant['max_context']}"
+                    )
                     self.emit(
-                        f"    Context up to {variant['max_context']} · Horizon up to {variant['max_horizon']} observations"
+                        f"    Context {context} · Horizon up to {variant['max_horizon']} observations"
                     )
                     self.emit(f"    {variant['verification_label']}")
                 previous_repository = self.fields["repository"]
                 self.set("repository", "Checkpoint repository", choices=repositories)
+                variants = [
+                    item
+                    for item in information["variants"]
+                    if item["repository"] == self.fields["repository"]
+                ]
+                selected = variants[0]
+                if len(variants) > 1:
+                    previous_profile = self._checkpoint_profile
+                    default_profile = next(
+                        (
+                            item["variant"]
+                            for item in variants
+                            if item["reference_revision"] == self.fields["revision"]
+                        ),
+                        None,
+                    )
+                    if default_profile is None and previous_profile in {
+                        item["variant"] for item in variants
+                    }:
+                        default_profile = previous_profile
+                    self._checkpoint_profile = _question(
+                        self.ask,
+                        self.emit,
+                        "Checkpoint profile",
+                        default_profile or variants[0]["variant"],
+                        tuple(item["variant"] for item in variants),
+                    )
+                    selected = checkpoint_info(
+                        self.fields["repository"], self._checkpoint_profile
+                    )
+                    if self._checkpoint_profile != previous_profile:
+                        self.fields["revision"] = selected["reference_revision"]
                 if (
                     self.fields["repository"] != previous_repository
                     or not self.fields["revision"]
                 ):
-                    self.fields["revision"] = checkpoint_info(
-                        self.fields["repository"]
-                    )["reference_revision"]
+                    self.fields["revision"] = selected["reference_revision"]
                 self.set("revision", "Exact checkpoint SHA", validate=self._sha)
                 self.set("cache_dir", "Cache directory (optional; - uses the default)")
                 if self.fields["cache_dir"] == "-":
@@ -166,7 +215,22 @@ class _Guide:
         }
         config = config_from_fields(prototype, **self.arguments)
         model = build_model(config.model, config.runtime)
+        self._model = model
         self.capabilities = model.metadata().capabilities
+        next_demo = (
+            self._ttm_demo_path
+            if self.fields["adapter"] == "ttm_r2"
+            else self._ordinary_demo_path
+        )
+        if next_demo is not None:
+            if (
+                Path(self.fields["dataset_path"]).expanduser().resolve()
+                == self.demo_path
+            ):
+                self.fields["dataset_path"] = str(next_demo)
+            self.demo_path = next_demo
+        if self.capabilities.min_context == self.capabilities.max_context:
+            self.fields["context_length"] = str(self.capabilities.min_context)
         record = getattr(model, "configuration", lambda: {})().get("checkpoint")
         if record:
             snapshot = checkpoint_verification(record)
@@ -217,6 +281,7 @@ class _Guide:
             if self.fields["timezone"] == "-":
                 self.fields["timezone"] = ""
         self.dataset = inspect_data(self.fields, **self.arguments)
+        validate_model_frequency(self._model, self.dataset.frequency)
         self.emit(
             f"Validated {len(self.dataset.values)} observations of {self.dataset.target_name} ({self.dataset.units}), frequency {self.dataset.frequency}."
         )
@@ -352,11 +417,12 @@ def build_experiment(
     demo_path: Path,
     adapter: str | None = None,
     demo: bool = False,
+    ttm_demo_path: Path | None = None,
 ) -> ExperimentConfig | None:
     """Ask inline questions and return a reviewed config without execution or writes."""
     try:
         if not demo:
-            return _Guide(ask, emit, workspace, demo_path, adapter).run()
+            return _Guide(ask, emit, workspace, demo_path, adapter, ttm_demo_path).run()
         if adapter in CHECKPOINT_REPOSITORIES:
             raise ConfigError("Use guided setup to select a pretrained checkpoint")
         fields = demo_fields(demo_path)

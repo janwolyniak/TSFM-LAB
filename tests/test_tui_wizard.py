@@ -248,6 +248,47 @@ def test_switching_checkpoint_family_filters_repositories_and_clears_old_revisio
     asyncio.run(exercise())
 
 
+def test_shared_repository_profiles_set_native_task_exact_context_and_sha(
+    tmp_path, demo
+):
+    async def exercise():
+        from tsfm_lab.models.catalog import checkpoint_info
+
+        repository = "ibm-granite/granite-timeseries-ttm-r2"
+        app = WizardApp(tmp_path / "runs", demo, "ttm_r2")
+        async with app.run_test(size=(80, 24)) as pilot:
+            screen = app.wizard
+            profile = screen.query_one("#wizard-checkpoint-profile", Select)
+            revision = screen.query_one("#wizard-revision", Input)
+            task = screen.query_one("#wizard-point-statistic", Select)
+            assert screen.query_one("#wizard-profile-fields").display
+            assert screen._fields()["point_statistic"] == "native_point"
+            assert profile.value == "512-96-r2"
+            assert revision.value == checkpoint_info(repository)["reference_revision"]
+            revision.value = "a" * 40
+            screen._sync_checkpoint_profiles()
+            await pilot.pause()
+            assert revision.value == "a" * 40
+            profile.value = "1536-96-r2"
+            await pilot.pause()
+            assert (
+                revision.value
+                == checkpoint_info(repository, "1536-96-r2")["reference_revision"]
+            )
+            assert screen.query_one("#wizard-context-length", Input).value == "1536"
+            assert screen._fields()["repository"] == repository
+            with pytest.raises(InvalidSelectValueError):
+                task.value = "median"
+            screen.query_one("#wizard-adapter", Select).value = "last_value"
+            await pilot.pause()
+            assert task.value == "median"
+            assert not screen.query_one("#wizard-profile-fields").display
+            task.value = "native_point"
+            assert screen._fields()["point_statistic"] == "native_point"
+
+    asyncio.run(exercise())
+
+
 def test_bad_dataset_stays_on_data_step_with_actionable_error(tmp_path, demo):
     async def exercise():
         app = WizardApp(tmp_path / "runs", demo)

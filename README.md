@@ -14,13 +14,14 @@
 [Chronos-2](docs/chronos2.md) ·
 [TimesFM](docs/timesfm.md) ·
 [TiRex-2](docs/tirex2.md) ·
+[TTM](docs/ttm.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
-Chronos-Bolt, Chronos-2, TimesFM 2.5, and TiRex-2 adapters. A separate finance extension evaluates
+Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, and Granite TTM R2 adapters. A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
 
 ## Project status
@@ -32,10 +33,10 @@ hypothetical OHLC strategies from saved price forecasts.
 - **Work locally:** use the Python core, scriptable `tsfm` commands, or a
   persistent terminal prompt with inline setup, progress, and cancellation.
   Output stays in terminal scrollback; terminal dependencies remain optional.
-- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, or TiRex-2 with
+- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, or TTM with
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
-  experiments, and recorded runtime provenance. Additional model families remain
-  later work.
+  experiments, and recorded runtime provenance. TTM uses explicit context profiles
+  and a native-point evaluation task.
 - **Evaluate price decisions:** derive long/flat/short signals from saved lead-1
   forecasts, require explicit OHLC timing and costs, and inspect verified
   strategy, cash, and buy-and-hold reports without rerunning a model.
@@ -171,6 +172,22 @@ revisions, safe loading, and saved-result behavior. Small has a bounded real CPU
 check; standard has metadata/API compatibility checks without individual inference.
 The [P2 record](docs/p2-chronos2-verification.md) describes the evidence and limits.
 
+## Use Granite TTM R2
+
+The optional `ttm_r2` adapter offers three R2 MSE profiles requiring exactly
+512, 1,024, or 1,536 historical observations, with forecasts up to 96 steps.
+It supports regular one-minute through hourly series. Select `/new ttm_r2`
+and a checkpoint profile; guided setup supplies a longer synthetic example.
+TTM uses the explicit `native_point` task and records causal external scaling
+plus the native scaler. Existing models retain their actual median or
+deterministic output labels when compared in that task. OHLC reports continue
+to require the median task.
+
+See the [TTM guide](docs/ttm.md), [approved contract](docs/ttm-contract.md), and
+[P4 verification record](docs/p4-ttm-verification.md). Install the optional
+runtime with `python -m pip install -c requirements-ttm.txt '.[cli,ttm]'`. Checkpoints are acquired
+separately through an explicit pull.
+
 ## Use TiRex-2
 
 The optional `tirex_2` adapter offers four training profiles through the terminal
@@ -297,7 +314,7 @@ remaining publication gates. The repository has not published a package release.
 The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
-family, followed by TimesFM 2.5, Chronos-2, and TiRex-2. TTM and further work follow the
+family, followed by TimesFM 2.5, Chronos-2, TiRex-2, and TTM. Further work follows the
 [next release plan](docs/next-release-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
 OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
 the bounded compatibility findings before further benchmark integration.

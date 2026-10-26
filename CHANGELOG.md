@@ -2,6 +2,14 @@
 
 ## Next feature release in development
 
+- Add Granite TTM R2 with three pinned exact-context profiles, native 96-step
+  prefix forecasts, causal external standardization, and terminal selection.
+- Add explicit native-point comparisons preserving actual output labels and
+  legacy median records. OHLC reports continue to require the median task.
+- Qualify the shared Transformers 4.56 runtime with cached representative TTM
+  and five existing-checkpoint CPU checks. Larger TTM profiles remain
+  compatibility checked without separate inference. See the P4 record.
+
 - Add Chronos-Bolt Base to the curated catalog and terminal setup using the
   existing adapter, without requiring an individual Base inference test.
 - Separate adapter representative checks from selected checkpoint evidence,
@@ -17,7 +25,7 @@
   the NXAI attribution and mLSTM Kernels Community License copy in distributions.
 - Coordinate checkpoint runtimes on Hub 0.35.3 while retaining Torch 2.8 and
   Transformers 4.55. P3 qualification records the representative TiRex check
-  and existing-family regressions; TTM's runtime decision remains future work.
+  and existing-family regressions. P4 subsequently qualifies the TTM runtime.
 
 ## 0.1.0 — Unreleased
 

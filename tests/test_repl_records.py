@@ -39,6 +39,7 @@ def test_catalog_is_offline_compact_and_borderless(commands):
         "timesfm_2p5",
         "chronos_2",
         "tirex_2",
+        "ttm_r2",
     }
     rendered = output.getvalue()
     assert "apache-2.0" in rendered and "2048" in rendered and "64" in rendered
@@ -64,7 +65,9 @@ def test_catalog_variant_statuses_remain_readable_in_an_80_column_terminal(tmp_p
     assert "NXAI Community License" in rendered
     assert "Context up to 2048" in rendered and "Context up to 8192" in rendered
     assert "Horizon up to 320" in rendered and "Horizon up to 928" in rendered
-    assert "TTM" not in rendered
+    assert "TTM" in rendered
+    assert "512-96-r2" in rendered and "1536-96-r2" in rendered
+    assert "Context exactly 512" in rendered and "Context exactly 1536" in rendered
     assert not any(symbol in rendered for symbol in ("┌", "┐", "╭", "╮", "│", "\x1b["))
 
 

@@ -1,0 +1,31 @@
+schema_version: 1
+name: seasonal-demo-ttm-r2
+model:
+  source: huggingface
+  adapter_id: ttm_r2
+  repository: ibm-granite/granite-timeseries-ttm-r2
+  revision: d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f
+  offline: true
+  cache_dir: ../../model-cache
+dataset:
+  path: ../datasets/ttm-seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+evaluation:
+  context_length: 512
+  horizon: 4
+  stride: 4
+  evaluation_start: "2026-01-22T08:00:00Z"
+  evaluation_end: "2026-01-23T00:00:00Z"
+  seasonal_period: 24
+  metrics: [mae, rmse, mase]
+  point_statistic: native_point
+runtime:
+  device: cpu
+  dtype: float32
+  batch_size: 1
+  seed: 0
+output:
+  directory: ../../results

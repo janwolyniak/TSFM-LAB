@@ -167,7 +167,7 @@ export locations need their own deliberate storage or ignore choices.
 
 Start with the baseline demonstration before installing a model runtime. The
 Chronos adapter accepts only its bounded CPU/float32 configuration and requires
-compatible Chronos forecasting 2.2.0, PyTorch 2.8.x, Transformers 4.55.x, and
+compatible Chronos forecasting 2.2.0, PyTorch 2.8.x, Transformers 4.56.x, and
 Hugging Face Hub 0.35.3. The supplied
 [runtime constraints](../requirements-chronos.txt) record exact versions.
 
@@ -200,8 +200,7 @@ median semantics, and the bounded local verification evidence.
 ## Add CPU TiRex-2 inference separately
 
 TiRex-2 offers four training/forecast profiles through `tirex_2`. The shared
-checkpoint runtime now pins Hub 0.35.3; Torch 2.8 and Transformers 4.55 stay
-unchanged. Update the chosen model environment explicitly using the current
+checkpoint runtime pins Hub 0.35.3 and Torch 2.8. P4 updates Transformers to 4.56. Update the chosen model environment explicitly using the current
 constraints when upgrading the source; no command upgrades global packages
 automatically. Saved forecasts remain readable without model libraries.
 
@@ -222,3 +221,19 @@ This optional stack adds recurrent-kernel packages; Linux can also resolve
 accelerator dependencies from their declared platform requirements. Core/CLI
 installation and routine CI require none of them. Follow the guide for an
 explicit pinned checkpoint pull and the four profile-specific native bounds.
+
+## Add Granite TTM R2 inference separately
+
+Use the coordinated shared runtime in a chosen environment:
+
+```sh
+python -m pip install -c requirements-ttm.txt '.[cli,ttm]'
+tsfm models info ttm_r2
+```
+
+The optional Granite 0.3.4 runtime uses Transformers 4.56.0, Tokenizers 0.22.0,
+scikit-learn 1.7.2, and Filelock 3.20.3, with Torch 2.8 and Hub 0.35.3.
+Installing updated source does not update an existing global environment.
+See the [TTM guide](ttm.md), [constraints](../requirements-ttm.txt), and
+[P4 qualification](p4-ttm-verification.md) for profile selection, runtime
+checks, and the scope of the representative CPU evidence.

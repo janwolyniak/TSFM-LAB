@@ -38,14 +38,14 @@ def _runtime():
         if (
             installed["chronos-forecasting"] != "2.2.0"
             or not installed["torch"].startswith("2.8.")
-            or not installed["transformers"].startswith("4.55.")
+            or not installed["transformers"].startswith("4.56.")
             or installed["huggingface-hub"] != "0.35.3"
             or not installed["safetensors"].startswith("0.6.")
             or not installed["accelerate"].startswith("1.12.")
         ):
             raise ImportError(
                 "Chronos-2 requires chronos-forecasting 2.2.0, torch 2.8.x, "
-                "transformers 4.55.x, huggingface-hub 0.35.3, safetensors 0.6.x, "
+                "transformers 4.56.x, huggingface-hub 0.35.3, safetensors 0.6.x, "
                 "and accelerate 1.12.x; use tsfm-lab[chronos]"
             )
         return importlib.import_module("torch"), importlib.import_module("chronos")
@@ -164,8 +164,10 @@ class Chronos2:
             )
         if not 0 < spec.horizon <= self._max_horizon:
             raise ValueError("Chronos-2 horizon exceeds its native prediction limit")
-        if spec.point_statistic != "median":
-            raise ValueError("Chronos-2 point forecasts require the median task")
+        if spec.point_statistic not in {"median", "native_point"}:
+            raise ValueError(
+                "Chronos-2 point forecasts require a median or native_point task"
+            )
 
     def load(self) -> None:
         if self._pipeline is not None:

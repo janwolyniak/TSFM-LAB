@@ -162,8 +162,11 @@ def _fingerprint(record: dict) -> str:
         "quantiles",
         "license",
     )
+    schema = record["schema_version"]
+    if schema == 2:
+        fields += ("point_forecast",)
     payload = {
-        "serialization": "tsfm_checkpoint_v1",
+        "serialization": f"tsfm_checkpoint_v{schema}",
         **{key: record[key] for key in fields},
     }
     return hashlib.sha256(_json(payload)).hexdigest()
@@ -183,10 +186,11 @@ class ResolvedCheckpoint:
 
     def record(self) -> dict:
         """Return consumed-file identity and native capabilities, excluding raw config."""
+        metadata = config_metadata(self.config)
         return json.loads(
             _json(
                 {
-                    "schema_version": 1,
+                    "schema_version": 2 if "point_forecast" in metadata else 1,
                     "source": self.source,
                     "path": str(self.path),
                     "repository": self.repository,
@@ -195,7 +199,7 @@ class ResolvedCheckpoint:
                     "files": self.files,
                     "fingerprint": self.fingerprint,
                     "license": self.license,
-                    **config_metadata(self.config),
+                    **metadata,
                 }
             )
         )
@@ -207,7 +211,7 @@ def validate_checkpoint_record(record: dict) -> dict:
         if (
             not isinstance(record, dict)
             or type(record["schema_version"]) is not int
-            or record["schema_version"] != 1
+            or record["schema_version"] not in {1, 2}
         ):
             raise CheckpointError("Invalid checkpoint record schema")
         fields = {
@@ -227,6 +231,8 @@ def validate_checkpoint_record(record: dict) -> dict:
             "native_prediction_length",
             "quantiles",
         }
+        if record["schema_version"] == 2:
+            fields.add("point_forecast")
         if set(record) != fields or ".." in Path(record["path"]).parts:
             raise CheckpointError("Invalid checkpoint record fields or path")
         if (

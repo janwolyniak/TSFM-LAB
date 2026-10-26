@@ -128,13 +128,16 @@ A controlled comparison requires identical canonical dataset content and import
 semantics, target/units, evaluation keys, L, H, S, preprocessing, scaling history,
 metric versions, aggregation, and point statistic. Check provenance independently
 of matching file names. Here point statistic means the requested forecasting task;
-deterministic baselines are admissible under either mean or median tasks. Keep
-their `deterministic` provenance rather than falsely labelling a distribution
-reduction. A probabilistic model's output statistic must match the request.
-Different context lengths or mean-versus-median outputs
-may be displayed as an explicitly labelled comparison with different settings;
-they must not pass the controlled-comparison check. Record runtime and device
-differences beside timing comparisons. Incomplete runs are ineligible.
+the default `median` task admits median and deterministic outputs. The explicit
+`native_point` task compares declared point outputs while retaining every actual
+label. It uses `controlled_native_point_v1`, per-run `output_statistics`, and
+`mixed_point_statistics` to disclose different statistical targets. TTM retains
+`native_point`, the other curated families retain `median`, and baselines retain
+`deterministic`. A mixed native-point comparison makes no common mean/median
+claim. Tasks cannot be mixed; legacy median comparisons keep their old policy
+and representation. Different context lengths fail controlled comparison.
+The numerical scores and chronological case-alignment rules are unchanged.
+Record runtime and device differences beside timing comparisons. Incomplete runs are ineligible.
 
 ## Required regression evidence
 

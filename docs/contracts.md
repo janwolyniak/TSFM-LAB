@@ -62,7 +62,7 @@ file formats without making provenance identical.
 | `evaluation_end` | Exclusive target boundary; a grid timestamp or exactly one grid step beyond the final observation. |
 | `seasonal_period` | Integer m greater than zero, in observations; also fixes the MASE scale convention. Default 1. |
 | `metrics` | Initial allowed names: `mae`, `rmse`, `mase`. Reject unknown names. |
-| `point_statistic` | Requested point task, initially `median`. Deterministic baselines are admissible; a model's derived point statistic must match. |
+| `point_statistic` | Requested task: `median` (default) or `native_point`. The former accepts median/deterministic outputs; the latter preserves each model's actual point label. |
 | `aggregation` | Fixed identifier `forecast_case_micro_v1`; no configurable weighting in the first slice. |
 
 The first origin must have L preceding observations. The entire H-step target
@@ -177,9 +177,10 @@ native representation and explicitly record any reduction to a point estimate.
 For batches, the corresponding dense shapes are `[B,H]`, `[B,H,Q]`, and `[B,K,H]`.
 
 Keep the requested point task separate from output provenance. A deterministic
-baseline is valid for a median or mean task because it has no distribution to
-reduce. A probabilistic model must use the requested statistic, with its actual
-reduction recorded; it cannot substitute a median for a requested mean.
+baseline is valid for either implemented task because it has no distribution
+to reduce. The median task requires median/deterministic output. The explicit
+native-point task retains each model's actual point statistic without asserting
+a common conditional mean or median.
 
 ## Adapter lifecycle
 
@@ -279,7 +280,8 @@ or optional inference libraries; see the [Chronos](chronos.md) and
 New pretrained runs also capture `provenance.project_verification` through an
 optional metadata hook, detached and checked before model loading. This records
 project checks against exact config/weight identities separately from the
-unchanged schema-1 checkpoint fingerprint. Reload validates the stored snapshot
+checkpoint fingerprint (schema 1 for quantile families, schema 2 for TTM).
+Reload validates the stored snapshot
 without consulting current project evidence. Older records without the field
 remain unchanged. See the [catalog guide](model-catalog.md).
 
@@ -315,3 +317,20 @@ capital paths. `save_report` publishes strict checked JSON to a new destination;
 `export_equity` writes one CSV row per target close. Hashes and consistency
 checks are not signatures. See the [finance contract](finance-extension.md)
 for formulas, report checks, and the exact scope of this hypothetical simulator.
+
+## Native-point checkpoint and comparison compatibility
+
+TTM R2 uses checkpoint schema 2, adding `point_forecast` to the fingerprinted
+identity: native statistic, MSE loss, R2/profile, minute-to-hour frequency,
+external population scaling plus native std, inverse order, and native-prefix
+horizon policy. It has an empty quantile list. Exact context and complete
+configurations are validated before loading. Schema-1 checkpoint fields and
+fingerprints remain unchanged; the enclosing YAML/result formats stay schema 1.
+
+`native_point` is an explicit evaluation task. It accepts each declared point
+output while preserving actual labels: native point for TTM, median for the
+other curated families, deterministic for baselines. Its comparison policy is
+`controlled_native_point_v1`, with per-run labels and mixed-statistic disclosure.
+Task, dataset, case keys, context, horizon, stride, and metric rules must match.
+Legacy median results keep their old validation and comparison representation.
+OHLC derivation and independent reload require the median parent task.

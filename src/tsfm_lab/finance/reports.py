@@ -145,6 +145,8 @@ def _parent(payload):
     _uuid(parent["run_id"], "Parent run_id")
     result = parent["result"]
     config, spec, interval = _schema(result)
+    if spec.point_statistic != "median":
+        raise FinanceReportError("Finance reports require the saved median task")
     if config["dataset"]["units"] == "unspecified":
         raise FinanceReportError("Declare price quote units in the parent dataset")
     if result.get("run_id", parent["run_id"]) != parent["run_id"]:

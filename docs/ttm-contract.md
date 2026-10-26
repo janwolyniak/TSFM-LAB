@@ -1,9 +1,10 @@
-# Proposed TTM integration contract
+# Approved TTM integration contract
 
-Status: **proposal awaiting owner decisions** on 26 October 2026. This document
-does not authorize dependency installation, runtime changes, or inference. No
-TTM adapter or new evaluation task has been implemented. It makes P4's required
-contract step reviewable under the [release plan](next-release-plan.md).
+Status: **approved by the owner on 26 October 2026**. The selected contract
+permits cross-model native-point comparisons with actual labels, retains
+median-task-only OHLC reports, and approves the shared runtime change plus
+bounded temporary CPU checks. See the [implementation guide](ttm.md),
+[P4 evidence](p4-ttm-verification.md), and [release plan](next-release-plan.md).
 
 ## Initial checkpoint choices
 
@@ -35,7 +36,7 @@ The 512→96 config and weights are already cached and their local hashes match:
 - Weights: SHA-256
   `a706726a7eb01bbcb42994b7dcb3c06ea9557898dbae8d480eb04fe8ccb89710`.
 
-The proposed initial frequency policy is a declared regular interval between
+The approved frequency policy is a declared regular interval between
 one minute and one hour inclusive, reflecting the R2 model card's stated scope.
 Reject unsupported intervals before model allocation; never resample or convert
 units automatically. Daily/weekly R2.1, MAE-trained variants, other native
@@ -76,7 +77,7 @@ are fabricated from this point head.
 
 Implementation source: [pinned Granite 0.3.4 model](https://github.com/ibm-granite/granite-tsfm/blob/4d4c6cf0e345c985d84f6292a4f397caf5e2ba78/tsfm_public/models/tinytimemixer/modeling_tinytimemixer.py).
 
-## Point task and comparisons — proposed decision
+## Point task and comparisons
 
 TTM's MSE-trained head produces a **native point forecast**. MSE training alone
 does not verify a conditional mean, and the output must not be labelled median.
@@ -84,7 +85,7 @@ Add an explicit `native_point` evaluation task beside the existing `median`
 task. The existing task remains the default for existing models and retains its
 old output acceptance rules, records, and hashes.
 
-Recommended policy: the new task permits comparison of each model's declared
+Approved policy: the new task permits comparison of each model's declared
 point output on identical cases and metric definitions. Retain actual prediction
 labels: TTM `native_point`, existing pretrained adapters `median`, and baselines
 `deterministic`. Explain that these outputs can target different statistical
@@ -96,30 +97,21 @@ new native-point runs. MAE, RMSE, MASE, case alignment, aggregation, and fixed
 pre-evaluation MASE scaling remain numerically unchanged. Terminal setup exposes
 the selected task; manual YAML is validated rather than silently rewritten.
 
-The narrower alternative is to admit only TTM and deterministic baselines to the
-new task. Owner selection is required before implementing either policy.
-
 TTM needs point-only nested checkpoint metadata with a new serialization version
 covering native output semantics, MSE loss, release/profile, frequency policy,
 exact native bounds, and normalization. Preserve schema-1 checkpoint field sets,
 fingerprint bytes, old environment records, and verification snapshots. The
 containing YAML/result formats can remain schema 1; no old file is rewritten.
 
-## OHLC eligibility — separate owner decision
+## OHLC eligibility
 
-The bounded recommendation is to keep OHLC reports on the existing median task.
-TTM forecasts can still be evaluated on financial price series; they would not
-yet enter the OHLC report. A generic native-point task using a baseline or a
-median-producing adapter must not accidentally bypass this policy: validate the
-parent evaluation task during both report creation and independent report reload.
+OHLC reports remain on the existing median task. TTM forecasts can be evaluated
+on financial price series, but cannot enter the OHLC report in this milestone.
+Native-point runs using a baseline or median-producing adapter also fail this
+eligibility check, during both report creation and independent report reload.
+All existing timing, cost, position, and accounting rules remain in force.
 
-Alternatively, the owner may explicitly extend OHLC eligibility to native-point
-runs. That change must retain actual output labels and all existing positive
-price, origin/entry/exit timing, threshold, fee, slippage, short financing,
-capital, and accounting rules. It must not reinterpret an MSE output as a median.
-No such extension is assumed by this proposal.
-
-## Runtime — proposed decision and resource request
+## Approved shared runtime
 
 Use `granite-tsfm==0.3.4`, which supports Python 3.11–3.13 and Torch 2.8. Keep
 Hub 0.35.3 and NumPy 2.1.3. A coordinated shared runtime requires Transformers
@@ -127,8 +119,8 @@ Hub 0.35.3 and NumPy 2.1.3. A coordinated shared runtime requires Transformers
 missing Granite dataset dependencies. This preserves one inference interpreter;
 separate family environments would require a new execution/routing design.
 
-The static required closure passed for 72 packages / 142 requirements; it has
-not been executed. Ten macOS/Python 3.13 wheels total 27,839,485 bytes, about
+The required closure passed for 72 packages / 142 requirements in the isolated
+validation environment. Ten macOS/Python 3.13 wheels total 27,839,485 bytes, about
 28 MB, without a Torch download. The representative TTM weights can be reused
 from cache. No additional restrictive dependency license was found in this audit.
 See the [pinned runtime requirements](https://github.com/ibm-granite/granite-tsfm/blob/4d4c6cf0e345c985d84f6292a4f397caf5e2ba78/pyproject.toml).
@@ -139,11 +131,11 @@ required scikit-learn; do not repair it incidentally or claim that the whole
 inherited environment is dependency-clean. Verify the model-required closure
 and retain the separate clean core/CLI package check.
 
-After installation approval, run one bounded cached TTM CPU check and brief
+The approved verification includes one bounded cached TTM CPU check and brief
 replay checks for Bolt Tiny/Small, Chronos-2 Small, TimesFM, and TiRex-2. No paid
 compute, benchmark campaign, fine-tuning, or larger checkpoint download is included.
 
-## Acceptance evidence after contract approval
+## Acceptance evidence
 
 - Hand-check external scaling/inverse scaling, constant histories, native output
   prefix selection, exact context, frequency refusal, and full profile validation.

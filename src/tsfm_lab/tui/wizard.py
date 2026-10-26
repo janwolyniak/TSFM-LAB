@@ -84,6 +84,8 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         self._cancelled = False
         self._prepared: PreparedExperiment | None = None
         self._review_snapshot: dict[str, str] | None = None
+        self._adapter_reference = initial_adapter
+        self._profile_reference: tuple[str, str] | None = None
 
     @property
     def step(self) -> str:
@@ -108,6 +110,17 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                         for entry in catalog_entries()
                     ],
                     self._defaults["adapter"],
+                )
+                yield _selection(
+                    "Forecast task",
+                    "point-statistic",
+                    [
+                        (value, value)
+                        for value in catalog_info(self._defaults["adapter"])[
+                            "supported_tasks"
+                        ]
+                    ],
+                    self._defaults["point_statistic"],
                 )
                 with Vertical(
                     id="wizard-seasonal-fields", classes="wizard-conditional"
@@ -140,6 +153,15 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                             self._repository_choices(),
                             self._defaults["repository"],
                         )
+                        with Vertical(
+                            id="wizard-profile-fields", classes="wizard-conditional"
+                        ):
+                            yield _selection(
+                                "Checkpoint profile",
+                                "checkpoint-profile",
+                                [("Default", "default")],
+                                "default",
+                            )
                         yield _field(
                             "Exact checkpoint SHA (40 lowercase characters)", "revision"
                         )
@@ -188,6 +210,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        self._sync_checkpoint_profiles()
         self._update_model_visibility()
         self._show_step()
 
@@ -220,6 +243,51 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         )
         self.query_one("#wizard-hub-fields").display = source == "huggingface"
         self.query_one("#wizard-local-fields").display = source == "local"
+
+    def _sync_checkpoint_profiles(self) -> None:
+        adapter = str(self.query_one("#wizard-adapter", Select).value)
+        repository = str(self.query_one("#wizard-repository", Select).value)
+        variants = [
+            item
+            for item in catalog_info(adapter).get("variants", [])
+            if item["repository"] == repository
+        ]
+        self.query_one("#wizard-profile-fields").display = len(variants) > 1
+        if len(variants) <= 1:
+            self._profile_reference = None
+            return
+        control = self.query_one("#wizard-checkpoint-profile", Select)
+        revision = self.query_one("#wizard-revision", Input)
+        names = {item["variant"] for item in variants}
+        previous = control.value
+        selected = next(
+            (
+                item["variant"]
+                for item in variants
+                if item["reference_revision"] == revision.value
+            ),
+            None,
+        )
+        if selected is None:
+            selected = previous if previous in names else variants[0]["variant"]
+        control.set_options(
+            [(item["display_name"], item["variant"]) for item in variants]
+        )
+        control.value = selected
+        self._select_checkpoint_profile(repository, str(selected))
+
+    def _select_checkpoint_profile(self, repository: str, name: str) -> None:
+        reference = (repository, name)
+        if reference == self._profile_reference:
+            return
+        variant = catalog_info(repository, name)
+        self._profile_reference = reference
+        self.query_one("#wizard-revision", Input).value = variant["reference_revision"]
+        caps = variant["capabilities"]
+        if caps["min_context"] == caps["max_context"]:
+            self.query_one("#wizard-context-length", Input).value = str(
+                caps["min_context"]
+            )
 
     def _show_step(self) -> None:
         self.query_one("#wizard-content", ContentSwitcher).current = (
@@ -265,6 +333,15 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         self._invalidate()
         if self.is_mounted:
             if event.select.id == "wizard-adapter":
+                adapter = str(event.value)
+                if adapter != self._adapter_reference:
+                    information = catalog_info(adapter)
+                    task = self.query_one("#wizard-point-statistic", Select)
+                    task.set_options(
+                        [(value, value) for value in information["supported_tasks"]]
+                    )
+                    task.value = default_fields(adapter)["point_statistic"]
+                    self._adapter_reference = adapter
                 repository = self.query_one("#wizard-repository", Select)
                 choices = self._repository_choices(event.value)
                 previous = repository.value
@@ -276,6 +353,19 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                 )
                 if previous != repository.value:
                     self.query_one("#wizard-revision", Input).value = ""
+                self._sync_checkpoint_profiles()
+            elif event.select.id == "wizard-repository":
+                self._sync_checkpoint_profiles()
+            elif event.select.id == "wizard-checkpoint-profile":
+                repository = str(self.query_one("#wizard-repository", Select).value)
+                adapter = str(self.query_one("#wizard-adapter", Select).value)
+                names = {
+                    item["variant"]
+                    for item in catalog_info(adapter).get("variants", [])
+                    if item["repository"] == repository
+                }
+                if event.value in names and len(names) > 1:
+                    self._select_checkpoint_profile(repository, str(event.value))
             self._update_model_visibility()
 
     @on(Input.Submitted)

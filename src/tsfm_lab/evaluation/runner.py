@@ -24,6 +24,7 @@ from tsfm_lab.data import canonical_fingerprint
 from tsfm_lab.evaluation.metrics import Scores, score_forecasts
 from tsfm_lab.evaluation.windows import evaluation_bounds, iter_windows
 from tsfm_lab.models.base import ForecastModel
+from tsfm_lab.point_tasks import output_statistics, validate_model_frequency
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,7 @@ def _aligned_output(
         raise ValueError(
             "adapter output identity or timestamps do not match the request"
         )
-    if output.point_statistic not in {"deterministic", spec.point_statistic}:
+    if output.point_statistic not in output_statistics(spec.point_statistic):
         raise ValueError(
             "adapter output point statistic does not match the requested task"
         )
@@ -203,6 +204,7 @@ def run_experiment(
     metadata = model.metadata()
     _check_capabilities(metadata, spec)
     model.validate(spec)
+    validate_model_frequency(model, dataset.frequency)
     configuration = json.loads(
         json.dumps(_configuration(dataset, metadata, model, spec), allow_nan=False)
     )

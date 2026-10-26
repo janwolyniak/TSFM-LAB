@@ -1,7 +1,9 @@
 # Tested model-runtime constraints; optional, not required for routine CI.
 chronos-forecasting==2.2.0
 torch==2.8.0
-transformers==4.55.0
+transformers==4.56.0
+tokenizers==0.22.0
+filelock==3.20.3
 huggingface-hub==0.35.3
 safetensors==0.6.2
 accelerate==1.12.0

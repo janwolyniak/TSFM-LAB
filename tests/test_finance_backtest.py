@@ -7,6 +7,7 @@ import pytest
 from finance_helpers import price_fixture
 
 from tsfm_lab.contracts import Dataset
+from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.finance.backtest import backtest_run
 from tsfm_lab.finance.contracts import FinanceError
 
@@ -40,6 +41,32 @@ def test_checked_saved_prices_produce_separate_derived_report(tmp_path):
         == value.dataset.provenance["canonical_sha256"]
     )
     assert not (value.workspace / "finance").exists()
+
+
+@pytest.mark.parametrize("statistic", ["deterministic", "median", "native_point"])
+def test_native_task_cannot_enter_finance_through_its_output_label(
+    tmp_path, monkeypatch, statistic
+):
+    value = price_fixture(tmp_path)
+    store = ExperimentStore(value.workspace)
+    result, frame = store.load_result(value.run_id)
+    result["configuration"]["evaluation"]["point_statistic"] = "native_point"
+    frame["point_statistic"] = statistic
+    run_id = store.create("Native point fixture", {}, "# Direct fixture")
+    store.complete(run_id, result, frame)
+    monkeypatch.setattr(
+        "tsfm_lab.finance.backtest.evaluate_cases",
+        lambda *args, **kwargs: pytest.fail("Native task must fail before accounting"),
+    )
+    with pytest.raises(FinanceError, match="median task"):
+        backtest_run(
+            run_id,
+            value.workspace,
+            value.dataset,
+            value.ohlc,
+            value.rules,
+            target_is_price=True,
+        )
 
 
 def test_higher_horizon_retains_every_lead_one_case(tmp_path):

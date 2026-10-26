@@ -49,6 +49,10 @@ def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
     with zipfile.ZipFile(path, "w") as archive:
         for name in (
             "tsfm_lab/resources/seasonal.csv",
+            "tsfm_lab/resources/ttm-seasonal.csv",
+            "tsfm_lab/point_tasks.py",
+            "tsfm_lab/models/ttm.py",
+            "tsfm_lab/models/ttm_profile.py",
             "tsfm_lab/repl/session.py",
             "tsfm_lab/terminal.py",
             "tsfm_lab/finance_commands.py",

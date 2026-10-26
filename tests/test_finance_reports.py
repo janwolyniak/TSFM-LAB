@@ -145,6 +145,22 @@ def resign_parent(value):
         }
 
 
+@pytest.mark.parametrize("statistic", ["deterministic", "median"])
+def test_resigned_native_parent_task_is_ineligible_even_with_old_output_labels(
+    payload, statistic
+):
+    sealed = reports.seal_report(payload)
+    sealed["parent"]["result"]["configuration"]["evaluation"][
+        "point_statistic"
+    ] = "native_point"
+    for case in sealed["cases"]:
+        case["point_statistic"] = statistic
+    resign_parent(sealed)
+    resign(sealed)
+    with pytest.raises(FinanceReportError, match="median task"):
+        reports.validate_report(sealed)
+
+
 def test_seal_save_load_recalculate_and_preserve_detached_unicode_payload(
     payload, tmp_path
 ):

@@ -108,6 +108,28 @@ def test_idle_interrupt_then_eof_closes_without_creating_workspace(tmp_path):
     app.run()
     assert app.closed
     assert "Input cancelled" in output.getvalue()
+
+
+def test_setup_keeps_both_packaged_datasets_available_for_the_session(
+    tmp_path, monkeypatch
+):
+    calls = []
+
+    def setup(*args, **kwargs):
+        assert kwargs["demo_path"].is_file()
+        assert kwargs["ttm_demo_path"].is_file()
+        assert len(pd.read_csv(kwargs["demo_path"])) == 32
+        assert len(pd.read_csv(kwargs["ttm_demo_path"])) == 1600
+        calls.append(kwargs)
+        return None
+
+    monkeypatch.setattr("tsfm_lab.repl.session.build_experiment", setup)
+    app, _ = session(tmp_path / "runs", Editor(["/new ttm_r2", "/demo", "/exit"]))
+    app.run()
+    assert len(calls) == 2
+    assert calls[0]["adapter"] == "ttm_r2"
+    assert calls[1]["demo"] is True
+    assert not (tmp_path / "runs").exists()
     assert not app.workspace.exists()
 
 

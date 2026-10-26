@@ -81,6 +81,20 @@ def test_spec_rejects_unsupported_or_ambiguous_settings(options):
         EvaluationSpec(**(kwargs | options))
 
 
+def test_native_point_task_is_explicit_and_median_remains_default():
+    options = dict(
+        context_length=3,
+        horizon=2,
+        evaluation_start="2026-01-01T03:00:00Z",
+        evaluation_end="2026-01-01T08:00:00Z",
+    )
+    assert EvaluationSpec(**options).point_statistic == "median"
+    assert (
+        EvaluationSpec(**options, point_statistic="native_point").point_statistic
+        == "native_point"
+    )
+
+
 def test_contracts_detach_both_input_and_output_values():
     timestamps = pd.date_range("2026-01-01", periods=4, freq="h", tz="UTC")
     original = np.array([1.0, 2.0, 3.0, 4.0])

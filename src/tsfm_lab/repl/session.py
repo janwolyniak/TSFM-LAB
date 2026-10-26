@@ -28,6 +28,7 @@ class TerminalSession:
         self.runner = runner
         self.records = RecordCommands(self.console, self.workspace)
         self.demo_path = None
+        self.ttm_demo_path = None
         self.last_run = None
         self.known_ids = []
         self.closed = False
@@ -49,6 +50,9 @@ class TerminalSession:
         with ExitStack() as resources:
             self.demo_path = resources.enter_context(
                 as_file(files("tsfm_lab.resources").joinpath("seasonal.csv"))
+            )
+            self.ttm_demo_path = resources.enter_context(
+                as_file(files("tsfm_lab.resources").joinpath("ttm-seasonal.csv"))
             )
             self._welcome()
             while not self.closed:
@@ -139,6 +143,7 @@ class TerminalSession:
             self.emit,
             workspace=self.workspace,
             demo_path=self.demo_path,
+            ttm_demo_path=self.ttm_demo_path,
             adapter=arguments[0] if arguments else None,
             demo=demo,
         )
