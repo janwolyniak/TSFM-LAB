@@ -7,8 +7,11 @@
 - Separate adapter representative checks from selected checkpoint evidence,
   expose variant/runtime metadata, and snapshot project verification in new
   pretrained run provenance while preserving old checkpoint fingerprints.
-- Document the runtime compatibility gates for the planned Chronos-2, TiRex-2,
-  and TTM integrations. Those three adapters are not implemented by this change.
+- Add the optional Chronos-2 adapter with curated Small/standard checkpoints,
+  strict CPU float32 local loading, independent native median forecasts,
+  terminal/YAML selection, and saved-result compatibility. Small receives a
+  bounded real CPU check; standard remains metadata/API checked without inference.
+- Document the runtime compatibility gates for planned TiRex-2 and TTM.
 
 ## 0.1.0 — Unreleased
 

@@ -53,6 +53,8 @@ def wheel(tmp_path, dependency):
             "tsfm_lab/finance/ohlc.py",
             "tsfm_lab/finance/exports.py",
             "tsfm_lab/models/registry.py",
+            "tsfm_lab/models/chronos2.py",
+            "tsfm_lab/models/chronos2_profile.py",
             "tsfm_lab/models/verification.py",
             "tsfm_lab/models/_verification_evidence.py",
             f"{prefix}/licenses/LICENSE",

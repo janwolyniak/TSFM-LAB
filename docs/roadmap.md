@@ -11,6 +11,8 @@ The repository now contains the numerical Python package, scriptable CLI,
 YAML configuration, local records, Parquet support, tests, synthetic examples,
 and configured checks/CI, plus an interactive terminal. Chronos-Bolt Tiny/Small
 and TimesFM 2.5 have passed pinned local CPU integrations on synthetic data.
+Chronos-2 Small adds the bounded P2 CPU integration; standard is compatibility
+checked without individual inference.
 The pre-existing local `PLAN.md` remains the product brief;
 these tracked documents make the actionable proposal usable without relying on
 that untracked file.
@@ -66,8 +68,9 @@ remain required. Large benchmark comparisons are postponed.
 
 P1's catalog, variant selection, Base metadata, and historical verification
 snapshots are implemented and verified locally; see the
-[P1 verification record](p1-catalog-verification.md). Chronos-2 is the next
-adapter package. TiRex-2/TTM require the runtime compatibility decisions recorded
+[P1 verification record](p1-catalog-verification.md). P2 adds Chronos-2 Small and
+standard; see the [P2 verification record](p2-chronos2-verification.md).
+TiRex-2/TTM require the runtime compatibility decisions recorded
 in the [catalog guide](model-catalog.md).
 
 ## Milestone 0 Architecture review
@@ -231,7 +234,8 @@ Acceptance: a baseline and TimesFM use identical forecast cases and metric
 definitions; saved records remain usable without either model's weights/runtime;
 wrong-family identities, unsupported limits, unsafe files, and unverified runtime
 versions fail explicitly. Routine CI needs no weights. Larger device/model claims
-require separate verification; Chronos-2 remains a later adapter.
+require separate verification. The subsequent P2 integration adds Chronos-2 as
+a distinct adapter without changing the TimesFM contract.
 
 ## Milestone 7 Explicit OHLC finance reports
 

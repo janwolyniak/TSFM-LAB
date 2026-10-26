@@ -447,7 +447,7 @@ def test_hub_configuration_requires_checkpoint_selection(tmp_path, valid_config,
         {"path": None},
         {"path": []},
         {"adapter_id": "seasonal_naive"},
-        {"adapter_id": "chronos_2"},
+        {"adapter_id": "chronos_3"},
     ],
 )
 def test_invalid_local_configuration_is_rejected(tmp_path, valid_config, changes):

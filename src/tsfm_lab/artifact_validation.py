@@ -133,6 +133,16 @@ def _checkpoint_identity(model, runtime, spec, environment):
     ):
         raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
     distributions = tuple(name for name, _ in profile.runtime_requirements)
+    if adapter == "chronos_2":
+        from tsfm_lab.models.chronos2 import FORECAST_OPTIONS
+
+        options = runtime.get("forecast_options")
+        if (
+            not isinstance(options, dict)
+            or set(options) != set(FORECAST_OPTIONS)
+            or any(options[key] is not value for key, value in FORECAST_OPTIONS.items())
+        ):
+            raise StoreError("Chronos-2 runtime requires its recorded forecast options")
     if adapter == "timesfm_2p5":
         from tsfm_lab.models.timesfm import FORECAST_OPTIONS
 

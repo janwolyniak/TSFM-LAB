@@ -23,6 +23,7 @@ def test_catalog_metadata_is_json_compatible_and_has_cpu_only_verified_bounds():
         "seasonal_naive",
         "chronos_bolt",
         "timesfm_2p5",
+        "chronos_2",
     ]
     assert json.loads(json.dumps(entries, allow_nan=False)) == entries
     bolt = catalog_info("chronos_bolt")
@@ -40,6 +41,15 @@ def test_catalog_metadata_is_json_compatible_and_has_cpu_only_verified_bounds():
     assert timesfm["dtypes"] == ["float32"]
     assert timesfm["point_statistic"] == "median"
     assert timesfm["repositories"] == ["google/timesfm-2.5-200m-pytorch"]
+    chronos2 = catalog_info("chronos_2")
+    assert chronos2["family"] == "chronos"
+    assert chronos2["capabilities"]["max_context"] == 8192
+    assert chronos2["capabilities"]["max_horizon"] == 1024
+    assert chronos2["point_statistic"] == "median"
+    assert chronos2["repositories"] == [
+        "autogluon/chronos-2-small",
+        "amazon/chronos-2",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -64,7 +74,7 @@ def test_catalog_returns_independent_metadata_objects():
 
 
 @pytest.mark.parametrize(
-    "identifier", ["amazon/chronos-2", "unknown/model", "", "amazon/chronos-bolt-large"]
+    "identifier", ["amazon/chronos-3", "unknown/model", "", "amazon/chronos-bolt-large"]
 )
 def test_catalog_rejects_unknown_models(identifier):
     with pytest.raises(ValueError, match="Unsupported model"):

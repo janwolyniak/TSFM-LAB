@@ -393,7 +393,13 @@ class Verifier:
         catalog = self.json_command("models", "list")
         require(
             {item["adapter_id"] for item in catalog}
-            == {"last_value", "seasonal_naive", "chronos_bolt", "timesfm_2p5"},
+            == {
+                "last_value",
+                "seasonal_naive",
+                "chronos_bolt",
+                "timesfm_2p5",
+                "chronos_2",
+            },
             "Installed model catalog differs from supported adapters",
         )
         for identifier, adapter in (
@@ -401,6 +407,8 @@ class Verifier:
             ("amazon/chronos-bolt-tiny", "chronos_bolt"),
             ("amazon/chronos-bolt-base", "chronos_bolt"),
             ("google/timesfm-2.5-200m-pytorch", "timesfm_2p5"),
+            ("autogluon/chronos-2-small", "chronos_2"),
+            ("amazon/chronos-2", "chronos_2"),
         ):
             require(
                 self.json_command("models", "info", identifier)["adapter_id"]
@@ -416,6 +424,28 @@ class Verifier:
             and base["project_inference_status"] == "not_recorded"
             and len(base["representative_checks"]) == 2,
             "Installed Base metadata or representative verification is incorrect",
+        )
+        small = self.json_command("models", "info", "autogluon/chronos-2-small")[
+            "selected_checkpoint"
+        ]
+        require(
+            small["reference_revision"] == "ddec01313e50b6bc58ebaa92ede81bc24a3d9f9a"
+            and small["weight_bytes"] == 111749048
+            and small["project_inference_status"] == "recorded"
+            and len(small["representative_checks"]) == 1,
+            "Installed Chronos-2 Small verification evidence is incorrect",
+        )
+        standard = self.json_command("models", "info", "amazon/chronos-2")
+        require(
+            standard["capabilities"]["max_context"] == 8192
+            and standard["capabilities"]["max_horizon"] == 1024
+            and standard["selected_checkpoint"]["reference_revision"]
+            == "29ec3766d36d6f73f0696f85560a422f50e8498c"
+            and standard["selected_checkpoint"]["weight_bytes"] == 477930472
+            and standard["selected_checkpoint"]["project_inference_status"]
+            == "not_recorded"
+            and len(standard["selected_checkpoint"]["representative_checks"]) == 1,
+            "Installed Chronos-2 metadata or checkpoint status is incorrect",
         )
         cache = self.root / "empty-cache"
         require(
@@ -853,7 +883,7 @@ print(json.dumps({'optional_loaded': sorted(blocked.intersection(sys.modules))})
         )
         runtime_probe = _BLOCK_OPTIONAL + """
 from importlib import import_module
-for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm')]:
+for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos')]:
     try:
         import_module('tsfm_lab.models.' + module)._runtime()
     except ImportError as exc:

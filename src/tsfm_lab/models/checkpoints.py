@@ -56,9 +56,7 @@ def _hub():
 
 def _repository(repository):
     if repository not in CURATED_REPOSITORIES:
-        raise CheckpointError(
-            "Only curated Chronos-Bolt and TimesFM 2.5 repositories are supported"
-        )
+        raise CheckpointError("Only curated checkpoint repositories are supported")
 
 
 def _revision(revision):

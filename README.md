@@ -11,6 +11,7 @@
 [Quick start](#run-the-offline-example) ·
 [Terminal walkthrough](docs/tui.md) ·
 [Chronos-Bolt](docs/chronos.md) ·
+[Chronos-2](docs/chronos2.md) ·
 [TimesFM](docs/timesfm.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
@@ -18,7 +19,7 @@
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
-Chronos-Bolt and TimesFM 2.5 adapters. A separate finance extension evaluates
+Chronos-Bolt, Chronos-2, and TimesFM 2.5 adapters. A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
 
 ## Project status
@@ -30,7 +31,7 @@ hypothetical OHLC strategies from saved price forecasts.
 - **Work locally:** use the Python core, scriptable `tsfm` commands, or a
   persistent terminal prompt with inline setup, progress, and cancellation.
   Output stays in terminal scrollback; terminal dependencies remain optional.
-- **Add pretrained forecasts:** use optional Chronos-Bolt or TimesFM 2.5 adapters with
+- **Add pretrained forecasts:** use optional Chronos-Bolt, Chronos-2, or TimesFM 2.5 adapters with
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
   experiments, and recorded runtime provenance. Additional model families remain
   later work.
@@ -156,6 +157,19 @@ The [verification record](docs/milestone6-verification.md) covers the real CPU
 workflow and expanded Chronos-Bolt Small checks. It makes no real-data advantage
 claim.
 
+## Use Chronos-2
+
+The optional `chronos_2` adapter offers Small and standard checkpoints through
+the existing Chronos runtime. It supports independent univariate CPU float32
+median forecasts, context up to 8,192 observations, and horizon up to 1,024.
+Use `/new chronos_2` in the terminal to choose either variant, or start from the
+[Small YAML example](examples/configurations/chronos2-small.yaml).
+
+See the [Chronos-2 guide](docs/chronos2.md) for explicit downloads, pinned
+revisions, safe loading, and saved-result behavior. Small has a bounded real CPU
+check; standard has metadata/API compatibility checks without individual inference.
+The [P2 record](docs/p2-chronos2-verification.md) describes the evidence and limits.
+
 ## Evaluate a hypothetical price strategy
 
 Run the [synthetic OHLC example](examples/configurations/finance-seasonal-naive.yaml)
@@ -268,8 +282,8 @@ remaining publication gates. The repository has not published a package release.
 The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
-family, followed by TimesFM 2.5; other Chronos variants and TimesFM 3.0 remain
-unsupported. The [finance contract](docs/finance-extension.md) defines the separate
+family, followed by TimesFM 2.5 and Chronos-2. Further families follow the
+[next release plan](docs/next-release-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
 OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
 the bounded compatibility findings before further benchmark integration.
 
