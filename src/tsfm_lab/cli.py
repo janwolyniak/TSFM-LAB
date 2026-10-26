@@ -13,6 +13,7 @@ from tsfm_lab.cli_support import guard as _guard
 from tsfm_lab.cli_support import table as _table
 from tsfm_lab.comparison import compare_runs
 from tsfm_lab.config import ConfigError
+from tsfm_lab.connection_commands import connections
 from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.exports import export_predictions
 from tsfm_lab.finance_commands import finance
@@ -30,6 +31,7 @@ app.add_typer(models, name="models")
 app.add_typer(datasets, name="datasets")
 app.add_typer(experiments, name="experiments")
 app.add_typer(finance, name="finance")
+app.add_typer(connections, name="connections")
 
 Workspace = Annotated[Path, typer.Option("--workspace", "-w")]
 JsonOutput = Annotated[bool, typer.Option("--json")]

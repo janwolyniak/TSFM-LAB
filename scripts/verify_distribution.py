@@ -34,6 +34,10 @@ _OPTIONAL = (
     "flashrnn",
     "mlstm_kernels",
     "tsfm_public",
+    "httpx",
+    "jwt",
+    "cryptography",
+    "keyring",
 )
 _COLUMNS = {
     "request_id",
@@ -68,7 +72,7 @@ _BLOCK_OPTIONAL = """import importlib.abc
 import json
 import sys
 
-blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual', 'tirex2', 'flashrnn', 'mlstm_kernels', 'tsfm_public'}
+blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual', 'tirex2', 'flashrnn', 'mlstm_kernels', 'tsfm_public', 'httpx', 'jwt', 'cryptography', 'keyring'}
 
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -232,7 +236,8 @@ def canonical_rows(rows):
 
 class Verifier:
     def __init__(self, launcher, root):
-        self.launcher, self.root = launcher, root
+        self.launcher, self.root = launcher, root.resolve()
+        root = self.root
         self.check = "initialization"
         self.passed = []
         self.deadline = time.monotonic() + 120
@@ -346,6 +351,8 @@ class Verifier:
         self.finance()
         self.native_point_fixture()
         self.usage_profiles()
+        self.connections()
+        self.managed_worker(dataset)
         self.optional_boundaries()
         return {
             "baseline_run_ids": identifiers,
@@ -1203,6 +1210,134 @@ print(json.dumps({'copied': 5, 'optional_loaded': sorted(blocked.intersection(sy
                 "experiments", "show", identifiers[profile], "--workspace", workspace
             )
         self.done("five_usage_profiles_saved_reload_and_metadata_only_comparison")
+
+    def connections(self):
+        self.check = "fake_connections_without_provider_dependencies"
+        directory = self.root / "connection-metadata"
+        require(
+            self.json_command("connections", "list", "--state-directory", directory)
+            == [],
+            "Fresh connection metadata is not empty",
+        )
+        require(
+            not directory.exists(), "Reading empty metadata created connection state"
+        )
+        probe = _BLOCK_OPTIONAL + """
+import time
+from pathlib import Path
+from types import SimpleNamespace
+from tsfm_lab.connections.contracts import KINDS
+from tsfm_lab.connections.credentials import Credentials
+from tsfm_lab.connections.manager import ConnectionManager
+from tsfm_lab.connections.state import StateStore
+from tsfm_lab.connections.transport import HTTPResponse
+
+fake_secret = 'fake-installed-connection-secret-12345678'
+class Fake:
+    kind = None
+    calls = []
+    def send(self, request, **kwargs):
+        self.calls.append(request)
+        if request.method == 'GET':
+            payload = {
+                'chatgpt_plan': {'models':[{'slug':'fake-model','visibility':'list'}]},
+                'openai_api': {'data':[{'id':'fake-model'}]},
+                'anthropic_api': {'data':[{'id':'fake-model'}],'has_more':False},
+                'gemini_api': {'models':[{'name':'models/fake-model','supportedGenerationMethods':['generateContent']}]},
+            }[self.kind]
+        elif self.kind == 'anthropic_api':
+            payload = {'type':'message','role':'assistant','stop_reason':'end_turn','content':[{'type':'text','text':'confirmed'}]}
+        elif self.kind == 'gemini_api':
+            payload = {'candidates':[{'finishReason':'STOP','content':{'role':'model','parts':[{'text':'confirmed'}]}}]}
+        else:
+            payload = {'status':'completed','output':[{'type':'message','role':'assistant','status':'completed','content':[{'type':'output_text','text':'confirmed'}]}]}
+        if request.method == 'POST' and self.kind == 'chatgpt_plan':
+            frame = {'type':'response.completed','response':payload}
+            return HTTPResponse(200, ('data: '+json.dumps(frame)+'\\n\\n').encode(),headers={'content-type':'text/event-stream'})
+        return HTTPResponse(200,json.dumps(payload).encode())
+
+transport = Fake()
+manager = ConnectionManager(StateStore(Path('connection-metadata')),transport=transport,oauth_factory=lambda _:SimpleNamespace(revoke=lambda *a,**kw:True))
+for kind in KINDS:
+    transport.kind = kind
+    if kind == 'chatgpt_plan':
+        item = manager.add_plan('Installed fake plan',storage='session')
+        account = {'issuer':'https://auth.openai.com','subject':'fake-account','client_id':'fake-issued-client'}
+        credentials = Credentials({**account,'access_token':fake_secret,'refresh_token':fake_secret+'-refresh','id_token':fake_secret+'-identity','token_type':'Bearer','scopes':['chatgpt.tokens.use.direct'],'access_expires_at':time.time()+3600,'identity_pending':False})
+        manager.finish_sign_in(item['id'],SimpleNamespace(account=account,credentials=credentials,identity_pending=False),manager.state.read()['generation'])
+    else:
+        item = manager.add_key(kind,'Installed fake '+kind,fake_secret,storage='session')
+    manager.select(item['id'])
+    assert [model.identifier for model in manager.models()] == ['fake-model']
+    manager.set_model('fake-model')
+    preview = manager.preview_test()
+    assert fake_secret not in json.dumps(preview)
+    assert manager.submit_test(preview,confirmed=True) == 'confirmed'
+    manager.disconnect(item['id'])
+assert len(transport.calls) == 8
+assert not manager.session._secrets
+assert fake_secret not in manager.state.path.read_text()
+assert not blocked.intersection(sys.modules)
+print(json.dumps({'fake_routes':4,'inference_requests':4,'optional_loaded':[]}))
+"""
+        require(
+            strict_json(self.command("-c", probe, python=True).stdout)
+            == {"fake_routes": 4, "inference_requests": 4, "optional_loaded": []},
+            "Installed fake connection workflow failed",
+        )
+        self.done("four_fake_connections_without_provider_dependencies_or_secret_files")
+
+    def managed_worker(self, dataset):
+        self.check = "installed_clean_worker"
+        self.save_config(
+            "managed", self.config("last_value", dataset, self.root / "managed-results")
+        )
+        probe = _BLOCK_OPTIONAL + """
+import os
+import time
+from pathlib import Path
+from tsfm_lab import worker_entry
+from tsfm_lab.config import load_config
+from tsfm_lab.execution import ManagedRun
+
+names = ('OPENAI_API_KEY','ANTHROPIC_API_KEY','GEMINI_API_KEY','TSFM_PRIVATE_SENTINEL')
+for name in names:
+    os.environ[name] = 'fake-installed-worker-secret'
+prefix = "import json,os\\nfrom pathlib import Path\\nPath('worker-startup.json').write_text(json.dumps({name:name in os.environ for name in " + repr(names) + "}))\\n"
+worker_entry.BOOTSTRAP = prefix + worker_entry.BOOTSTRAP
+configuration = load_config(Path('managed.yaml'))
+worker = ManagedRun(configuration)
+events = []
+try:
+    worker.start()
+    end = time.monotonic()+10
+    while worker.is_running and time.monotonic()<end:
+        events.extend(worker.poll())
+        time.sleep(.005)
+    assert not worker.is_running
+    assert events[-1]['type'] == 'completed'
+    assert worker._process.exitcode == 0
+    assert not any(json.loads(Path('worker-startup.json').read_text()).values())
+    assert all(os.environ[name] == 'fake-installed-worker-secret' for name in names)
+    assert 'fake-installed-worker-secret' not in worker.log_path.read_text()
+    assert not blocked.intersection(sys.modules)
+finally:
+    log = worker.log_path
+    worker.close()
+assert not log.exists()
+for path in configuration.output_directory.rglob('*'):
+    if path.is_file():
+        assert b'fake-installed-worker-secret' not in path.read_bytes()
+print(json.dumps({'completed':True,'clean_environment':True,'exitcode':0}))
+"""
+        require(
+            strict_json(self.command("-c", probe, python=True).stdout)
+            == {"completed": True, "clean_environment": True, "exitcode": 0},
+            "Installed managed worker failed environment isolation or execution",
+        )
+        self.done(
+            "installed_clean_worker_completes_without_credentials_or_optional_imports"
+        )
 
     def optional_boundaries(self):
         self.check = "optional_dependency_boundaries"

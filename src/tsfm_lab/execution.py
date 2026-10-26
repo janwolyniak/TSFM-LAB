@@ -1,19 +1,15 @@
 """One spawned inference process with nonblocking events and truthful cancellation."""
 
 import math
-import multiprocessing
-import os
-import signal
-import sys
 import tempfile
 import threading
 from concurrent.futures import Future
-from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from time import monotonic
 
 from tsfm_lab.config import ExperimentConfig
 from tsfm_lab.experiments import ExperimentStore
+from tsfm_lab.worker_entry import launch_worker
 
 _KILL_DELAY = 0.25
 _TERMINAL = {"completed", "failed", "cancelled"}
@@ -59,32 +55,6 @@ def _worker_main(config, events, cancellation) -> None:
         events.send({"type": "cancelled", "run_id": run_id})
     except Exception as exc:
         events.send({"type": "failed", "message": str(exc), "run_id": run_id})
-
-
-def _spawn_entry(config, events, cancellation, log_path, target) -> None:
-    try:
-        # The foreground terminal sends Ctrl+C to the whole process group. Only
-        # the controller interprets it; workers stop through the shared Event.
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        with open(log_path, "ab", buffering=0) as output:
-            os.dup2(output.fileno(), 1)
-            os.dup2(output.fileno(), 2)
-            sys.stdout = open(1, "w", encoding="utf-8", buffering=1, closefd=False)
-            sys.stderr = open(2, "w", encoding="utf-8", buffering=1, closefd=False)
-            target(config, events, cancellation)
-    except BaseException as exc:
-        try:
-            events.send(
-                {
-                    "type": "failed",
-                    "message": f"Worker setup or execution failed: {exc}",
-                    "run_id": None,
-                }
-            )
-        except (OSError, EOFError):
-            pass
-    finally:
-        events.close()
 
 
 def _log_tail(path: Path | None) -> str:
@@ -194,51 +164,26 @@ class ManagedRun:
     def start(self) -> None:
         if self._started or self._closed:
             raise RuntimeError("A managed run can only be started once")
-        context = multiprocessing.get_context("spawn")
-        receive = send = None
         try:
             with tempfile.NamedTemporaryFile(
-                mode="a",
-                encoding="utf-8",
-                prefix="tsfm-run-",
-                suffix=".log",
-                delete=False,
+                mode="ab", prefix="tsfm-run-", suffix=".log", delete=False
             ) as output:
                 self._log_path = Path(output.name)
-                # Python's resource tracker copies stderr.fileno() into the spawn
-                # descriptor list; terminal capture streams may return -1.
-                with redirect_stderr(output), redirect_stdout(output):
-                    receive, send = context.Pipe(duplex=False)
-                    self._events = receive
-                    self._cancellation = context.Event()
-                    self._process = context.Process(
-                        target=_spawn_entry,
-                        args=(
-                            self.config,
-                            send,
-                            self._cancellation,
-                            str(self._log_path),
-                            self._target,
-                        ),
-                    )
-                    self._process.start()
+                self._process, self._events, self._cancellation = launch_worker(
+                    self.config, self._target, self._log_path, output
+                )
             self._started = True
         except BaseException:
-            if receive is not None:
-                receive.close()
-            self._events = None
             if self._process is not None:
                 if self._process.is_alive():
                     self._process.kill()
                     self._process.join(timeout=1.0)
                 if not self._process.is_alive():
                     self._process.close()
+            self._events = None
             if self._log_path is not None:
                 self._log_path.unlink(missing_ok=True)
             raise
-        finally:
-            if send is not None:
-                send.close()
 
     def request_cancel(self) -> None:
         if not self._started:
@@ -255,7 +200,9 @@ class ManagedRun:
         self._outbox.append({"type": "cancellation_requested", "run_id": self._run_id})
 
     def _drain(self) -> None:
-        while self._events is not None and self._events.poll():
+        for _ in range(128):
+            if self._events is None or not self._events.poll():
+                break
             try:
                 event = self._events.recv()
             except (EOFError, OSError):
@@ -273,6 +220,8 @@ class ManagedRun:
 
     def _settle(self) -> None:
         self._process.join(timeout=0)
+        if not self._process.events.finished.is_set():
+            return
         self._drain()
         self._finalizer = Future()
         exitcode = self._process.exitcode
@@ -297,6 +246,10 @@ class ManagedRun:
         """Drain small events and advance stop/reap state without waiting or file IO."""
         if not self._started or self._closed:
             return []
+        if (
+            self._process.events.error or self._process.control.error
+        ) and self._process.is_alive():
+            self._process.kill()
         self._drain()
         if self._finalizer is None:
             alive, now = self._process.is_alive(), monotonic()

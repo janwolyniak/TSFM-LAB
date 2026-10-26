@@ -3,7 +3,8 @@
 TSFM opens a persistent local command prompt inside your terminal. Commands,
 questions, progress, and results form one transcript in normal terminal scrollback.
 It uses the terminal's background and a small amount of accent color. There are
-no home-screen buttons, tabs, full-screen forms, or AI service.
+no home-screen buttons, tabs, or full-screen forms. Assistant connections are
+optional; local forecasting does not require one.
 
 ## Start
 
@@ -53,6 +54,7 @@ and scores 1.0 on all three metrics. These are arithmetic checks on
 | `/new [adapter]` | Ask setup questions one at a time, then review and confirm. |
 | `/run CONFIG.yaml` | Execute a saved configuration and use its configured results directory. |
 | `/models` | Print the offline model catalog. |
+| `/connections` | Manage optional assistant connections, hidden credentials, and an explicit connection check. |
 | `/history` | List saved records in the current workspace. |
 | `/show ID` | Show verified scores, per-lead metrics, and a short forecast preview. |
 | `/compare ID ID [ID…]` | Enforce the shared matching-task comparison policy. |
@@ -78,6 +80,11 @@ or step. `/back` returns to the previous setup step; `/cancel`, Escape, or Ctrl+
 aborts setup. Nothing runs or creates a workspace until the final confirmation.
 `Run experiment?` defaults to **no**. Custom datasets need declared target units,
 frequency, and timezone handling; no gaps or missing values are silently repaired.
+
+Enter `/connections` at any setup question to manage optional connections and
+return to that question. The [connection guide](connections.md) explains the four
+account/billing routes, storage, explicit model choice, and checks. Natural-language
+setup and explanations arrive in P7.
 
 Chronos-Bolt and TimesFM 2.5 use CPU/float32 and an already cached exact revision
 or compatible standalone local checkpoint. Select them with `/new chronos_bolt`
