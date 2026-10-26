@@ -2,18 +2,23 @@
 
 import math
 
+from tsfm_lab.models.registry import ADAPTER_PROFILES
+
 CHECKPOINT_REPOSITORIES = {
-    "chronos_bolt": ("amazon/chronos-bolt-tiny", "amazon/chronos-bolt-small"),
-    "timesfm_2p5": ("google/timesfm-2.5-200m-pytorch",),
+    profile.adapter_id: tuple(variant.repository for variant in profile.variants)
+    for profile in ADAPTER_PROFILES
 }
-ADAPTER_LIMITS = {"chronos_bolt": (2048, 64), "timesfm_2p5": (16256, 128)}
+ADAPTER_LIMITS = {
+    profile.adapter_id: (profile.max_context, profile.max_horizon)
+    for profile in ADAPTER_PROFILES
+}
 _IDENTITIES = {
-    "chronos_bolt": ("ChronosBoltModelForForecasting", "ChronosBoltPipeline", "t5"),
-    "timesfm_2p5": (
-        "TimesFmModelForPrediction",
-        "TimesFM_2p5_200M_torch",
-        "timesfm",
-    ),
+    profile.adapter_id: (
+        profile.architecture,
+        profile.pipeline_class,
+        profile.model_type,
+    )
+    for profile in ADAPTER_PROFILES
 }
 _TIMESFM_CONFIG = {
     "context_length": 16384,

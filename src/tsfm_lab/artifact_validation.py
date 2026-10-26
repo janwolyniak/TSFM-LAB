@@ -102,7 +102,10 @@ def _metrics(metrics, spec):
 
 def _checkpoint_identity(model, runtime, spec, environment):
     adapter = model["adapter_id"]
-    if adapter not in {"chronos_bolt", "timesfm_2p5"}:
+    from tsfm_lab.models.checkpoint_profiles import CHECKPOINT_REPOSITORIES
+    from tsfm_lab.models.registry import adapter_profile
+
+    if adapter not in CHECKPOINT_REPOSITORIES:
         if model["source"] in {"huggingface", "local"}:
             raise StoreError("Checkpoint sources require a supported model adapter")
         return
@@ -110,17 +113,15 @@ def _checkpoint_identity(model, runtime, spec, environment):
     from tsfm_lab.models.checkpoints import validate_checkpoint_record
 
     record = validate_checkpoint_record(model["options"]["checkpoint"])
-    family = "chronos" if adapter == "chronos_bolt" else "timesfm"
+    profile = adapter_profile(adapter)
     if (
         model["source"] != record["source"]
-        or model["family"] != family
+        or model["family"] != profile.family
         or checkpoint_adapter(record["architecture"]) != adapter
     ):
         raise StoreError("Checkpoint source/family disagrees with the adapter")
     caps = model["capabilities"]
-    max_context = record["native_context_length"]
-    if adapter == "timesfm_2p5":
-        max_context -= 128
+    max_context = record["native_context_length"] - profile.context_reserved
     if (
         caps["max_context"] != max_context
         or caps["max_horizon"] != record["native_prediction_length"]
@@ -131,13 +132,10 @@ def _checkpoint_identity(model, runtime, spec, environment):
         or runtime["batch_size"] != 1
     ):
         raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
-    distributions = ("torch", "huggingface-hub", "safetensors")
-    if adapter == "chronos_bolt":
-        distributions += ("chronos-forecasting", "transformers", "accelerate")
-    else:
+    distributions = tuple(name for name, _ in profile.runtime_requirements)
+    if adapter == "timesfm_2p5":
         from tsfm_lab.models.timesfm import FORECAST_OPTIONS
 
-        distributions += ("timesfm",)
         options = runtime.get("forecast_options")
         if (
             runtime.get("torch_compile") is not False
@@ -189,6 +187,14 @@ def _schema(result):
     for key in ("python", "numpy", "pandas", "os", "machine"):
         _text(environment[key], f"environment {key}")
     _checkpoint_identity(model, runtime, spec, environment)
+    if "project_verification" in provenance:
+        from tsfm_lab.models.verification import validate_verification_record
+
+        validate_verification_record(
+            provenance["project_verification"],
+            model["options"]["checkpoint"],
+            model["adapter_id"],
+        )
     fingerprint = _object(provenance["dataset"], "dataset provenance")[
         "canonical_sha256"
     ]

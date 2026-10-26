@@ -64,7 +64,7 @@ def test_catalog_returns_independent_metadata_objects():
 
 
 @pytest.mark.parametrize(
-    "identifier", ["amazon/chronos-2", "unknown/model", "", "amazon/chronos-bolt-base"]
+    "identifier", ["amazon/chronos-2", "unknown/model", "", "amazon/chronos-bolt-large"]
 )
 def test_catalog_rejects_unknown_models(identifier):
     with pytest.raises(ValueError, match="Unsupported model"):

@@ -1,14 +1,17 @@
 """Checkpoint selection and saved model identity work without model runtimes."""
 
 import hashlib
+import io
 import json
 import shutil
+from copy import deepcopy
 from dataclasses import replace
 from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from tsfm_lab.application import run_from_config
@@ -20,6 +23,7 @@ from tsfm_lab.evaluation.runner import run_experiment
 from tsfm_lab.experiments import ExperimentStore, StoreError
 from tsfm_lab.models import checkpoints
 from tsfm_lab.models.baselines import LastValue
+from tsfm_lab.repl.records import RecordCommands
 
 SHA = "a" * 40
 REPOSITORY = "amazon/chronos-bolt-tiny"
@@ -304,3 +308,126 @@ def test_explicit_pull_command_passes_revision_and_cache(
     assert calls == [(REPOSITORY, "selected-tag", {"cache_dir": tmp_path / "cache"})]
     assert json.loads(result.stdout)["fingerprint"] == checkpoint.fingerprint
     assert "Resolving" not in result.stdout
+
+
+def test_catalog_lists_runnable_variants_and_keeps_existing_json_fields():
+    completed = runner.invoke(app, ["models", "list", "--json"])
+    assert completed.exit_code == 0, completed.output
+    items = json.loads(completed.stdout)
+    assert {item["adapter_id"] for item in items} == {
+        "last_value",
+        "seasonal_naive",
+        "chronos_bolt",
+        "timesfm_2p5",
+    }
+    required = {"adapter_id", "family", "capabilities", "license", "repositories"}
+    assert all(required <= item.keys() for item in items)
+    bolt = next(item for item in items if item["adapter_id"] == "chronos_bolt")
+    assert {variant["repository"] for variant in bolt["variants"]} == {
+        "amazon/chronos-bolt-tiny",
+        "amazon/chronos-bolt-small",
+        "amazon/chronos-bolt-base",
+    }
+    assert all(
+        item.get("variants", []) == [] for item in items if item["source"] == "builtin"
+    )
+
+
+def test_base_information_distinguishes_reference_and_selected_variant():
+    result = runner.invoke(
+        app, ["models", "info", "amazon/chronos-bolt-base", "--json"]
+    )
+    assert result.exit_code == 0, result.output
+    value = json.loads(result.stdout)
+    assert value["point_statistic"] == "median"
+    variant = value["selected_checkpoint"]
+    assert variant["repository"] == "amazon/chronos-bolt-base"
+    assert variant["project_inference_status"] == "not_recorded"
+    assert variant["representative_checks"]
+    assert "individual inference not run" in variant["verification_label"]
+    human = runner.invoke(app, ["models", "info", "amazon/chronos-bolt-base"])
+    assert human.exit_code == 0, human.output
+    text = " ".join(human.stdout.split())
+    assert "individual inference not run" in text
+    assert "Adapter representative checks" in human.stdout
+
+
+def test_human_cached_status_does_not_change_cache_json(
+    checkpoint_directory, monkeypatch
+):
+    checkpoint = checkpoints.inspect_local_checkpoint(checkpoint_directory)
+    cached = {**checkpoint.record(), "status": "cached", "bytes": 123}
+    monkeypatch.setattr(
+        "tsfm_lab.model_commands.cached_checkpoints", lambda **_: [cached]
+    )
+    human = runner.invoke(app, ["models", "cache"])
+    assert human.exit_code == 0, human.output
+    assert "not recorded" in human.stdout
+    raw = runner.invoke(app, ["models", "cache", "--json"])
+    assert raw.exit_code == 0, raw.output
+    assert json.loads(raw.stdout) == [cached]
+
+
+def test_pull_json_preserves_exact_checkpoint_record_and_human_status(
+    checkpoint_directory, monkeypatch
+):
+    checkpoint = checkpoints.inspect_local_checkpoint(checkpoint_directory)
+    monkeypatch.setattr(
+        "tsfm_lab.model_commands.pull_checkpoint", lambda *a, **k: checkpoint
+    )
+    raw = runner.invoke(app, ["models", "pull", REPOSITORY, "--json"])
+    assert raw.exit_code == 0, raw.output
+    assert json.loads(raw.stdout) == checkpoint.record()
+    human = runner.invoke(app, ["models", "pull", REPOSITORY])
+    assert human.exit_code == 0, human.output
+    assert "Selected checkpoint:" in human.stdout and "not recorded" in human.stdout
+
+
+def test_saved_checkpoint_status_is_used_without_reopening_its_files(
+    config_factory, checkpoint_directory, fake_runtime, tmp_path, monkeypatch
+):
+    from tsfm_lab.models.verification import checkpoint_verification
+
+    monkeypatch.setattr(
+        fake_runtime,
+        "verification_metadata",
+        lambda self: checkpoint_verification(self.checkpoint.record()),
+        raising=False,
+    )
+    value = run_from_config(local_config(config_factory, checkpoint_directory))
+    store = ExperimentStore(tmp_path / "workspace")
+    result, _ = store.load_result(value["run_id"])
+    assert "project_verification" in result["provenance"]
+    checkpoint_directory.rename(tmp_path / "unavailable-weights")
+    output = io.StringIO()
+    records = RecordCommands(
+        Console(file=output, width=80, color_system=None), store.workspace
+    )
+    shown = records.show(value["run_id"])
+    assert (
+        shown["result"]["provenance"]["project_verification"]
+        == result["provenance"]["project_verification"]
+    )
+    assert "Selected checkpoint:" in output.getvalue()
+    assert "Adapter reference:" in output.getvalue()
+
+
+def test_legacy_checkpoint_records_do_not_acquire_current_project_evidence(
+    config_factory, checkpoint_directory, fake_runtime, tmp_path
+):
+    value = run_from_config(local_config(config_factory, checkpoint_directory))
+    store = ExperimentStore(tmp_path / "workspace")
+    current, frame = store.load_result(value["run_id"])
+    old = deepcopy(current)
+    old["provenance"].pop("project_verification", None)
+    legacy = store.create("Legacy checkpoint", {}, "# Legacy fixture")
+    old["run_id"] = legacy
+    store.complete(legacy, old, frame)
+    directory = store.root / legacy
+    before = {path.name: path.read_bytes() for path in directory.iterdir()}
+    output = io.StringIO()
+    records = RecordCommands(Console(file=output, color_system=None), store.workspace)
+    records.show(legacy)
+    assert "Project verification was not recorded" in output.getvalue()
+    assert "Adapter reference:" not in output.getvalue()
+    assert before == {path.name: path.read_bytes() for path in directory.iterdir()}

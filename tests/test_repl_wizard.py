@@ -284,12 +284,19 @@ def test_local_checkpoint_metadata_refines_limits_without_loading_runtime(
         "load",
         lambda self: pytest.fail("No model initialization during setup"),
     )
-    config = build(setup, questions, adapter="chronos_bolt")
+    emitted = []
+    config = build(setup, questions, emitted, adapter="chronos_bolt")
     assert config.model["path"] == str(directory)
     assert config.runtime["dtype"] == "float32"
     assert config.evaluation.context_length == 4
     assert config.evaluation.horizon == 2
     assert questions.count("Context length") == questions.count("Forecast horizon") == 2
+    text = "\n".join(emitted)
+    assert (
+        "Selected checkpoint: Compatibility checked; project inference check not recorded for these files"
+        in text
+    )
+    assert "Adapter reference:" in text
     assert not setup["workspace"].exists()
 
 
@@ -297,6 +304,7 @@ def test_local_checkpoint_metadata_refines_limits_without_loading_runtime(
     "adapter,repository",
     [
         ("chronos_bolt", "amazon/chronos-bolt-tiny"),
+        ("chronos_bolt", "amazon/chronos-bolt-base"),
         ("timesfm_2p5", "google/timesfm-2.5-200m-pytorch"),
     ],
 )
@@ -319,7 +327,13 @@ def test_cached_model_requires_exact_sha_and_respects_native_limits(
 
     monkeypatch.setattr(wizard, "build_model", model)
     monkeypatch.setattr("tsfm_lab.tui.forms.build_model", model)
-    questions = Questions({"Exact checkpoint SHA": ["main", "a" * 40], _RUN: "yes"})
+    questions = Questions(
+        {
+            "Checkpoint repository": repository,
+            "Exact checkpoint SHA": ["main", "a" * 40],
+            _RUN: "yes",
+        }
+    )
     config = build(setup, questions, adapter=adapter)
     assert questions.count("Exact checkpoint SHA") == 2
     assert config.model["offline"] is True
@@ -328,6 +342,88 @@ def test_cached_model_requires_exact_sha_and_respects_native_limits(
     assert config.evaluation.context_length == 4
     assert config.evaluation.horizon == 2
     assert all(selection["source"] == "huggingface" for selection, _ in selections)
+    assert not setup["workspace"].exists()
+
+
+def test_base_choice_shows_compatibility_and_project_reference_evidence(
+    setup, monkeypatch
+):
+    class Model:
+        def metadata(self):
+            return SimpleNamespace(capabilities=ModelCapabilities(max_horizon=64))
+
+        def validate(self, spec):
+            pass
+
+    monkeypatch.setattr(wizard, "build_model", lambda *_: Model())
+    monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: Model())
+    questions, emitted = (
+        Questions(
+            {
+                "Checkpoint repository": "amazon/chronos-bolt-base",
+                _RUN: "yes",
+            }
+        ),
+        [],
+    )
+    config = build(setup, questions, emitted, adapter="chronos_bolt")
+    assert config.model["repository"] == "amazon/chronos-bolt-base"
+    reference = wizard.checkpoint_info("amazon/chronos-bolt-base")["reference_revision"]
+    assert config.model["revision"] == reference
+    assert (
+        next(call[1] for call in questions.calls if call[0] == "Exact checkpoint SHA")
+        == reference
+    )
+    text = "\n".join(emitted)
+    assert "amazon/chronos-bolt-base" in text
+    assert "individual inference not run" in text
+    assert "Reference checkpoint inference check recorded" in text
+    repository_call = next(
+        call for call in questions.calls if call[0] == "Checkpoint repository"
+    )
+    assert "amazon/chronos-bolt-base" in repository_call[2]
+    assert not setup["workspace"].exists()
+
+
+@pytest.mark.parametrize("variant", ["tiny", "base"])
+def test_back_to_model_preserves_same_repo_override_or_defaults_new_variant(
+    setup, monkeypatch, variant
+):
+    class Model:
+        def metadata(self):
+            return SimpleNamespace(capabilities=ModelCapabilities(max_horizon=64))
+
+        def validate(self, spec):
+            pass
+
+    monkeypatch.setattr(wizard, "build_model", lambda *_: Model())
+    monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: Model())
+    repository = f"amazon/chronos-bolt-{variant}"
+    override = "b" * 40
+    questions = Questions(
+        {
+            "Checkpoint repository": ["amazon/chronos-bolt-tiny", repository],
+            "Exact checkpoint SHA": [override, ""],
+            "Dataset path": ["/back", ""],
+            _RUN: "yes",
+        }
+    )
+    config = build(setup, questions, adapter="chronos_bolt")
+    expected = (
+        override
+        if variant == "tiny"
+        else wizard.checkpoint_info(repository)["reference_revision"]
+    )
+    assert config.model["repository"] == repository
+    assert config.model["revision"] == expected
+    sha_defaults = [
+        call[1] for call in questions.calls if call[0] == "Exact checkpoint SHA"
+    ]
+    assert sha_defaults == [
+        wizard.checkpoint_info("amazon/chronos-bolt-tiny")["reference_revision"],
+        expected,
+    ]
+    assert questions.count(_RECOVER) == 0
     assert not setup["workspace"].exists()
 
 

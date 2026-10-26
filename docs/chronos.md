@@ -8,8 +8,9 @@ point forecasts remain float64 in the original target units.
 ## Supported models and runtime
 
 The curated Hub repositories are
-[`amazon/chronos-bolt-tiny`](https://huggingface.co/amazon/chronos-bolt-tiny) and
-[`amazon/chronos-bolt-small`](https://huggingface.co/amazon/chronos-bolt-small).
+[`amazon/chronos-bolt-tiny`](https://huggingface.co/amazon/chronos-bolt-tiny),
+[`amazon/chronos-bolt-small`](https://huggingface.co/amazon/chronos-bolt-small), and
+[`amazon/chronos-bolt-base`](https://huggingface.co/amazon/chronos-bolt-base).
 The official cards list Apache-2.0. A checkpoint record derives its license from
 its consumed README when available and reports `null` otherwise; catalog license
 metadata and an inspected local file's license are separate fields of evidence.
@@ -19,6 +20,10 @@ authorized Small run verified the pinned checkpoint, offline replay, local
 loading, saved records, comparison, and exports; see the
 [expanded verification record](milestone6-verification.md). Other devices remain
 unverified.
+Base uses the compatible Bolt architecture and has metadata/API compatibility
+checks; no Base weight download or individual inference test was required for
+its addition. See the [catalog and verification guide](model-catalog.md) for its
+pinned reference, exact file identities, and project-status labels.
 
 The initial supported runtime uses Chronos forecasting 2.2.0, PyTorch 2.8.x,
 Transformers 4.55.x, and Hugging Face Hub 0.34.4. The exact development runtime is
@@ -43,12 +48,17 @@ training, or remote-code execution.
 tsfm models list
 tsfm models info chronos_bolt --json
 tsfm models info amazon/chronos-bolt-tiny --json
+tsfm models info amazon/chronos-bolt-base --json
 tsfm models cache --cache-dir ./model-cache --json
 ```
 
 Catalog information is offline and imports no inference runtime. Cache inspection
 reads only supported repository snapshots, reports incomplete snapshots, and does
 not delete or download files.
+The guided terminal lists Tiny, Small, and Base under `/new chronos_bolt` and
+defaults a newly selected variant to its curated reference SHA. Users can edit
+that revision explicitly. The [Base example](../examples/configurations/chronos-bolt-base.yaml)
+is a cache-only configuration; running it requires separately obtained weights.
 
 Pulling is an explicit download operation:
 

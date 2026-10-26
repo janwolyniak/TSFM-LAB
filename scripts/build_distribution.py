@@ -31,6 +31,8 @@ SOURCE_FILES = {
     "docs/evaluation.md",
     "docs/timesfm.md",
     "docs/finance-extension.md",
+    "docs/model-catalog.md",
+    "docs/next-release-plan.md",
     "examples/baseline.py",
     "examples/custom_adapter.py",
     "examples/datasets/README.md",
@@ -39,6 +41,7 @@ SOURCE_FILES = {
     "examples/configurations/last-value.yaml",
     "examples/configurations/seasonal-naive.yaml",
     "examples/configurations/chronos-bolt-tiny.yaml",
+    "examples/configurations/chronos-bolt-base.yaml",
     "examples/configurations/timesfm-2p5.yaml",
     "examples/configurations/finance-seasonal-naive.yaml",
     "tests/conftest.py",
@@ -101,6 +104,9 @@ def inspect_wheel(path, *, name, version):
             "tsfm_lab/finance/ledger.py",
             "tsfm_lab/finance/ohlc.py",
             "tsfm_lab/finance/exports.py",
+            "tsfm_lab/models/registry.py",
+            "tsfm_lab/models/verification.py",
+            "tsfm_lab/models/_verification_evidence.py",
         }
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")

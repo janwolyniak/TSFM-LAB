@@ -1,5 +1,15 @@
 # Changelog
 
+## Next feature release in development
+
+- Add Chronos-Bolt Base to the curated catalog and terminal setup using the
+  existing adapter, without requiring an individual Base inference test.
+- Separate adapter representative checks from selected checkpoint evidence,
+  expose variant/runtime metadata, and snapshot project verification in new
+  pretrained run provenance while preserving old checkpoint fingerprints.
+- Document the runtime compatibility gates for the planned Chronos-2, TiRex-2,
+  and TTM integrations. Those three adapters are not implemented by this change.
+
 ## 0.1.0 — Unreleased
 
 The first local release candidate provides:

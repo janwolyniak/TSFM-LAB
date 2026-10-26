@@ -55,6 +55,21 @@ benchmarking compatibility study is authorized in a separate temporary runtime;
 the first finance timing, position, and cost rules are now agreed below.
 These decisions do not authorize publishing a package release.
 
+On 26 October 2026, the owner selected the next feature-release scope:
+additional forecasting families and compatible checkpoint sizes, usage profiles
+in the terminal wizard, and optional natural-language setup/explanations through
+four explicit LLM connections. The detailed
+[next release plan](next-release-plan.md) defines the implementation order and
+acceptance criteria. Larger compatible variants need not receive separate real
+inference runs; checkpoint compatibility checks and accurate verification status
+remain required. Large benchmark comparisons are postponed.
+
+P1's catalog, variant selection, Base metadata, and historical verification
+snapshots are implemented and verified locally; see the
+[P1 verification record](p1-catalog-verification.md). Chronos-2 is the next
+adapter package. TiRex-2/TTM require the runtime compatibility decisions recorded
+in the [catalog guide](model-catalog.md).
+
 ## Milestone 0 Architecture review
 
 Deliver the bounded MVP, stack, contracts, methodology, checkpoint plan, repository
@@ -240,10 +255,10 @@ calendars, and selection/parameter tuning remain outside this contract.
 
 ## Benchmarking compatibility study
 
-The bounded [fev compatibility study](benchmarking-extension.md) is authorized.
-Assess reuse before panels, covariates, or probability scoring. Its isolated
-prototype/evidence must establish where contracts agree or differ; it does not
-automatically add a mandatory dependency or replace the numerical scorer.
+The bounded [fev compatibility study](benchmarking-extension.md) was completed.
+Its isolated prototype records where contracts agree or differ; it does not add
+a mandatory dependency or replace the numerical scorer. Production integration
+and larger benchmark comparisons are deferred from the next feature release.
 
 ## Later work
 

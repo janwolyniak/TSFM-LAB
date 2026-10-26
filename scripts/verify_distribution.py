@@ -399,6 +399,7 @@ class Verifier:
         for identifier, adapter in (
             ("last_value", "last_value"),
             ("amazon/chronos-bolt-tiny", "chronos_bolt"),
+            ("amazon/chronos-bolt-base", "chronos_bolt"),
             ("google/timesfm-2.5-200m-pytorch", "timesfm_2p5"),
         ):
             require(
@@ -406,6 +407,16 @@ class Verifier:
                 == adapter,
                 "Model information lookup returned a different adapter",
             )
+        base = self.json_command("models", "info", "amazon/chronos-bolt-base")[
+            "selected_checkpoint"
+        ]
+        require(
+            base["reference_revision"] == "5d9f166d69f47aef3401367a7b842e78fe97b121"
+            and base["weight_bytes"] == 821203576
+            and base["project_inference_status"] == "not_recorded"
+            and len(base["representative_checks"]) == 2,
+            "Installed Base metadata or representative verification is incorrect",
+        )
         cache = self.root / "empty-cache"
         require(
             self.json_command("models", "cache", "--cache-dir", cache) == []

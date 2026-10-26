@@ -128,7 +128,7 @@ See [CLI and configuration](docs/cli.md) for validation, records, and exit codes
 
 ## Use Chronos Bolt
 
-The optional CPU adapter supports the official tiny/small checkpoints and
+The optional CPU adapter supports the curated Tiny, Small, and Base checkpoints and
 compatible standalone local Bolt weights. `tsfm models info chronos_bolt` shows
 catalog metadata without downloading or importing the model runtime. Downloading
 requires an explicit `tsfm models pull` command; normal experiments require
@@ -138,6 +138,10 @@ See the [Chronos guide](docs/chronos.md) for the pinned runtime, exact revisions
 cache paths, local checkpoints, median semantics, and the optional CPU test.
 [chronos-bolt-tiny.yaml](examples/configurations/chronos-bolt-tiny.yaml) uses the
 same numerical task as the baseline examples. Routine tests need no model weights.
+Base is available after metadata/API compatibility checks; its weights were not
+downloaded or individually tested with inference. The
+[catalog guide](docs/model-catalog.md) distinguishes reference and selected-file
+verification and documents the pinned Base choice.
 
 ## Use TimesFM 2.5
 
