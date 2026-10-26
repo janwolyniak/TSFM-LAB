@@ -36,6 +36,13 @@ Finance input/report contract errors use exit code 2. See the
 lead-1/stride-1 timing policy. Finance commands are shell commands; they have not
 been added to the interactive prompt.
 
+Model entries include checkpoint variants and declared runtime requirements.
+Repository information adds `selected_checkpoint` while preserving the existing
+adapter fields. Human pull/cache output describes project verification; their
+JSON checkpoint-record shapes remain unchanged. See the
+[catalog guide](model-catalog.md) for exact reference/selected-file status and
+historical verification snapshots.
+
 Human-readable tables use [Rich](https://rich.readthedocs.io/en/stable/tables.html),
 with [Typer](https://typer.tiangolo.com/tutorial/testing/) handling shell arguments.
 The application functions return Python values and emit optional stage callbacks;

@@ -13,6 +13,7 @@ from tsfm_lab.comparison import compare_runs
 from tsfm_lab.experiments import ExperimentStore, StoreError
 from tsfm_lab.exports import ExportError, export_predictions
 from tsfm_lab.models.catalog import catalog_entries
+from tsfm_lab.models.verification import verification_label
 from tsfm_lab.repl.text import literal
 
 
@@ -87,8 +88,23 @@ class RecordCommands:
             ),
         )
         self._print(
-            "Chronos-Bolt requires its installed runtime and a cached or local checkpoint."
+            "Pretrained adapters require their installed runtime and a cached or local checkpoint."
         )
+        for entry in entries:
+            variants = entry.get("variants", [])
+            for variant in variants:
+                self._print(f"{variant['display_name']} · {variant['repository']}")
+                if variant["weight_bytes"] is not None:
+                    self._print(
+                        f"  Weight files: {variant['weight_bytes'] / 1_000_000:.1f} MB"
+                    )
+                self._print("  Reference checkpoint:")
+                self._print(f"    {variant['verification_label']}")
+            if variants:
+                for check in variants[0]["representative_checks"]:
+                    self._print(
+                        f"  Adapter reference: {check['repository']} @ {check['revision'][:12]} · {check['device']}/{check['dtype']}"
+                    )
         return entries
 
     def history(self) -> list[dict]:
@@ -238,6 +254,15 @@ class RecordCommands:
             self._print(
                 f"Revision: {checkpoint.get('resolved_revision') or 'local files'} · Fingerprint: {checkpoint['fingerprint']}"
             )
+            verification = result["provenance"].get("project_verification")
+            if verification is None:
+                self._print("Project verification was not recorded.")
+            else:
+                self._print(f"Selected checkpoint: {verification_label(verification)}")
+                for check in verification["adapter_representative_checks"]:
+                    self._print(
+                        f"Adapter reference: {check['repository']} @ {check['revision'][:12]} · {check['device']}/{check['dtype']}"
+                    )
         self._print(f"Export full forecasts with /export {resolved[:8]} <path.csv>.")
         return {"manifest": manifest, "result": result, "predictions": predictions}
 

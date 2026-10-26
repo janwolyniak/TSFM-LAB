@@ -107,6 +107,11 @@ class TimesFM:
     def configuration(self) -> dict:
         return {"checkpoint": copy.deepcopy(self._record)}
 
+    def verification_metadata(self) -> dict:
+        from tsfm_lab.models.verification import checkpoint_verification
+
+        return checkpoint_verification(self._record)
+
     def runtime_configuration(self) -> dict:
         return {
             "device": "cpu",

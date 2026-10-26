@@ -1,6 +1,9 @@
 """Resolve explicitly selected models without implicit checkpoint downloads."""
 
+import importlib
+
 from tsfm_lab.models.baselines import LastValue, SeasonalNaive
+from tsfm_lab.models.registry import adapter_profile
 
 
 def build_model(selection: dict, runtime: dict):
@@ -10,6 +13,7 @@ def build_model(selection: dict, runtime: dict):
             if selection["adapter_id"] == "last_value"
             else SeasonalNaive(**selection["options"])
         )
+    profile = adapter_profile(selection["adapter_id"])
     from tsfm_lab.models.checkpoints import inspect_local_checkpoint, resolve_checkpoint
 
     if selection["source"] == "local":
@@ -21,16 +25,7 @@ def build_model(selection: dict, runtime: dict):
             cache_dir=selection.get("cache_dir"),
             offline=selection["offline"],
         )
-    if selection["adapter_id"] == "chronos_bolt":
-        from tsfm_lab.models.chronos_bolt import ChronosBolt
-
-        adapter = ChronosBolt
-    elif selection["adapter_id"] == "timesfm_2p5":
-        from tsfm_lab.models.timesfm import TimesFM
-
-        adapter = TimesFM
-    else:
-        raise ValueError("Unsupported checkpoint adapter")
+    adapter = getattr(importlib.import_module(profile.module), profile.class_name)
     return adapter(
         checkpoint,
         device=runtime["device"],

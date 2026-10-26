@@ -206,6 +206,21 @@ def run_experiment(
     configuration = json.loads(
         json.dumps(_configuration(dataset, metadata, model, spec), allow_nan=False)
     )
+    project_verification = None
+    verification_hook = getattr(model, "verification_metadata", None)
+    if verification_hook is not None:
+        from tsfm_lab.models.verification import validate_verification_record
+
+        options = configuration["model"]["options"]
+        if not callable(verification_hook):
+            raise ValueError("verification_metadata must be a callable hook")
+        if not isinstance(options, dict) or "checkpoint" not in options:
+            raise ValueError("Project verification requires a resolved checkpoint")
+        project_verification = validate_verification_record(
+            verification_hook(),
+            options["checkpoint"],
+            metadata.adapter_id,
+        )
     fingerprint = canonical_fingerprint(dataset)
     rows, actual, predicted = [], [], []
     load_time, inference_time = 0.0, 0.0
@@ -273,6 +288,11 @@ def run_experiment(
                 "observations": start,
                 "seasonal_period": spec.seasonal_period,
             },
+            **(
+                {"project_verification": project_verification}
+                if project_verification is not None
+                else {}
+            ),
         },
         counts={
             "attempted_windows": len(actual),

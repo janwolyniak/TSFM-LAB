@@ -64,6 +64,12 @@ acceptance criteria. Larger compatible variants need not receive separate real
 inference runs; checkpoint compatibility checks and accurate verification status
 remain required. Large benchmark comparisons are postponed.
 
+P1's catalog, variant selection, Base metadata, and historical verification
+snapshots are implemented and verified locally; see the
+[P1 verification record](p1-catalog-verification.md). Chronos-2 is the next
+adapter package. TiRex-2/TTM require the runtime compatibility decisions recorded
+in the [catalog guide](model-catalog.md).
+
 ## Milestone 0 Architecture review
 
 Deliver the bounded MVP, stack, contracts, methodology, checkpoint plan, repository

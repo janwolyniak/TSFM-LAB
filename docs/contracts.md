@@ -255,6 +255,12 @@ Optional runtime/environment hooks give direct Python and CLI callers the same
 model dtype and dependency provenance. Reload validates identity without weights
 or optional inference libraries; see the [Chronos](chronos.md) and
 [TimesFM](timesfm.md) checkpoint rules.
+New pretrained runs also capture `provenance.project_verification` through an
+optional metadata hook, detached and checked before model loading. This records
+project checks against exact config/weight identities separately from the
+unchanged schema-1 checkpoint fingerprint. Reload validates the stored snapshot
+without consulting current project evidence. Older records without the field
+remain unchanged. See the [catalog guide](model-catalog.md).
 
 `run_experiment` currently returns an in-memory numerical result with JSON
 conversion through `to_dict()`. It validates dataset identity and snapshots

@@ -8,8 +8,9 @@ from rich.console import Console
 
 from tsfm_lab.cli_support import emit, guard, table
 from tsfm_lab.config import ConfigError
-from tsfm_lab.models.catalog import catalog_entries, catalog_info
+from tsfm_lab.models.catalog import catalog_entries, catalog_info, checkpoint_info
 from tsfm_lab.models.checkpoints import cached_checkpoints, pull_checkpoint
+from tsfm_lab.models.verification import checkpoint_verification, verification_label
 
 models = typer.Typer(
     help="Inspect adapters and manage explicit model downloads.", no_args_is_help=True
@@ -25,6 +26,45 @@ def _selection(identifier):
         raise ConfigError(str(exc)) from exc
 
 
+def _variant_information(variant):
+    rows = [
+        ["Repository", variant["repository"]],
+        ["Variant", variant["variant"]],
+        ["Reference revision", variant["reference_revision"]],
+    ]
+    for key, label in (
+        ("parameter_count", "Parameters"),
+        ("weight_bytes", "Weight bytes"),
+    ):
+        if variant[key] is not None:
+            rows.append([label, f"{variant[key]:,}"])
+    table(variant["display_name"], ["Field", "Value"], rows)
+    console = Console(markup=False, highlight=False)
+    console.print("Reference checkpoint:")
+    console.print(variant["verification_label"])
+    checks = variant["representative_checks"]
+    if checks:
+        table(
+            "Adapter representative checks",
+            ["Checkpoint", "Revision", "Device / dtype"],
+            [
+                [
+                    item["repository"],
+                    item["revision"][:12],
+                    f"{item['device']} / {item['dtype']}",
+                ]
+                for item in checks
+            ],
+        )
+
+
+def _selected_verification(record):
+    snapshot = checkpoint_verification(record)
+    Console(markup=False, highlight=False).print(
+        f"Selected checkpoint: {verification_label(snapshot)}"
+    )
+
+
 @models.command("list")
 @guard
 def list_models(json_output: JsonOutput = False):
@@ -35,12 +75,16 @@ def list_models(json_output: JsonOutput = False):
     else:
         table(
             "Available models",
-            ["Adapter", "Family", "Device"],
+            ["Adapter", "Family", "Device", "Variants"],
             [
                 [
                     item["adapter_id"],
                     item["family"],
                     ", ".join(item["capabilities"]["devices"]),
+                    ", ".join(
+                        variant["variant"] for variant in item.get("variants", [])
+                    )
+                    or "built-in",
                 ]
                 for item in items
             ],
@@ -52,8 +96,9 @@ def list_models(json_output: JsonOutput = False):
 def model_info(identifier: str, json_output: JsonOutput = False):
     """Show curated adapter/checkpoint metadata without network access."""
     value = _selection(identifier)
+    selected = checkpoint_info(identifier) if "repository" in value else None
     if json_output:
-        emit(value)
+        emit({**value, "selected_checkpoint": selected} if selected else value)
     else:
         table(
             "Model information",
@@ -70,6 +115,8 @@ def model_info(identifier: str, json_output: JsonOutput = False):
                 if key in value
             ],
         )
+        for variant in [selected] if selected else value.get("variants", []):
+            _variant_information(variant)
 
 
 @models.command("pull")
@@ -80,7 +127,7 @@ def pull_model(
     cache_dir: CacheDirectory = None,
     json_output: JsonOutput = False,
 ):
-    """Explicitly download a curated Bolt checkpoint at a resolved exact revision."""
+    """Explicitly download a curated checkpoint at a resolved exact revision."""
     selected = _selection(repository)
     if repository not in selected["repositories"]:
         raise ConfigError("Select a curated Hugging Face repository, not an adapter ID")
@@ -106,6 +153,7 @@ def pull_model(
                 )
             ],
         )
+        _selected_verification(value)
 
 
 @models.command("cache")
@@ -120,12 +168,25 @@ def list_cached_models(
     else:
         table(
             "Cached checkpoints",
-            ["Repository", "Revision", "Status"],
+            ["Repository", "Revision", "Cache", "Project inference"],
             [
                 [
                     str(value.get("repository", "")),
-                    str(value.get("resolved_revision", "")),
+                    str(value.get("resolved_revision", ""))[:12],
                     str(value.get("status", "cached")),
+                    (
+                        verification_label(
+                            checkpoint_verification(
+                                {
+                                    key: item
+                                    for key, item in value.items()
+                                    if key not in {"status", "bytes"}
+                                }
+                            )
+                        )
+                        if value.get("status", "cached") == "cached"
+                        else "Unavailable for incomplete files"
+                    ),
                 ]
                 for value in values
             ],

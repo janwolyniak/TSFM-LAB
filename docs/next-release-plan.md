@@ -1,9 +1,14 @@
 # Next feature release plan
 
 Working target: **v0.2.0**, following the prepared v0.1.0 release.
-Scope agreed with the owner on 26 October 2026. This is the implementation plan;
-the features below are not yet implemented. The existing package version and
-publication status remain unchanged.
+Scope agreed with the owner on 26 October 2026. P1 is implemented and verified
+locally; P2–P8 remain future work. The existing package version and publication
+status remain unchanged.
+
+P1 behavior is described in the [catalog guide](model-catalog.md), with checks
+recorded in the [P1 verification record](p1-catalog-verification.md). Individual
+release criteria below stay open until the corresponding implementation is
+verified.
 
 The release will let a user start an experiment in the terminal, choose its
 usage profile and forecasting model, and complete setup either through guided

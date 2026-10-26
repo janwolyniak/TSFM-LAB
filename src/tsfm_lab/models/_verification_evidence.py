@@ -1,0 +1,154 @@
+"""Recorded project integration checks, independent of optional model runtimes.
+
+Each entry describes one historical workflow. Missing source provenance stays
+unknown; these checks are not accuracy benchmarks or evidence for other weights.
+"""
+
+PROJECT_CHECKS = (
+    {
+        "id": "chronos-bolt-tiny-milestone3-cpu",
+        "adapter_id": "chronos_bolt",
+        "repository": "amazon/chronos-bolt-tiny",
+        "revision": "a0e552de83495b5c28c14c71c374f3e33280b340",
+        "files": {
+            "config.json": {
+                "sha256": "278f0086733031635fb1c861cb01c1bad6477420c7fcb19381a2993e335785e0",
+                "size": 1120,
+            },
+            "model.safetensors": {
+                "sha256": "75068728d376d2bec670379eeef4bfb4d24c0cfe24d957451f8d19b447030a32",
+                "size": 34622352,
+            },
+        },
+        "source": {
+            "package_version": None,
+            "git_revision": None,
+            "git_dirty": None,
+        },
+        "runtime": {
+            "python": "3.13.6",
+            "numpy": "2.1.3",
+            "pandas": "2.3.3",
+            "PyYAML": "6.0.2",
+            "chronos-forecasting": "2.2.0",
+            "torch": "2.8.0",
+            "transformers": "4.55.0",
+            "huggingface-hub": "0.34.4",
+            "safetensors": "0.6.2",
+            "accelerate": "1.12.0",
+            "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+            "machine": "arm64",
+        },
+        "device": "cpu",
+        "dtype": "float32",
+        "checks": [
+            "counts.successful_windows=4",
+            "counts.forecast_cases=16",
+            "counts.failed_windows=0",
+            "runtime.batch_size=1",
+            "offline_connections_blocked",
+            "cached_replay_identical",
+            "standalone_copy_identical",
+            "comparison_compatible",
+        ],
+        "reference": "docs/milestone3-verification.md",
+    },
+    {
+        "id": "chronos-bolt-small-milestone6-cpu",
+        "adapter_id": "chronos_bolt",
+        "repository": "amazon/chronos-bolt-small",
+        "revision": "772f3d25d38aec6d914c8949dab4462e2d46f5d8",
+        "files": {
+            "config.json": {
+                "sha256": "9ca0ebbe049ccebacb0546361e8aa728f0cf104cd18d1838d78d296aa317bd21",
+                "size": 1121,
+            },
+            "model.safetensors": {
+                "sha256": "06a6a19bbe74bc10a9cd193bd4bf2bf638ae07f7e0d51653ae7ab8ea968a21dd",
+                "size": 190888824,
+            },
+        },
+        "source": {
+            "package_version": None,
+            "git_revision": "0e3eb702b51d4f8b33d99219eec6ce35a4b79766",
+            "git_dirty": None,
+        },
+        "runtime": {
+            "python": (
+                "3.13.6 (v3.13.6:4e665351082, Aug  6 2025, 11:22:35) "
+                "[Clang 16.0.0 (clang-1600.0.26.6)]"
+            ),
+            "numpy": "2.1.3",
+            "pandas": "2.3.3",
+            "PyYAML": "6.0.2",
+            "pyarrow": "23.0.1",
+            "chronos-forecasting": "2.2.0",
+            "torch": "2.8.0",
+            "transformers": "4.55.0",
+            "huggingface-hub": "0.34.4",
+            "safetensors": "0.6.2",
+            "accelerate": "1.12.0",
+            "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+            "machine": "arm64",
+        },
+        "device": "cpu",
+        "dtype": "float32",
+        "checks": [
+            "counts.successful_windows=4",
+            "counts.forecast_cases=16",
+            "counts.failed_windows=0",
+            "runtime.batch_size=1",
+            "network_attempts=[]",
+            "exact_cache_replay",
+            "finite_aligned_original_units",
+            "controlled_comparison",
+            "exports_reload_equal=csv,json,parquet",
+        ],
+        "reference": "docs/milestone6-verification.md",
+    },
+    {
+        "id": "timesfm-2p5-milestone6-cpu",
+        "adapter_id": "timesfm_2p5",
+        "repository": "google/timesfm-2.5-200m-pytorch",
+        "revision": "1d952420fba87f3c6dee4f240de0f1a0fbc790e3",
+        "files": {
+            "config.json": {
+                "sha256": "cd3315b760d5cc7e278d7afdf41b897031ced888fc6c115bd9b3ac0ea2c47408",
+                "size": 475,
+            },
+            "model.safetensors": {
+                "sha256": "2f776efe6245e42b24bc4153ffdf61810140210e4bd3b01fb21f7aa779ab6ce8",
+                "size": 925181104,
+            },
+        },
+        "source": {
+            "package_version": "0.1.0",
+            "git_revision": "0e3eb702b51d4f8b33d99219eec6ce35a4b79766",
+            "git_dirty": True,
+        },
+        "runtime": {
+            "python": "3.13.6",
+            "numpy": "2.1.3",
+            "pandas": "2.3.3",
+            "PyYAML": "6.0.2",
+            "timesfm": "3.0.2",
+            "torch": "2.8.0",
+            "huggingface-hub": "0.34.4",
+            "safetensors": "0.6.2",
+            "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+            "machine": "arm64",
+        },
+        "device": "cpu",
+        "dtype": "float32",
+        "checks": [
+            "counts.successful_windows=4",
+            "counts.forecast_cases=16",
+            "counts.failed_windows=0",
+            "runtime.batch_size=1",
+            "network_attempts=[]",
+            "cached_replay_equal",
+            "baseline_comparison",
+        ],
+        "reference": "docs/milestone6-verification.md",
+    },
+)

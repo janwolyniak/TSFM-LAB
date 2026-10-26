@@ -9,8 +9,13 @@ from pathlib import Path
 from tsfm_lab.config import ConfigError, ExperimentConfig
 from tsfm_lab.contracts import fixed_interval, utc_timestamp
 from tsfm_lab.evaluation.windows import evaluation_bounds
-from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES, catalog_entries
+from tsfm_lab.models.catalog import (
+    CHECKPOINT_REPOSITORIES,
+    catalog_entries,
+    checkpoint_info,
+)
 from tsfm_lab.models.factory import build_model
+from tsfm_lab.models.verification import checkpoint_verification, verification_label
 from tsfm_lab.tui.forms import (
     config_from_fields,
     default_fields,
@@ -117,7 +122,20 @@ class _Guide:
             )
             self.fields["source"] = "huggingface" if source == "cached" else "local"
             if source == "cached":
+                self.emit("Curated checkpoint variants:")
+                for repository in repositories:
+                    variant = checkpoint_info(repository)
+                    self.emit(f"  {variant['variant']} · {repository}")
+                    self.emit(f"    {variant['verification_label']}")
+                previous_repository = self.fields["repository"]
                 self.set("repository", "Checkpoint repository", choices=repositories)
+                if (
+                    self.fields["repository"] != previous_repository
+                    or not self.fields["revision"]
+                ):
+                    self.fields["revision"] = checkpoint_info(
+                        self.fields["repository"]
+                    )["reference_revision"]
                 self.set("revision", "Exact checkpoint SHA", validate=self._sha)
                 self.set("cache_dir", "Cache directory (optional; - uses the default)")
                 if self.fields["cache_dir"] == "-":
@@ -142,6 +160,14 @@ class _Guide:
         config = config_from_fields(prototype, **self.arguments)
         model = build_model(config.model, config.runtime)
         self.capabilities = model.metadata().capabilities
+        record = getattr(model, "configuration", lambda: {})().get("checkpoint")
+        if record:
+            snapshot = checkpoint_verification(record)
+            self.emit(f"Selected checkpoint: {verification_label(snapshot)}")
+            for check in snapshot["adapter_representative_checks"]:
+                self.emit(
+                    f"  Adapter reference: {check['repository']} @ {check['revision'][:12]} · {check['device']}/{check['dtype']}"
+                )
 
     @staticmethod
     def _sha(value):

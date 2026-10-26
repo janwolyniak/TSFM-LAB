@@ -44,6 +44,21 @@ def test_catalog_is_offline_compact_and_borderless(commands):
     assert not any(symbol in rendered for symbol in ("┌", "┐", "╭", "╮", "│", "\x1b["))
 
 
+def test_catalog_variant_statuses_remain_readable_in_an_80_column_terminal(tmp_path):
+    output = io.StringIO()
+    records = RecordCommands(
+        Console(file=output, width=80, color_system=None), tmp_path
+    )
+    records.models()
+    rendered = output.getvalue()
+    assert "amazon/chronos-bolt-base" in rendered
+    assert "individual inference not run" in rendered
+    assert "Adapter reference:" in rendered
+    assert "Weight files:" in rendered
+    assert not any(name in rendered for name in ("Chronos-2", "TiRex", "TTM"))
+    assert not any(symbol in rendered for symbol in ("┌", "┐", "╭", "╮", "│", "\x1b["))
+
+
 def test_empty_history_suggests_demo_without_creating_workspace(commands):
     records, output = commands
     assert records.history() == []
@@ -248,7 +263,7 @@ def test_record_import_and_catalog_need_no_ui_or_model_runtime():
 import importlib.abc,io,sys
 class Block(importlib.abc.MetaPathFinder):
  def find_spec(self,fullname,path,target=None):
-  if fullname.split('.')[0] in {'textual','torch','chronos','huggingface_hub','prompt_toolkit'}:
+  if fullname.split('.')[0] in {'textual','torch','chronos','timesfm','huggingface_hub','safetensors','transformers','prompt_toolkit'}:
    raise ModuleNotFoundError(fullname,name=fullname)
 sys.meta_path.insert(0,Block())
 from rich.console import Console
