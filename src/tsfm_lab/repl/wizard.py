@@ -12,6 +12,7 @@ from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.models.catalog import (
     CHECKPOINT_REPOSITORIES,
     catalog_entries,
+    catalog_info,
     checkpoint_info,
 )
 from tsfm_lab.models.factory import build_model
@@ -68,11 +69,12 @@ def _question(ask, emit, label, default="", choices=(), validate=None) -> str:
         answer = answer or default
         aliases = {"y": "yes", "n": "no"}
         if choices:
+            canonical_choices = {choice.casefold(): choice for choice in choices}
             canonical = aliases.get(answer.casefold(), answer.casefold())
-            if canonical not in choices:
+            if canonical not in canonical_choices:
                 emit(f"Choose {', '.join(choices)}, or /cancel.")
                 continue
-            answer = canonical
+            answer = canonical_choices[canonical]
         try:
             if validate:
                 validate(answer)
@@ -104,6 +106,8 @@ class _Guide:
 
     def model(self):
         self.set("adapter", "Model adapter", choices=_ADAPTERS)
+        for notice in catalog_info(self.fields["adapter"])["runtime_notices"]:
+            self.emit(notice)
         if self.fields["adapter"] == "seasonal_naive":
             self.set("seasonal_period", "Baseline seasonal period", validate=_positive)
         elif self.fields["adapter"] in CHECKPOINT_REPOSITORIES:
@@ -126,6 +130,9 @@ class _Guide:
                 for repository in repositories:
                     variant = checkpoint_info(repository)
                     self.emit(f"  {variant['variant']} · {repository}")
+                    self.emit(
+                        f"    Context up to {variant['max_context']} · Horizon up to {variant['max_horizon']} observations"
+                    )
                     self.emit(f"    {variant['verification_label']}")
                 previous_repository = self.fields["repository"]
                 self.set("repository", "Checkpoint repository", choices=repositories)

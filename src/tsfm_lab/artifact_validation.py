@@ -133,6 +133,18 @@ def _checkpoint_identity(model, runtime, spec, environment):
     ):
         raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
     distributions = tuple(name for name, _ in profile.runtime_requirements)
+    if adapter == "tirex_2":
+        from tsfm_lab.models.tirex2_profile import forecast_options_for_record
+
+        expected = forecast_options_for_record(record)
+        options = runtime.get("forecast_options")
+        if (
+            runtime.get("torch_compile") is not False
+            or not isinstance(options, dict)
+            or set(options) != set(expected)
+            or any(options[key] is not value for key, value in expected.items())
+        ):
+            raise StoreError("TiRex-2 runtime requires its recorded forecast options")
     if adapter == "chronos_2":
         from tsfm_lab.models.chronos2 import FORECAST_OPTIONS
 

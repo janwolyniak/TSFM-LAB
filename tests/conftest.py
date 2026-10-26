@@ -91,7 +91,7 @@ def timesfm_runtime(monkeypatch):
         versions={
             "timesfm": "3.0.2",
             "torch": "2.8.0",
-            "huggingface-hub": "0.34.4",
+            "huggingface-hub": "0.35.3",
             "safetensors": "0.6.2",
         },
         load_calls=[],

@@ -38,6 +38,7 @@ def test_catalog_is_offline_compact_and_borderless(commands):
         "chronos_bolt",
         "timesfm_2p5",
         "chronos_2",
+        "tirex_2",
     }
     rendered = output.getvalue()
     assert "apache-2.0" in rendered and "2048" in rendered and "64" in rendered
@@ -58,7 +59,12 @@ def test_catalog_variant_statuses_remain_readable_in_an_80_column_terminal(tmp_p
     assert "Weight files:" in rendered
     assert "Chronos-2" in rendered
     assert "autogluon/chronos-2-small" in rendered and "amazon/chronos-2" in rendered
-    assert not any(name in rendered for name in ("TiRex", "TTM"))
+    assert "TiRex-2" in rendered
+    assert "Built with technology from NXAI" in rendered
+    assert "NXAI Community License" in rendered
+    assert "Context up to 2048" in rendered and "Context up to 8192" in rendered
+    assert "Horizon up to 320" in rendered and "Horizon up to 928" in rendered
+    assert "TTM" not in rendered
     assert not any(symbol in rendered for symbol in ("┌", "┐", "╭", "╮", "│", "\x1b["))
 
 

@@ -11,6 +11,8 @@ class CheckpointVariant:
     reference_revision: str
     weight_bytes: int
     parameter_count: int | None = None
+    max_context: int | None = None
+    max_horizon: int | None = None
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,7 @@ class AdapterProfile:
     context_reserved: int
     runtime_requirements: tuple[tuple[str, str], ...]
     variants: tuple[CheckpointVariant, ...]
+    runtime_notices: tuple[str, ...] = ()
 
 
 ADAPTER_PROFILES = (
@@ -47,7 +50,7 @@ ADAPTER_PROFILES = (
             ("chronos-forecasting", "==2.2.0"),
             ("torch", ">=2.8,<2.9"),
             ("transformers", ">=4.55,<4.56"),
-            ("huggingface-hub", "==0.34.4"),
+            ("huggingface-hub", "==0.35.3"),
             ("safetensors", ">=0.6,<0.7"),
             ("accelerate", ">=1.12,<1.13"),
         ),
@@ -93,7 +96,7 @@ ADAPTER_PROFILES = (
         (
             ("timesfm", "==3.0.2"),
             ("torch", ">=2.8,<2.9"),
-            ("huggingface-hub", "==0.34.4"),
+            ("huggingface-hub", "==0.35.3"),
             ("safetensors", ">=0.6,<0.7"),
         ),
         (
@@ -123,7 +126,7 @@ ADAPTER_PROFILES = (
             ("chronos-forecasting", "==2.2.0"),
             ("torch", ">=2.8,<2.9"),
             ("transformers", ">=4.55,<4.56"),
-            ("huggingface-hub", "==0.34.4"),
+            ("huggingface-hub", "==0.35.3"),
             ("safetensors", ">=0.6,<0.7"),
             ("accelerate", ">=1.12,<1.13"),
         ),
@@ -144,6 +147,77 @@ ADAPTER_PROFILES = (
                 477930472,
                 119477664,
             ),
+        ),
+    ),
+    AdapterProfile(
+        "tirex_2",
+        "tirex",
+        "TiRex-2",
+        "tsfm_lab.models.tirex2",
+        "TiRex2",
+        "TiRex2",
+        "TiRex2",
+        "tirex2",
+        8192,
+        928,
+        0,
+        (
+            ("tirex-2", "==0.4.0"),
+            ("torch", ">=2.8,<2.9"),
+            ("huggingface-hub", "==0.35.3"),
+            ("safetensors", ">=0.6,<0.7"),
+            ("numpy", ">=2.1.3,<3"),
+            ("flashrnn", "==1.0.8"),
+            ("mlstm-kernels", "==2.0.6"),
+            ("ninja", "==1.13.2"),
+            ("narwhals", "==2.13.0"),
+        ),
+        (
+            CheckpointVariant(
+                "NX-AI/TiRex-2",
+                "main",
+                "Default training profile",
+                "30788a311699acba7e6393ad9700ea7b7cb9bb2d",
+                330038664,
+                82501744,
+                2048,
+                320,
+            ),
+            CheckpointVariant(
+                "NX-AI/TiRex-2-fevbench",
+                "fevbench",
+                "FEV benchmark training profile",
+                "acd6153b8ee2179f38cfd3cc4fd64a3c045a424f",
+                330038640,
+                82501744,
+                2048,
+                320,
+            ),
+            CheckpointVariant(
+                "NX-AI/TiRex-2-gifteval-zs",
+                "gifteval-zs",
+                "GiftEval zero-shot training profile",
+                "c94872d1c8caacbe7755cbfa01bc5c4c5c5ddb7f",
+                330038640,
+                82501744,
+                8192,
+                928,
+            ),
+            CheckpointVariant(
+                "NX-AI/TiRex-2-gifteval-pretrain",
+                "gifteval-pretrain",
+                "GiftEval pretrain training profile",
+                "54f88ac06ccfba9fe3e727aa8856b39775481f0f",
+                330038640,
+                82501744,
+                8192,
+                928,
+            ),
+        ),
+        (
+            "Built with technology from NXAI",
+            "The optional mlstm-kernels 2.0.6 dependency uses the NXAI Community License, including additional commercial terms.",
+            "https://github.com/NX-AI/mlstm_kernels/blob/v2.0.6/LICENSE",
         ),
     ),
 )

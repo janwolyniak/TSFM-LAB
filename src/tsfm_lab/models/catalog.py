@@ -34,6 +34,8 @@ def checkpoint_info(repository: str) -> dict:
     )
     return {
         **asdict(variant),
+        "max_context": variant.max_context or profile.max_context,
+        "max_horizon": variant.max_horizon or profile.max_horizon,
         "project_inference_status": "recorded" if recorded else "not_recorded",
         "verification_label": (
             "Reference checkpoint inference check recorded"
@@ -62,6 +64,7 @@ def catalog_entries() -> list[dict]:
                 "repositories": [],
                 "variants": [],
                 "runtime_requirements": {},
+                "runtime_notices": [],
             }
         )
     for profile in ADAPTER_PROFILES:
@@ -86,6 +89,7 @@ def catalog_entries() -> list[dict]:
                     for repository in CHECKPOINT_REPOSITORIES[adapter]
                 ],
                 "runtime_requirements": dict(profile.runtime_requirements),
+                "runtime_notices": list(profile.runtime_notices),
             }
         )
     # Tuples in typed metadata become ordinary JSON arrays at this boundary.
@@ -110,6 +114,11 @@ def catalog_info(identifier: str) -> dict:
                     if key != "display_name"
                 },
                 "variant_display_name": variant["display_name"],
+                "capabilities": {
+                    **entry["capabilities"],
+                    "max_context": variant["max_context"],
+                    "max_horizon": variant["max_horizon"],
+                },
             }
     raise ValueError(
         f"Unsupported model {identifier!r}; use a catalog adapter or curated repository"

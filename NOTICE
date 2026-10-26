@@ -1,0 +1,19 @@
+TSFM-LAB source code is licensed under Apache-2.0.
+Optional dependencies and pretrained weights retain their own licenses.
+
+Optional TiRex-2 runtime
+-----------------------
+Built with technology from NXAI
+
+The optional TiRex-2 runtime depends on mlstm-kernels 2.0.6, licensed under
+its NXAI Community License, including attribution and additional commercial
+terms. The TiRex-2 model weights and FlashRNN have separate Apache-2.0 licenses;
+that does not make the complete optional runtime Apache-only.
+
+This product includes materials developed at NXAI that are licensed under
+the NXAI Community License, Copyright © NXAI GmbH, All Rights Reserved.
+
+The complete mlstm-kernels 2.0.6 license, including its bundled third-party
+notices, is provided in licenses/mlstm-kernels-2.0.6.txt. In a wheel both
+this NOTICE and the license are included under the distribution's licenses
+metadata directory. No kernel implementation or model weights are bundled.

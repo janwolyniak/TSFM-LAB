@@ -55,7 +55,7 @@ def test_model_browser_keyboard_selection_and_literal_details():
         async with app.run_test(size=(80, 24)) as pilot:
             await pilot.pause()
             table = screen.query_one("#model-table", DataTable)
-            assert table.row_count == 5
+            assert table.row_count == 6
             await pilot.press("down")
             assert "complete season" in text(screen, "#model-details")
             await pilot.press("enter")

@@ -13,13 +13,14 @@
 [Chronos-Bolt](docs/chronos.md) ·
 [Chronos-2](docs/chronos2.md) ·
 [TimesFM](docs/timesfm.md) ·
+[TiRex-2](docs/tirex2.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
-Chronos-Bolt, Chronos-2, and TimesFM 2.5 adapters. A separate finance extension evaluates
+Chronos-Bolt, Chronos-2, TimesFM 2.5, and TiRex-2 adapters. A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
 
 ## Project status
@@ -31,7 +32,7 @@ hypothetical OHLC strategies from saved price forecasts.
 - **Work locally:** use the Python core, scriptable `tsfm` commands, or a
   persistent terminal prompt with inline setup, progress, and cancellation.
   Output stays in terminal scrollback; terminal dependencies remain optional.
-- **Add pretrained forecasts:** use optional Chronos-Bolt, Chronos-2, or TimesFM 2.5 adapters with
+- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, or TiRex-2 with
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
   experiments, and recorded runtime provenance. Additional model families remain
   later work.
@@ -170,6 +171,20 @@ revisions, safe loading, and saved-result behavior. Small has a bounded real CPU
 check; standard has metadata/API compatibility checks without individual inference.
 The [P2 record](docs/p2-chronos2-verification.md) describes the evidence and limits.
 
+## Use TiRex-2
+
+The optional `tirex_2` adapter offers four training profiles through the terminal
+and YAML. Default/FEV checkpoints support context up to 2,048 and horizon up to
+320; the two GiftEval profiles support 8,192/928. All use CPU float32 inference
+and the native median. Use `/new tirex_2` or the
+[default YAML example](examples/configurations/tirex2-main.yaml).
+
+**Built with technology from NXAI.** Model weights declare Apache-2.0;
+the optional mLSTM Kernels dependency has separate NXAI Community License terms.
+See the [TiRex-2 guide](docs/tirex2.md), [NOTICE](NOTICE), and
+[P3 verification record](docs/p3-tirex2-verification.md) for pinned references,
+runtime setup, checkpoint-specific status, and the qualification evidence.
+
 ## Evaluate a hypothetical price strategy
 
 Run the [synthetic OHLC example](examples/configurations/finance-seasonal-naive.yaml)
@@ -282,7 +297,7 @@ remaining publication gates. The repository has not published a package release.
 The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
-family, followed by TimesFM 2.5 and Chronos-2. Further families follow the
+family, followed by TimesFM 2.5, Chronos-2, and TiRex-2. TTM and further work follow the
 [next release plan](docs/next-release-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
 OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
 the bounded compatibility findings before further benchmark integration.

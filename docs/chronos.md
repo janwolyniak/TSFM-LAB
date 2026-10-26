@@ -26,7 +26,7 @@ its addition. See the [catalog and verification guide](model-catalog.md) for its
 pinned reference, exact file identities, and project-status labels.
 
 The initial supported runtime uses Chronos forecasting 2.2.0, PyTorch 2.8.x,
-Transformers 4.55.x, and Hugging Face Hub 0.34.4. The exact development runtime is
+Transformers 4.55.x, and Hugging Face Hub 0.35.3. The exact development runtime is
 listed in [requirements-chronos.txt](../requirements-chronos.txt). Runtime checks
 refuse incompatible versions. This bounded matrix avoids silently changing
 inference/loading semantics with a third-party upgrade.

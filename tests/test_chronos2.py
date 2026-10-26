@@ -199,7 +199,7 @@ def fake_runtime(monkeypatch):
         "chronos-forecasting": "2.2.0",
         "torch": "2.8.0",
         "transformers": "4.55.0",
-        "huggingface-hub": "0.34.4",
+        "huggingface-hub": "0.35.3",
         "safetensors": "0.6.2",
         "accelerate": "1.12.0",
     }

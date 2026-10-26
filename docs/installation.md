@@ -168,7 +168,7 @@ export locations need their own deliberate storage or ignore choices.
 Start with the baseline demonstration before installing a model runtime. The
 Chronos adapter accepts only its bounded CPU/float32 configuration and requires
 compatible Chronos forecasting 2.2.0, PyTorch 2.8.x, Transformers 4.55.x, and
-Hugging Face Hub 0.34.4. The supplied
+Hugging Face Hub 0.35.3. The supplied
 [runtime constraints](../requirements-chronos.txt) record exact versions.
 
 Follow the [Chronos guide](chronos.md) to install that optional group, inspect the
@@ -180,7 +180,7 @@ results, history, comparison, and export remain usable without the model runtime
 ## Add CPU TimesFM inference separately
 
 The `timesfm_2p5` adapter uses TimesFM model 2.5 through the explicit Torch API in
-runtime package `timesfm==3.0.2`, with PyTorch 2.8.x, Hugging Face Hub 0.34.4, and
+runtime package `timesfm==3.0.2`, with PyTorch 2.8.x, Hugging Face Hub 0.35.3, and
 Safetensors 0.6.x. The [TimesFM constraints](../requirements-timesfm.txt) record
 the tested versions. From the source root, install the optional runtime only
 when dependency installation is authorized:
@@ -196,3 +196,29 @@ contexts up to 16,256 observations, and horizons up to 128. It fails if Torch's
 process-wide default dtype is not float32; it never changes that setting.
 Follow the [TimesFM guide](timesfm.md) for explicit pulls, cache-only experiments,
 median semantics, and the bounded local verification evidence.
+
+## Add CPU TiRex-2 inference separately
+
+TiRex-2 offers four training/forecast profiles through `tirex_2`. The shared
+checkpoint runtime now pins Hub 0.35.3; Torch 2.8 and Transformers 4.55 stay
+unchanged. Update the chosen model environment explicitly using the current
+constraints when upgrading the source; no command upgrades global packages
+automatically. Saved forecasts remain readable without model libraries.
+
+**Built with technology from NXAI**
+
+The optional kernel dependency has separate NXAI Community License terms;
+read [NOTICE](../NOTICE), the [complete license](../licenses/mlstm-kernels-2.0.6.txt),
+and the [TiRex-2 runtime guide](tirex2.md#optional-runtime-and-notices).
+The [TiRex-2 constraints](../requirements-tirex2.txt) specify the tested CPU
+environment. Its explicit install is:
+
+```sh
+python -m pip install -c requirements-tirex2.txt '.[cli,tirex2]'
+tsfm models info tirex_2
+```
+
+This optional stack adds recurrent-kernel packages; Linux can also resolve
+accelerator dependencies from their declared platform requirements. Core/CLI
+installation and routine CI require none of them. Follow the guide for an
+explicit pinned checkpoint pull and the four profile-specific native bounds.

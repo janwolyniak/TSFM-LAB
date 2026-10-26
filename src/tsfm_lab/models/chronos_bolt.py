@@ -33,11 +33,11 @@ def _runtime():
             versions["chronos-forecasting"] != "2.2.0"
             or not versions["torch"].startswith("2.8.")
             or not versions["transformers"].startswith("4.55.")
-            or versions["huggingface-hub"] != "0.34.4"
+            or versions["huggingface-hub"] != "0.35.3"
         ):
             raise ImportError(
                 "Chronos-Bolt requires chronos-forecasting 2.2.0, torch 2.8.x, "
-                "transformers 4.55.x, and huggingface-hub 0.34.4; use tsfm-lab[chronos]"
+                "transformers 4.55.x, and huggingface-hub 0.35.3; use tsfm-lab[chronos]"
             )
         return importlib.import_module("torch"), importlib.import_module("chronos")
     except (PackageNotFoundError, ModuleNotFoundError) as exc:

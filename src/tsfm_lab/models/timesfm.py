@@ -39,12 +39,12 @@ def _runtime():
         if (
             installed["timesfm"] != "3.0.2"
             or not installed["torch"].startswith("2.8.")
-            or installed["huggingface-hub"] != "0.34.4"
+            or installed["huggingface-hub"] != "0.35.3"
             or not installed["safetensors"].startswith("0.6.")
         ):
             raise ImportError(
                 "TimesFM 2.5 requires timesfm 3.0.2, torch 2.8.x, "
-                "huggingface-hub 0.34.4, and safetensors 0.6.x; "
+                "huggingface-hub 0.35.3, and safetensors 0.6.x; "
                 "use tsfm-lab[timesfm]"
             )
         torch = importlib.import_module("torch")

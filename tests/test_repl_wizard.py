@@ -39,6 +39,23 @@ class Questions:
         return sum(call[0] == label for call in self.calls)
 
 
+@pytest.mark.parametrize(
+    "answer", ["NX-AI/TiRex-2", "nx-ai/tirex-2", "Nx-Ai/TiReX-2", ""]
+)
+def test_choice_matching_preserves_curated_repository_spelling(answer):
+    questions = Questions({"Repository": answer})
+    emitted = []
+    repository = wizard._question(
+        questions,
+        emitted.append,
+        "Repository",
+        default="NX-AI/TiRex-2",
+        choices=("NX-AI/TiRex-2",),
+    )
+    assert repository == "NX-AI/TiRex-2"
+    assert questions.count("Repository") == 1 and emitted == []
+
+
 @pytest.fixture
 def setup(config_factory, tmp_path):
     path = config_factory()
@@ -383,6 +400,106 @@ def test_base_choice_shows_compatibility_and_project_reference_evidence(
     )
     assert "amazon/chronos-bolt-base" in repository_call[2]
     assert not setup["workspace"].exists()
+
+
+@pytest.mark.parametrize(
+    "repository,revision,context,horizon",
+    [
+        ("NX-AI/TiRex-2", "30788a311699acba7e6393ad9700ea7b7cb9bb2d", 2048, 320),
+        (
+            "NX-AI/TiRex-2-fevbench",
+            "acd6153b8ee2179f38cfd3cc4fd64a3c045a424f",
+            2048,
+            320,
+        ),
+        (
+            "NX-AI/TiRex-2-gifteval-zs",
+            "c94872d1c8caacbe7755cbfa01bc5c4c5c5ddb7f",
+            8192,
+            928,
+        ),
+        (
+            "NX-AI/TiRex-2-gifteval-pretrain",
+            "54f88ac06ccfba9fe3e727aa8856b39775481f0f",
+            8192,
+            928,
+        ),
+    ],
+)
+def test_tirex_training_profiles_select_canonical_repository_and_pinned_sha(
+    setup, monkeypatch, repository, revision, context, horizon
+):
+    selections = []
+
+    class Model:
+        def metadata(self):
+            return SimpleNamespace(
+                capabilities=ModelCapabilities(max_context=context, max_horizon=horizon)
+            )
+
+        def validate(self, spec):
+            assert spec.context_length <= context and spec.horizon <= horizon
+
+        def load(self):
+            pytest.fail("Guided selection must not load model weights")
+
+    def selected_model(selection, runtime):
+        selections.append(selection)
+        return Model()
+
+    monkeypatch.setattr(wizard, "build_model", selected_model)
+    monkeypatch.setattr("tsfm_lab.tui.forms.build_model", selected_model)
+    questions = Questions({"Checkpoint repository": repository.lower(), _RUN: "yes"})
+    emitted = []
+    config = build(setup, questions, emitted, adapter="tirex_2")
+    assert config.model["adapter_id"] == "tirex_2"
+    assert config.model["repository"] == repository
+    assert config.model["revision"] == revision
+    assert questions.count("Checkpoint repository") == 1
+    assert questions.count("Checkpoint variant") == 0
+    assert all(item["repository"] == repository for item in selections)
+    sha = next(call for call in questions.calls if call[0] == "Exact checkpoint SHA")
+    assert sha[1] == revision
+    text = "\n".join(emitted)
+    assert f"Context up to {context}" in text
+    assert f"Horizon up to {horizon}" in text
+    assert "Built with technology from NXAI" in text
+    assert "NXAI Community License" in text
+    assert not setup["workspace"].exists()
+
+
+@pytest.mark.parametrize("change_repository", [False, True])
+def test_tirex_back_navigation_preserves_sha_override_until_profile_changes(
+    setup, monkeypatch, change_repository
+):
+    class Model:
+        def metadata(self):
+            return SimpleNamespace(
+                capabilities=ModelCapabilities(max_context=8192, max_horizon=928)
+            )
+
+        def validate(self, spec):
+            pass
+
+    monkeypatch.setattr(wizard, "build_model", lambda *_: Model())
+    monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: Model())
+    first = "NX-AI/TiRex-2"
+    second = "NX-AI/TiRex-2-gifteval-zs" if change_repository else first
+    override = "b" * 40
+    questions = Questions(
+        {
+            "Checkpoint repository": [first, second.lower()],
+            "Exact checkpoint SHA": [override, ""],
+            "Dataset path": ["/back", ""],
+            _RUN: "yes",
+        }
+    )
+    config = build(setup, questions, adapter="tirex_2")
+    assert config.model["repository"] == second
+    assert config.model["revision"] == (
+        "c94872d1c8caacbe7755cbfa01bc5c4c5c5ddb7f" if change_repository else override
+    )
+    assert questions.count("Model adapter") == 2
 
 
 @pytest.mark.parametrize("variant", ["tiny", "base"])
