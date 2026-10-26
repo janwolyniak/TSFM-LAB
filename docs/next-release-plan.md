@@ -2,13 +2,19 @@
 
 Working target: **v0.2.0**, following the prepared v0.1.0 release.
 Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and verified
-locally; P3–P8 remain future work. The existing package version and publication
+locally. P3 TiRex-2 is also implemented and verified locally; P4–P8 remain
+future work. The existing package version and publication
 status remain unchanged.
 
 P1 behavior is described in the [catalog guide](model-catalog.md), with checks
 recorded in the [P1 verification record](p1-catalog-verification.md).
 Chronos-2 behavior and checks are documented in its [guide](chronos2.md) and
 [P2 verification record](p2-chronos2-verification.md).
+P3's [guide](tirex2.md) and [verification record](p3-tirex2-verification.md)
+document its four training profiles and completed checks. The owner
+approved a shared Hub 0.35.3 pin, existing-family CPU regression checks, isolated
+runtime setup, and explicit NXAI runtime notices; no per-family environment
+manager is introduced.
 Individual release criteria below stay open until the corresponding implementation is
 verified.
 
@@ -50,7 +56,7 @@ the five pretrained families.
 | Chronos-Bolt | Preserve Tiny and Small; add Base to the curated catalog using the existing compatible adapter. | Reuse the verified Tiny/Small evidence for the unchanged adapter; rerun affected checks if its implementation changes. Base needs no separate inference run solely for catalog inclusion. |
 | TimesFM | Preserve the existing TimesFM 2.5 200M adapter and checkpoint. Add further sizes only when they actually share its supported architecture and runtime contract. | Reuse current evidence for the unchanged adapter. |
 | Chronos-2 | Add a separate adapter; offer Small and the standard checkpoint. Begin with the existing univariate evaluation workflow. | Use the smaller supported checkpoint for the bounded CPU check. |
-| TiRex-2 | Add a separate adapter and its official compatible checkpoints. Its published checkpoint variants must not be presented as invented size tiers. | Use the smallest available compatible checkpoint; the current main release is a single 82.5M model. |
+| TiRex-2 | Add the separate CPU adapter and four official training profiles: default, FEV benchmark, GiftEval zero-shot, and GiftEval pretrain. Context/horizon bounds are profile specific. | Use the default 82.5M checkpoint as the representative check; other profiles remain individually untested unless evidence says otherwise. These are not size tiers. |
 | IBM Granite TTM | Add an adapter with explicit context, horizon, frequency, and preprocessing profiles for curated variants. | Use one small representative variant; add compatible variants after the checks below. |
 
 Official references: [Bolt Base](https://huggingface.co/amazon/chronos-bolt-base),
@@ -261,9 +267,10 @@ inference work. Integrate through the [contribution workflow](../CONTRIBUTING.md
 | P7 Natural-language setup and explanations | Implement the versioned draft, clarification, normal validators/review, and grounded explanations in the terminal. | End-to-end fake-provider tests cover intent preservation, missing fields, unsupported future targets, invalid responses, explanations, and manual fallback. |
 | P8 Release qualification | Update guides/examples, build source and wheel, and run the installed workflow and configured CI. | Current release checklist passes with exact source/artifact identities and documented representative/variant verification status. |
 
-**P1 and P2 are complete locally.** The common catalog and terminal boundaries
-now include Chronos-2 Small/standard. **P3 TiRex-2** is next; settle its runtime
-compatibility decision before installation, as described above.
+**P1, P2, and P3 are complete locally.** TiRex-2 adds its adapter and four
+profiles with a recorded representative CPU check. The agreed shared Hub
+update avoids a new environment manager. **P4 TTM** still requires its runtime,
+native-point task, and scaling decisions before implementation.
 
 ## Release acceptance
 

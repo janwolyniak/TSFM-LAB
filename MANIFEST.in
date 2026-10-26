@@ -1,5 +1,5 @@
-include CONTRIBUTING.md CHANGELOG.md
-include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt
+include CONTRIBUTING.md CHANGELOG.md NOTICE
+include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt requirements-tirex2.txt
 include docs/*.md
 include examples/baseline.py examples/custom_adapter.py
 include examples/datasets/README.md examples/datasets/seasonal.csv examples/datasets/ohlc.csv
@@ -9,3 +9,5 @@ recursive-include tests *.py
 recursive-include research/fev_compatibility *.py *.md *.json *.txt
 exclude PLAN.md
 global-exclude *.py[cod]
+
+include licenses/*.txt

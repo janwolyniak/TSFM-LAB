@@ -360,7 +360,7 @@ def inspect_local_checkpoint(path: str | Path) -> ResolvedCheckpoint:
 
 def _match_repository(config: dict, repository):
     if repository is not None:
-        adapter = checkpoint_adapter(config["architectures"][0])
+        adapter = checkpoint_adapter(config_metadata(config)["architecture"])
         if repository_adapter(repository) != adapter:
             raise CheckpointError("Checkpoint repository and architecture disagree")
 

@@ -35,6 +35,8 @@ def _variant_information(variant):
     for key, label in (
         ("parameter_count", "Parameters"),
         ("weight_bytes", "Weight bytes"),
+        ("max_context", "Maximum context"),
+        ("max_horizon", "Maximum horizon"),
     ):
         if variant[key] is not None:
             rows.append([label, f"{variant[key]:,}"])
@@ -65,6 +67,14 @@ def _selected_verification(record):
     )
 
 
+def _runtime_notices(value):
+    if value.get("runtime_notices"):
+        console = Console(markup=False, highlight=False)
+        console.print(f"{value['display_name']} optional runtime notices:")
+        for notice in value["runtime_notices"]:
+            console.print(notice)
+
+
 @models.command("list")
 @guard
 def list_models(json_output: JsonOutput = False):
@@ -89,6 +99,8 @@ def list_models(json_output: JsonOutput = False):
                 for item in items
             ],
         )
+        for item in items:
+            _runtime_notices(item)
 
 
 @models.command("info")
@@ -115,6 +127,7 @@ def model_info(identifier: str, json_output: JsonOutput = False):
                 if key in value
             ],
         )
+        _runtime_notices(value)
         for variant in [selected] if selected else value.get("variants", []):
             _variant_information(variant)
 

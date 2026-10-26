@@ -16,19 +16,24 @@ tsfm models info amazon/chronos-bolt-base --json
 ```
 
 The active terminal exposes this information through `/models`. Use
-`/new chronos_bolt`, `/new timesfm_2p5`, or `/new chronos_2` to choose a family and checkpoint during
+`/new chronos_bolt`, `/new timesfm_2p5`, `/new chronos_2`, or `/new tirex_2` to choose a family and checkpoint during
 guided setup. See the [terminal guide](tui.md) and [CLI guide](cli.md) for the
 complete workflow. Last value and seasonal naive remain available as baselines.
 
 The Python API keeps `catalog_info(identifier)` for adapter or repository lookup.
-Adapter entries add `variants` and `runtime_requirements`. Repository lookup
+Adapter entries add `variants`, `runtime_requirements`, and `runtime_notices`.
+Each variant carries its effective `max_context` and `max_horizon`. Repository lookup
 preserves the adapter's `display_name` and adds `variant_display_name`;
 `checkpoint_info(repository)` returns the variant's own `display_name`.
 CLI repository information also exposes that variant under `selected_checkpoint`.
+Repository capabilities use that variant's bounds; adapter capabilities describe
+the maximum across available variants. This distinction matters for TiRex-2's
+different training profiles. Existing single-profile choices inherit their
+adapter's limits.
 
 ## Curated choices
 
-| Adapter | Variant / repository | Context / horizon supported by the adapter | Safetensors bytes | Recorded project inference |
+| Adapter | Variant / repository | Context / horizon supported by the profile | Safetensors bytes | Recorded project inference |
 | --- | --- | --- | ---: | --- |
 | `chronos_bolt` | Tiny: `amazon/chronos-bolt-tiny` | 2,048 / 64 | 34,622,352 | Recorded for the reference checkpoint. |
 | `chronos_bolt` | Small: `amazon/chronos-bolt-small` | 2,048 / 64 | 190,888,824 | Recorded for the reference checkpoint. |
@@ -36,6 +41,10 @@ CLI repository information also exposes that variant under `selected_checkpoint`
 | `timesfm_2p5` | 2.5 200M: `google/timesfm-2.5-200m-pytorch` | 16,256 / 128 | 925,181,104 | Recorded for the reference checkpoint. |
 | `chronos_2` | Small: `autogluon/chronos-2-small` | 8,192 / 1,024 | 111,749,048 | Recorded for the reference checkpoint. |
 | `chronos_2` | Standard: `amazon/chronos-2` | 8,192 / 1,024 | 477,930,472 | Metadata/API compatibility checked; individual inference not run. |
+| `tirex_2` | Default: `NX-AI/TiRex-2` | 2,048 / 320 | 330,038,664 | Recorded for the reference checkpoint. |
+| `tirex_2` | FEV benchmark: `NX-AI/TiRex-2-fevbench` | 2,048 / 320 | 330,038,640 | Metadata/API compatibility checked; individual inference not run. |
+| `tirex_2` | GiftEval zero-shot: `NX-AI/TiRex-2-gifteval-zs` | 8,192 / 928 | 330,038,640 | Metadata/API compatibility checked; individual inference not run. |
+| `tirex_2` | GiftEval pretrain: `NX-AI/TiRex-2-gifteval-pretrain` | 8,192 / 928 | 330,038,640 | Metadata/API compatibility checked; individual inference not run. |
 
 Weight-file size describes stored bytes, not required runtime memory. Catalog
 status applies to its listed reference revision. A different requested revision
@@ -47,7 +56,16 @@ The pretrained adapters currently support CPU float32 median forecasts, with
 batch size one. TimesFM records its native context of 16,384, while the adapter
 reserves room for its output patch and accepts at most 16,256 historical values.
 Its native quantile head does not expand the adapter's 128-step horizon.
-See the [Bolt guide](chronos.md), [Chronos-2 guide](chronos2.md), and [TimesFM guide](timesfm.md).
+See the [Bolt guide](chronos.md), [Chronos-2 guide](chronos2.md),
+[TimesFM guide](timesfm.md), and [TiRex-2 guide](tirex2.md).
+
+TiRex-2's choices are training profiles of the same architecture, not size tiers.
+The model-weight license remains Apache-2.0. Its separate optional runtime
+notices identify mLSTM Kernels' NXAI Community License and display **Built with
+technology from NXAI**. Review the [runtime terms](tirex2.md#optional-runtime-and-notices),
+[NOTICE](../NOTICE), and shipped [license copy](../licenses/mlstm-kernels-2.0.6.txt)
+before using that optional runtime. The numerical core does not acquire those
+dependencies.
 
 ### Bolt Base reference
 
@@ -130,12 +148,14 @@ verification snapshots.
 These self-contained provenance checks establish internal consistency; they are
 not signed maintainer attestations or authentication of a rewritten workspace.
 
-## Future optional-runtime gates
+## Optional-runtime decisions
 
-TiRex-2 and TTM remain planned integrations. Chronos-2 is implemented in P2.
-The 26 October 2026 audit compares declared dependency requirements with
-the current Python 3.11–3.13, Torch 2.8, Transformers 4.55, and Hub 0.34.4 stack.
-Declared compatibility is not an executed integration test.
+Chronos-2 is implemented in P2; P3 adds TiRex-2 and its four training profiles.
+P3 updates the shared Hub pin to 0.35.3 while retaining the Python 3.11–3.13,
+Torch 2.8, and Transformers 4.55 stack. The original 26 October audit used Hub
+0.34.4 and exposed the conflict resolved below. Declared compatibility and actual
+execution remain distinct; see the [P3 record](p3-tirex2-verification.md) for
+qualification and existing-family regression evidence.
 
 **Chronos-2 (P2).** Existing `chronos-forecasting==2.2.0` includes
 `Chronos2Pipeline`; Python ≥3.10, Torch ≥2.2/<3, and Transformers ≥4.41/<5 admit
@@ -143,11 +163,12 @@ the current stack. P2 adds its distinct architecture/profile, safe local loading
 and representative Small check without changing the shared dependency pins.
 See the [pinned runtime requirements](https://github.com/amazon-science/chronos-forecasting/blob/75a2dfe228e39d55283f477c01399b9e53d89661/pyproject.toml).
 
-**TiRex-2 (P3).** `tirex-2==0.4.0` admits Python ≥3.11 and Torch ≥2.8, but
-requires Hub ≥0.35.3, conflicting with 0.34.4. It also adds recurrent-kernel
-dependencies. Resolve isolation or a coordinated Hub change before installation;
-require safe files and the explicit CPU path. Its published checkpoint variants
-are not size tiers.
+**TiRex-2 (P3).** The owner approved a coordinated Hub 0.35.3 pin and isolated
+validation before changing any existing installation. `tirex-2==0.4.0` uses
+Torch 2.8 with the pinned recurrent dependencies and explicit eager CPU path.
+Its native JSON and Safetensors load directly with strict parameters; unsafe
+legacy loading is excluded. The NXAI-licensed mLSTM dependency is optional and
+its notices are exposed separately from the model-weight license.
 See the [pinned runtime requirements](https://github.com/NX-AI/tirex-2/blob/614f46fd7c60e332d8a32e525403b341c2c1ce1e/pyproject.toml).
 
 **TTM (P4).** `granite-tsfm==0.3.4` admits Python 3.11–3.13/Torch <2.9 but pins
@@ -158,10 +179,10 @@ native-point task semantics. Do not relabel a point head as a verified median.
 See the [pinned 0.3.4 requirements](https://github.com/ibm-granite/granite-tsfm/blob/4d4c6cf0e345c985d84f6292a4f397caf5e2ba78/pyproject.toml)
 and [pinned 0.3.11 requirements](https://github.com/ibm-granite/granite-tsfm/blob/dfe846e6c1f1b0086b4a7b0831249ac8aeb7dcd7/pyproject.toml).
 
-P1 introduced no environment manager. P2 uses the compatible Chronos runtime;
-its authorized verification uses an isolated pristine package copy. Resolve the conflicting execution
-design before P3/P4 implementation; shared dependency changes
-need existing-adapter regression checks. TimesFM 2.0 and 3.0 are separate model
+P1 introduced no environment manager. P2's original verification used an isolated
+pristine Chronos package. P3 retains one managed inference interpreter and
+coordinates the shared Hub pin with existing-adapter regression checks. Settle
+TTM's remaining runtime conflict and output semantics before P4. TimesFM 2.0 and 3.0 are separate model
 generations outside the current 2.5 adapter, rather than larger variants covered
 by its verification. Follow the [next release plan](next-release-plan.md) for
 the remaining scope and acceptance gates.

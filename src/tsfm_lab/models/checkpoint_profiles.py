@@ -75,6 +75,19 @@ def _bolt_bounds(context, horizon):
 
 def config_metadata(config: dict) -> dict:
     """Validate runtime-compatible architecture and return schema-1 native fields."""
+    if "stack_config" in config or "act_func" in config:
+        from tsfm_lab.models.tirex2_profile import QUANTILES, validated_profile
+
+        profile = validated_profile(config)
+        architecture, pipeline, model_type = _IDENTITIES["tirex_2"]
+        return {
+            "architecture": architecture,
+            "pipeline_class": pipeline,
+            "model_type": model_type,
+            "native_context_length": profile["context"],
+            "native_prediction_length": profile["horizon"],
+            "quantiles": QUANTILES.copy(),
+        }
     architectures = config.get("architectures")
     if not isinstance(architectures, list) or len(architectures) != 1:
         raise ValueError("Checkpoint must declare one supported architecture")
@@ -129,6 +142,10 @@ def validate_record_profile(record: dict) -> str:
         _bolt_bounds(context, horizon)
     elif adapter == "chronos_2":
         from tsfm_lab.models.chronos2_profile import validate_native
+
+        validate_native(context, horizon, record["quantiles"])
+    elif adapter == "tirex_2":
+        from tsfm_lab.models.tirex2_profile import validate_native
 
         validate_native(context, horizon, record["quantiles"])
     elif (

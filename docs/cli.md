@@ -12,7 +12,7 @@ noninteractive.
 
 | Command | Behavior |
 | --- | --- |
-| `tsfm models list` | List baseline, Chronos-Bolt, Chronos-2, and TimesFM 2.5 adapters without loading weights. |
+| `tsfm models list` | List baselines and Chronos-Bolt, Chronos-2, TimesFM 2.5, and TiRex-2 without loading weights. |
 | `tsfm models info IDENTIFIER` | Show offline catalog metadata for an adapter or curated checkpoint repository. |
 | `tsfm models pull REPOSITORY --revision REF` | Explicitly resolve and download a curated checkpoint; optional `--cache-dir` selects its Hub cache. |
 | `tsfm models cache --cache-dir PATH` | Inspect complete/incomplete curated snapshots without network access or deletion. |
@@ -37,6 +37,12 @@ lead-1/stride-1 timing policy. Finance commands are shell commands; they have no
 been added to the interactive prompt.
 
 Model entries include checkpoint variants and declared runtime requirements.
+Each variant adds `max_context` and `max_horizon`; repository information refines
+its `capabilities` to those bounds. Adapter information retains its maximum
+across available variants. `runtime_notices` is a separate list for optional
+dependency terms, empty where no additional notice is recorded. TiRex-2 exposes
+the NXAI attribution and mLSTM Kernels Community License terms without changing
+the Apache-2.0 model-weight license.
 Repository information adds `selected_checkpoint` while preserving the existing
 adapter fields. Human pull/cache output describes project verification; their
 JSON checkpoint-record shapes remain unchanged. See the
@@ -68,8 +74,8 @@ with duplicate/alias rejection and ISO timestamps preserved as strings.
 `model.source: builtin` selects adapter `last_value` or
 `seasonal_naive`. Last-value has no options. Seasonal-naive requires
 `options.seasonal_period` and a context long enough for that season.
-`huggingface` and `local` select `chronos_bolt`, `chronos_2`, or `timesfm_2p5` through the strict
-[Bolt](chronos.md), [Chronos-2](chronos2.md), or [TimesFM](timesfm.md) checkpoint configuration.
+`huggingface` and `local` select `chronos_bolt`, `chronos_2`, `timesfm_2p5`, or `tirex_2` through the strict
+[Bolt](chronos.md), [Chronos-2](chronos2.md), [TimesFM](timesfm.md), or [TiRex-2](tirex2.md) checkpoint configuration.
 Each adapter accepts only its own curated repositories or a compatible local
 architecture. Arbitrary repositories, derived identity fields, and remote-code
 options are unsupported.
@@ -79,6 +85,8 @@ options are unsupported.
 | `chronos_bolt` | `amazon/chronos-bolt-tiny`, `amazon/chronos-bolt-small`, `amazon/chronos-bolt-base` | 1–2,048 / 1–64 |
 | `timesfm_2p5` | `google/timesfm-2.5-200m-pytorch` | 1–16,256 / 1–128 |
 | `chronos_2` | `autogluon/chronos-2-small`, `amazon/chronos-2` | 1–8,192 / 1–1,024 |
+| `tirex_2` | `NX-AI/TiRex-2`, `NX-AI/TiRex-2-fevbench` | 1–2,048 / 1–320 |
+| `tirex_2` | `NX-AI/TiRex-2-gifteval-zs`, `NX-AI/TiRex-2-gifteval-pretrain` | 1–8,192 / 1–928 |
 
 These are adapter limits. TimesFM's larger native context metadata does not
 permit a request above its supported bound or an undocumented horizon rollout.
@@ -97,15 +105,19 @@ baselines are valid for it. The model's seasonal period and MASE's lag are
 separate explicit settings.
 
 Runtime defaults are CPU, batch size 1, and seed 0. Baselines use float64;
-Chronos-Bolt, Chronos-2, and TimesFM 2.5 use float32 model arithmetic and return normalized
-float64 forecasts. All score genuine median predictions. Chronos-2 and TimesFM additionally
-requires Torch's existing global default dtype to be float32, with an explicit
-failure otherwise; it does not modify that setting.
+All four pretrained adapters use float32 model arithmetic and return normalized
+float64 forecasts. All score genuine median predictions. Chronos-2, TimesFM,
+and TiRex-2 require Torch's existing global default dtype to be float32, with an
+explicit failure otherwise; they do not modify that setting.
 Other device/dtype combinations or batch sizes fail. A nonnegative seed is
 recorded; the current deterministic point methods do not use it, which is stated
 in resolved runtime metadata.
 Chronos-2 records `cross_learning: false` and `limit_prediction_length: true`
 under resolved `forecast_options`; these fixed settings are validated on reload.
+TiRex-2 records its profile's sign-flip, differencing, and context-padding flags
+and disables compilation/Flex Attention; reload binds these settings to the
+saved native profile. All optional checkpoint runtimes now share the Hub 0.35.3
+pin. Earlier saved records retain their historical environment versions.
 
 ## Saved artifacts and failure behavior
 

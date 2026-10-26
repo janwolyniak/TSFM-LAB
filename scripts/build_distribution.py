@@ -16,6 +16,8 @@ from pathlib import Path, PurePosixPath
 
 SOURCE_FILES = {
     "LICENSE",
+    "NOTICE",
+    "licenses/mlstm-kernels-2.0.6.txt",
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
@@ -25,6 +27,7 @@ SOURCE_FILES = {
     "requirements-tui.txt",
     "requirements-chronos.txt",
     "requirements-timesfm.txt",
+    "requirements-tirex2.txt",
     "docs/installation.md",
     "docs/releasing.md",
     "docs/adapters.md",
@@ -32,6 +35,8 @@ SOURCE_FILES = {
     "docs/timesfm.md",
     "docs/chronos2.md",
     "docs/p2-chronos2-verification.md",
+    "docs/tirex2.md",
+    "docs/p3-tirex2-verification.md",
     "docs/finance-extension.md",
     "docs/model-catalog.md",
     "docs/next-release-plan.md",
@@ -46,9 +51,12 @@ SOURCE_FILES = {
     "examples/configurations/chronos-bolt-base.yaml",
     "examples/configurations/chronos2-small.yaml",
     "examples/configurations/timesfm-2p5.yaml",
+    "examples/configurations/tirex2-main.yaml",
     "examples/configurations/finance-seasonal-naive.yaml",
     "tests/conftest.py",
     "src/tsfm_lab/models/chronos2_profile.py",
+    "src/tsfm_lab/models/tirex2.py",
+    "src/tsfm_lab/models/tirex2_profile.py",
     "scripts/build_distribution.py",
     "scripts/verify_distribution.py",
     "research/fev_compatibility/README.md",
@@ -111,6 +119,8 @@ def inspect_wheel(path, *, name, version):
             "tsfm_lab/models/registry.py",
             "tsfm_lab/models/chronos2.py",
             "tsfm_lab/models/chronos2_profile.py",
+            "tsfm_lab/models/tirex2.py",
+            "tsfm_lab/models/tirex2_profile.py",
             "tsfm_lab/models/verification.py",
             "tsfm_lab/models/_verification_evidence.py",
         }
@@ -134,8 +144,13 @@ def inspect_wheel(path, *, name, version):
                 "Wheel license/Python metadata differs from the supported contract"
             )
         prefix = metadata_files[0].rsplit("/", 1)[0]
-        if f"{prefix}/licenses/LICENSE" not in names:
-            raise ValueError("Wheel does not include its project license")
+        license_files = {"LICENSE", "NOTICE", "licenses/mlstm-kernels-2.0.6.txt"}
+        if not license_files <= set(metadata.get_all("License-File", [])) or any(
+            f"{prefix}/licenses/{file}" not in names for file in license_files
+        ):
+            raise ValueError(
+                "Wheel does not include its declared project/runtime license notices"
+            )
         entry = configparser.ConfigParser()
         entry.read_string(archive.read(f"{prefix}/entry_points.txt").decode())
         if (
@@ -161,6 +176,7 @@ def inspect_wheel(path, *, name, version):
             "files": len(names),
             "console_script": "tsfm",
             "license": metadata["License-Expression"],
+            "license_files": sorted(metadata.get_all("License-File", [])),
             "core_dependencies": sorted(core),
         }
 

@@ -31,6 +31,7 @@ def test_model_json_is_plain_and_limited_to_implemented_adapters():
         "chronos_bolt",
         "timesfm_2p5",
         "chronos_2",
+        "tirex_2",
     }
     assert "\x1b[" not in result.stdout
 

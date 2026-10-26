@@ -15,7 +15,7 @@ whose model card declares Apache-2.0. Its pinned revision is
 The [pinned configuration](https://huggingface.co/google/timesfm-2.5-200m-pytorch/blob/1d952420fba87f3c6dee4f240de0f1a0fbc790e3/config.json)
 is inspected before any explicit weight download.
 
-The tested runtime is **`timesfm==3.0.2`**, with Torch 2.8.x, Hub 0.34.4, and
+The tested runtime is **`timesfm==3.0.2`**, with Torch 2.8.x, Hub 0.35.3, and
 Safetensors 0.6.x. Package version 3.0.2 and model version 2.5 are different
 identities. Only its `TimesFM_2p5_200M_torch` class is used; TimesFM 3.0 models and
 their separate licenses are outside this adapter. See the

@@ -11,7 +11,13 @@
   strict CPU float32 local loading, independent native median forecasts,
   terminal/YAML selection, and saved-result compatibility. Small receives a
   bounded real CPU check; standard remains metadata/API checked without inference.
-- Document the runtime compatibility gates for planned TiRex-2 and TTM.
+- Add TiRex-2 with four curated training profiles, per-profile limits, strict
+  Safetensors loading, CPU median forecasts, and terminal/YAML selection.
+- Expose variant-specific bounds and separate optional-runtime notices; include
+  the NXAI attribution and mLSTM Kernels Community License copy in distributions.
+- Coordinate checkpoint runtimes on Hub 0.35.3 while retaining Torch 2.8 and
+  Transformers 4.55. P3 qualification records the representative TiRex check
+  and existing-family regressions; TTM's runtime decision remains future work.
 
 ## 0.1.0 — Unreleased
 

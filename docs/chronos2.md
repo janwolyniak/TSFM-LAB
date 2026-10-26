@@ -28,7 +28,7 @@ tsfm models info chronos_2
 tsfm models info autogluon/chronos-2-small --json
 ```
 
-The adapter checks Chronos 2.2.0, Torch 2.8.x, Transformers 4.55.x, Hub 0.34.4,
+The adapter checks Chronos 2.2.0, Torch 2.8.x, Transformers 4.55.x, Hub 0.35.3,
 Safetensors 0.6.x, and Accelerate 1.12.x. These remain optional; catalog lookup,
 configuration validation, and saved-result reload/export do not import them.
 Torch's existing default dtype must be float32; the adapter fails otherwise

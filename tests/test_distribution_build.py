@@ -33,7 +33,7 @@ def test_directory_members_are_checked_before_extracting_a_source_archive(tmp_pa
         BUILDER["inspect_source"](path, name="tsfm-lab", version="0.1.0")
 
 
-def wheel(tmp_path, dependency):
+def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
     path = tmp_path / "test.whl"
     prefix = "tsfm_lab-0.1.0.dist-info"
     metadata = (
@@ -41,6 +41,11 @@ def wheel(tmp_path, dependency):
         "Requires-Python: >=3.11\nLicense-Expression: Apache-2.0\n"
         f"Requires-Dist: numpy>=1.26\nRequires-Dist: pandas>=2.2\nRequires-Dist: {dependency}\n"
     )
+    if declare_licenses:
+        metadata += (
+            "License-File: LICENSE\nLicense-File: NOTICE\n"
+            "License-File: licenses/mlstm-kernels-2.0.6.txt\n"
+        )
     with zipfile.ZipFile(path, "w") as archive:
         for name in (
             "tsfm_lab/resources/seasonal.csv",
@@ -55,10 +60,16 @@ def wheel(tmp_path, dependency):
             "tsfm_lab/models/registry.py",
             "tsfm_lab/models/chronos2.py",
             "tsfm_lab/models/chronos2_profile.py",
+            "tsfm_lab/models/tirex2.py",
+            "tsfm_lab/models/tirex2_profile.py",
             "tsfm_lab/models/verification.py",
             "tsfm_lab/models/_verification_evidence.py",
             f"{prefix}/licenses/LICENSE",
+            f"{prefix}/licenses/NOTICE",
+            f"{prefix}/licenses/licenses/mlstm-kernels-2.0.6.txt",
         ):
+            if omit_license and name.endswith("/" + omit_license):
+                continue
             archive.writestr(name, "fixture")
         archive.writestr(f"{prefix}/METADATA", metadata)
         archive.writestr(
@@ -87,6 +98,32 @@ def test_declared_extra_does_not_expand_the_numerical_core(tmp_path):
         wheel(tmp_path, 'torch; extra == "chronos"'), name="tsfm-lab", version="0.1.0"
     )
     assert result["core_dependencies"] == ["numpy", "pandas"]
+    assert result["license_files"] == [
+        "LICENSE",
+        "NOTICE",
+        "licenses/mlstm-kernels-2.0.6.txt",
+    ]
+
+
+@pytest.mark.parametrize(
+    "omitted", ["LICENSE", "NOTICE", "licenses/mlstm-kernels-2.0.6.txt"]
+)
+def test_wheel_requires_bundled_project_and_optional_runtime_notices(tmp_path, omitted):
+    with pytest.raises(ValueError, match="license notices"):
+        BUILDER["inspect_wheel"](
+            wheel(tmp_path, 'torch; extra == "chronos"', omit_license=omitted),
+            name="tsfm-lab",
+            version="0.1.0",
+        )
+
+
+def test_bundled_license_files_must_also_be_declared_in_metadata(tmp_path):
+    with pytest.raises(ValueError, match="license notices"):
+        BUILDER["inspect_wheel"](
+            wheel(tmp_path, 'torch; extra == "chronos"', declare_licenses=False),
+            name="tsfm-lab",
+            version="0.1.0",
+        )
 
 
 def test_build_preserves_preexisting_output_files(tmp_path):

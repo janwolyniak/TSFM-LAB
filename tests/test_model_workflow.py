@@ -320,6 +320,7 @@ def test_catalog_lists_runnable_variants_and_keeps_existing_json_fields():
         "chronos_bolt",
         "timesfm_2p5",
         "chronos_2",
+        "tirex_2",
     }
     required = {"adapter_id", "family", "capabilities", "license", "repositories"}
     assert all(required <= item.keys() for item in items)
@@ -351,6 +352,41 @@ def test_base_information_distinguishes_reference_and_selected_variant():
     text = " ".join(human.stdout.split())
     assert "individual inference not run" in text
     assert "Adapter representative checks" in human.stdout
+
+
+@pytest.mark.parametrize(
+    "repository,context,horizon",
+    [
+        ("NX-AI/TiRex-2", 2048, 320),
+        ("NX-AI/TiRex-2-fevbench", 2048, 320),
+        ("NX-AI/TiRex-2-gifteval-zs", 8192, 928),
+        ("NX-AI/TiRex-2-gifteval-pretrain", 8192, 928),
+    ],
+)
+def test_tirex_information_exposes_profile_limits_and_separate_runtime_terms(
+    repository, context, horizon, monkeypatch
+):
+    def no_checkpoint(*args, **kwargs):
+        pytest.fail("Information lookup must not inspect or download checkpoints")
+
+    monkeypatch.setattr(checkpoints, "pull_checkpoint", no_checkpoint)
+    monkeypatch.setattr(checkpoints, "resolve_checkpoint", no_checkpoint)
+    raw = runner.invoke(app, ["models", "info", repository, "--json"])
+    assert raw.exit_code == 0, raw.output
+    value = json.loads(raw.stdout)
+    assert value["adapter_id"] == "tirex_2"
+    assert value["capabilities"]["max_context"] == context
+    assert value["capabilities"]["max_horizon"] == horizon
+    assert value["selected_checkpoint"]["max_context"] == context
+    assert value["selected_checkpoint"]["max_horizon"] == horizon
+    assert value["license"] == "apache-2.0"
+    human = runner.invoke(app, ["models", "info", repository])
+    assert human.exit_code == 0, human.output
+    text = " ".join(human.stdout.split())
+    assert "Built with technology from NXAI" in text
+    assert "NXAI Community License" in text
+    assert "Maximum context" in text and f"{context:,}" in text
+    assert "Maximum horizon" in text and str(horizon) in text
 
 
 def test_human_cached_status_does_not_change_cache_json(

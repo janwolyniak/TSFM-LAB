@@ -30,6 +30,9 @@ _OPTIONAL = (
     "transformers",
     "huggingface_hub",
     "textual",
+    "tirex2",
+    "flashrnn",
+    "mlstm_kernels",
 )
 _COLUMNS = {
     "request_id",
@@ -64,7 +67,7 @@ _BLOCK_OPTIONAL = """import importlib.abc
 import json
 import sys
 
-blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual'}
+blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual', 'tirex2', 'flashrnn', 'mlstm_kernels'}
 
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -399,6 +402,7 @@ class Verifier:
                 "chronos_bolt",
                 "timesfm_2p5",
                 "chronos_2",
+                "tirex_2",
             },
             "Installed model catalog differs from supported adapters",
         )
@@ -409,6 +413,10 @@ class Verifier:
             ("google/timesfm-2.5-200m-pytorch", "timesfm_2p5"),
             ("autogluon/chronos-2-small", "chronos_2"),
             ("amazon/chronos-2", "chronos_2"),
+            ("NX-AI/TiRex-2", "tirex_2"),
+            ("NX-AI/TiRex-2-fevbench", "tirex_2"),
+            ("NX-AI/TiRex-2-gifteval-zs", "tirex_2"),
+            ("NX-AI/TiRex-2-gifteval-pretrain", "tirex_2"),
         ):
             require(
                 self.json_command("models", "info", identifier)["adapter_id"]
@@ -447,6 +455,44 @@ class Verifier:
             and len(standard["selected_checkpoint"]["representative_checks"]) == 1,
             "Installed Chronos-2 metadata or checkpoint status is incorrect",
         )
+        tirex_profiles = (
+            ("NX-AI/TiRex-2", "30788a311699acba7e6393ad9700ea7b7cb9bb2d", 2048, 320),
+            (
+                "NX-AI/TiRex-2-fevbench",
+                "acd6153b8ee2179f38cfd3cc4fd64a3c045a424f",
+                2048,
+                320,
+            ),
+            (
+                "NX-AI/TiRex-2-gifteval-zs",
+                "c94872d1c8caacbe7755cbfa01bc5c4c5c5ddb7f",
+                8192,
+                928,
+            ),
+            (
+                "NX-AI/TiRex-2-gifteval-pretrain",
+                "54f88ac06ccfba9fe3e727aa8856b39775481f0f",
+                8192,
+                928,
+            ),
+        )
+        for repository, revision, context, horizon in tirex_profiles:
+            value = self.json_command("models", "info", repository)
+            variant = value["selected_checkpoint"]
+            notices = "\n".join(value["runtime_notices"])
+            require(
+                value["capabilities"]["max_context"] == context
+                and value["capabilities"]["max_horizon"] == horizon
+                and variant["reference_revision"] == revision
+                and variant["project_inference_status"]
+                == ("recorded" if repository == "NX-AI/TiRex-2" else "not_recorded")
+                and value["license"] == "apache-2.0"
+                and "Built with technology from NXAI" in notices
+                and "NXAI Community License" in notices
+                and value["runtime_requirements"]["huggingface-hub"] == "==0.35.3",
+                "Installed TiRex-2 profile bounds, verification, or runtime notices are incorrect",
+                repository=repository,
+            )
         cache = self.root / "empty-cache"
         require(
             self.json_command("models", "cache", "--cache-dir", cache) == []
@@ -883,7 +929,7 @@ print(json.dumps({'optional_loaded': sorted(blocked.intersection(sys.modules))})
         )
         runtime_probe = _BLOCK_OPTIONAL + """
 from importlib import import_module
-for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos')]:
+for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos'), ('tirex2', 'tirex2')]:
     try:
         import_module('tsfm_lab.models.' + module)._runtime()
     except ImportError as exc:

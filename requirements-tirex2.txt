@@ -1,0 +1,13 @@
+# Optional CPU TiRex-2 runtime; model weights are downloaded separately.
+# See NOTICE and licenses/mlstm-kernels-2.0.6.txt before use/distribution.
+tirex-2==0.4.0
+torch==2.8.0
+huggingface-hub==0.35.3
+safetensors==0.6.2
+numpy==2.1.3
+flashrnn==1.0.8
+mlstm-kernels==2.0.6
+ninja==1.13.2
+narwhals==2.13.0
+einops==0.8.1
+matplotlib==3.10.8

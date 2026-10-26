@@ -75,7 +75,7 @@ reason; invalid bounds or lengths fail before calling a model.
 The current configuration boundary validates adapter/source/options as
 dictionaries. `ModelSpec` below is a conceptual grouping rather than a current
 dataclass. Curated Hub and compatible standalone local checkpoints are supported
-for Chronos-Bolt, Chronos-2, and TimesFM 2.5; there is no arbitrary-repository loader.
+for Chronos-Bolt, Chronos-2, TimesFM 2.5, and TiRex-2; there is no arbitrary-repository loader.
 Each adapter has its own repository allowlist and validated architecture profile.
 
 Input configuration supplies adapter/source/options and, for a Hub checkpoint,
@@ -89,7 +89,7 @@ the YAML boundary.
 
 - `family`: a catalog grouping such as `baseline`, `chronos`, or `timesfm`.
 - `adapter_id` and `adapter_version`: implementation identity, for example
-  `last_value`, `seasonal_naive`, `chronos_bolt`, `chronos_2`, or `timesfm_2p5`.
+  `last_value`, `seasonal_naive`, `chronos_bolt`, `chronos_2`, `timesfm_2p5`, or `tirex_2`.
 - `source`: `builtin`, `huggingface`, or `local`.
 - Source-specific identity: repository plus requested/resolved revision, or
   local checkpoint path plus a file/checksum manifest. Built-ins have neither.
@@ -119,6 +119,22 @@ univariate requests, and exact native 0.5 quantiles. It also requires the defaul
 Torch dtype to be float32. Its persisted `forecast_options` require
 `cross_learning: false` and `limit_prediction_length: true`; reload validates
 these flags without importing optional runtimes. See [Chronos-2](chronos2.md).
+
+TiRex-2's default/FEV profiles support context 1–2,048 and horizon 1–320; its
+GiftEval profiles support 1–8,192 and 1–928. Native JSON has no Transformers
+architecture declaration. The resolver validates the entire reviewed native
+profile and derives `architecture: TiRex2`, `pipeline_class: TiRex2`, and
+`model_type: tirex2` in its schema-1 record without modifying consumed bytes.
+Recorded `torch_compile: false` and exact profile-specific `forecast_options`
+are required on reload. These preserve native scaling, differencing/sign-flip,
+and missing-history padding; no observed future values or cross-series data
+enter a request. The adapter uses instance-local eager calls to bypass upstream
+unconditional compiled residual blocks, without changing their forward methods,
+weights, hooks, or global class. See the [TiRex-2 guide](tirex2.md).
+
+Current optional checkpoint runtimes share Hub 0.35.3. Historical artifact
+environment versions and verification snapshots are retained as recorded; reload
+does not impose current runtime version gates or import model/kernel libraries.
 
 ## ForecastRequest
 

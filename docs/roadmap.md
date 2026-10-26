@@ -13,6 +13,8 @@ and configured checks/CI, plus an interactive terminal. Chronos-Bolt Tiny/Small
 and TimesFM 2.5 have passed pinned local CPU integrations on synthetic data.
 Chronos-2 Small adds the bounded P2 CPU integration; standard is compatibility
 checked without individual inference.
+TiRex-2 adds four training profiles through P3, with a verified representative
+CPU workflow and shared-Hub regression checks recorded separately.
 The pre-existing local `PLAN.md` remains the product brief;
 these tracked documents make the actionable proposal usable without relying on
 that untracked file.
@@ -70,8 +72,11 @@ P1's catalog, variant selection, Base metadata, and historical verification
 snapshots are implemented and verified locally; see the
 [P1 verification record](p1-catalog-verification.md). P2 adds Chronos-2 Small and
 standard; see the [P2 verification record](p2-chronos2-verification.md).
-TiRex-2/TTM require the runtime compatibility decisions recorded
-in the [catalog guide](model-catalog.md).
+P3 implements TiRex-2 with the owner-approved shared Hub 0.35.3 update and NXAI
+runtime notices; qualification is recorded in the
+[P3 verification record](p3-tirex2-verification.md). The four choices are training
+profiles with distinct context/horizon bounds, not model sizes. TTM still needs
+the runtime and output-semantic decisions in the [catalog guide](model-catalog.md).
 
 ## Milestone 0 Architecture review
 

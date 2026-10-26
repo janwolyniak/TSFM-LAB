@@ -91,9 +91,14 @@ class RecordCommands:
             "Pretrained adapters require their installed runtime and a cached or local checkpoint."
         )
         for entry in entries:
+            for notice in entry.get("runtime_notices", []):
+                self._print(notice)
             variants = entry.get("variants", [])
             for variant in variants:
                 self._print(f"{variant['display_name']} · {variant['repository']}")
+                self._print(
+                    f"  Context up to {variant['max_context']} · Horizon up to {variant['max_horizon']} observations"
+                )
                 if variant["weight_bytes"] is not None:
                     self._print(
                         f"  Weight files: {variant['weight_bytes'] / 1_000_000:.1f} MB"

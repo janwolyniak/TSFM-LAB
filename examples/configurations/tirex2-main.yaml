@@ -1,0 +1,30 @@
+schema_version: 1
+name: seasonal-demo-tirex2-main
+model:
+  source: huggingface
+  adapter_id: tirex_2
+  repository: NX-AI/TiRex-2
+  revision: 30788a311699acba7e6393ad9700ea7b7cb9bb2d
+  offline: true
+  cache_dir: ../../model-cache
+dataset:
+  path: ../datasets/seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+evaluation:
+  context_length: 8
+  horizon: 4
+  stride: 4
+  evaluation_start: "2026-01-01T16:00:00Z"
+  evaluation_end: "2026-01-02T08:00:00Z"
+  seasonal_period: 4
+  metrics: [mae, rmse, mase]
+runtime:
+  device: cpu
+  dtype: float32
+  batch_size: 1
+  seed: 0
+output:
+  directory: ../../results

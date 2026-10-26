@@ -39,13 +39,13 @@ def _runtime():
             installed["chronos-forecasting"] != "2.2.0"
             or not installed["torch"].startswith("2.8.")
             or not installed["transformers"].startswith("4.55.")
-            or installed["huggingface-hub"] != "0.34.4"
+            or installed["huggingface-hub"] != "0.35.3"
             or not installed["safetensors"].startswith("0.6.")
             or not installed["accelerate"].startswith("1.12.")
         ):
             raise ImportError(
                 "Chronos-2 requires chronos-forecasting 2.2.0, torch 2.8.x, "
-                "transformers 4.55.x, huggingface-hub 0.34.4, safetensors 0.6.x, "
+                "transformers 4.55.x, huggingface-hub 0.35.3, safetensors 0.6.x, "
                 "and accelerate 1.12.x; use tsfm-lab[chronos]"
             )
         return importlib.import_module("torch"), importlib.import_module("chronos")
