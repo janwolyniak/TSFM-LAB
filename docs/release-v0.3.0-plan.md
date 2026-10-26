@@ -16,8 +16,10 @@ Their planned completion must not be described as already available.
 
 v0.3.0 integrates onboarding, model-specific setup, approved automatic checkpoint
 preparation, clearer outputs, and future forecasting. It also adds assistant
-connections, a bounded expansion of forecasting models, and public project
-documentation for AI discovery and visibility (GEO).
+connections, a bounded expansion of forecasting models, public project
+documentation for AI discovery and visibility (GEO), and native Windows support
+alongside Linux and macOS. Windows support is a release target, not a claim about
+the current implementation.
 
 This document records scope and implementation gates. It does not start
 implementation, change the package version, or authorize installations,
@@ -104,7 +106,8 @@ are unchanged.
 | S5 | DeepSeek, local Ollama, and compatible endpoint connections | v0.2.0 connection boundary; S1/S2 for terminal integration |
 | S6 | More existing-family variants and one additional family | Compatibility decisions first; S2/S3 for integration |
 | S7 | Public documentation and GEO preparation | Can proceed alongside implementation; final examples depend on verified behavior |
-| S8 | Release qualification | S1-S7 accepted |
+| S8 | Native Windows compatibility and verification | Portability audit can start early; S1-S6 for integrated workflow checks |
+| S9 | Release qualification | S1-S8 accepted |
 
 ### S1: First-launch onboarding
 
@@ -284,7 +287,51 @@ An optional `llms.txt` may aid navigation but is not a release requirement or a
 substitute for crawlable, useful documentation. Public checks follow publication
 authorization under the existing contribution workflow.
 
-### S8: Release qualification
+### S8: Native Windows compatibility
+
+Target native Windows 11 x64 with Python 3.11-3.13, alongside the existing Linux
+and macOS targets. Users must be able to install and run the application from
+PowerShell in Windows Terminal without WSL or a Unix shell. Keep CPU-first
+verification; Windows ARM and GPU qualification are separate future work.
+
+Start with a portability audit of packaging, optional model runtimes, filesystem
+operations, terminal input/rendering, worker startup/cancellation, credential
+storage, and browser-based authentication. Record a per-platform support matrix
+before declaring optional forecasting families or assistant routes supported.
+An unavailable native dependency is a blocker requiring an explicit support/scope
+decision, rather than an automatic WSL fallback or silent removal of a family.
+
+Acceptance:
+
+- [ ] A clean native Windows installation completes onboarding, the offline
+  baseline demonstration, historical evaluation, future forecasting, saved-result
+  reload, comparison where eligible, and CSV/JSON/optional Parquet export.
+- [ ] `/new`, back/cancel navigation, completion, native scrollback, Unicode text,
+  and live progress work in PowerShell/Windows Terminal. Redirected commands stay
+  noninteractive; Ctrl+C and worker failures leave no orphan inference process or
+  falsely completed run. Native terminal checks supplement automated coverage.
+- [ ] Workspace/cache/output settings, relative and absolute paths, drive letters,
+  spaces and non-ASCII characters, file handles/locking, and atomic publication
+  pass native checks. Existing results are never overwritten or migrated silently.
+- [ ] Optional runtime installation is audited for every curated family. Each
+  advertised Windows integration has a compatible pinned runtime and recorded
+  representative CPU inference/cache-replay evidence; larger variants retain
+  their truthful individual verification status. Unresolved platform exclusions
+  require an owner decision before release and explicit catalog/documentation labels.
+- [ ] Available assistant routes pass native connection-management checks,
+  including protected credential persistence or explicit session-only fallback,
+  browser sign-in where applicable, cancellation, and secret redaction. Routine
+  checks use fake providers; real connection checks remain separately authorized.
+- [ ] CI includes native Windows jobs for Python 3.11-3.13, covering configured
+  lint/format checks, applicable tests, source/wheel builds, and a clean installed
+  baseline workflow. Replace POSIX-only shell assumptions; platform-specific test
+  exclusions need documented reasons and equivalent Windows coverage.
+- [ ] Installation, terminal, model, and release guides include verified PowerShell
+  commands, platform-specific prerequisites, and the support matrix. Record exact
+  Windows/Python/terminal/runtime versions and retained verification evidence;
+  Linux/macOS checks continue to pass.
+
+### S9: Release qualification
 
 - [ ] A fresh installed application completes onboarding, a manual baseline,
   historical evaluation, and future forecasting with clearly located outputs.
@@ -293,10 +340,11 @@ authorization under the existing contribution workflow.
 - [ ] Offline fixtures cover every category, supported option boundary, new
   connection, and mode; old configuration/result/finance regressions pass.
 - [ ] Targeted and integrated tests, configured Black/Ruff checks, source/wheel
-  contents, installed workflows, and the supported CI matrix pass for the exact
-  release candidate. Record source/artifact identities and verification limits.
+  contents, installed workflows, and the Linux/macOS/native-Windows Python
+  3.11-3.13 CI matrix pass for the exact release candidate. Record source/artifact
+  identities, platform support decisions, and verification limits.
 - [ ] Guides, examples, licenses/notices, and GEO artifacts match verified behavior;
-  all S1-S7 decision gates and acceptance items have supporting evidence.
+  all S1-S8 decision gates and acceptance items have supporting evidence.
 - [ ] The final release follows the [release workflow](releasing.md). Versioning,
   package/repository publication, and public documentation deployment occur only
   within their authorized scope and are recorded separately from implementation.

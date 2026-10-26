@@ -275,7 +275,8 @@ On 26 October 2026, the owner agreed to the separate
 [v0.3.0 release plan](release-v0.3.0-plan.md), with staged acceptance criteria for
 first-launch onboarding, model-specific setup, integrated checkpoint preparation
 and live progress, finished outputs, future forecasting, additional assistant
-connections, bounded model expansion, and public documentation/GEO.
+connections, bounded model expansion, public documentation/GEO, and native Windows
+compatibility alongside Linux and macOS.
 The [v0.2.0 plan](next-release-plan.md) remains unchanged. v0.3.0 implementation
 and release qualification are pending; scope agreement does not establish
 completion or authorize publication. Public static documentation is covered by
