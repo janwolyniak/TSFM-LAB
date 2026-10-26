@@ -24,9 +24,12 @@ from tsfm_lab.tui.forms import (
     demo_fields,
     inspect_data,
     prepare_experiment,
+    profile_example_fields,
+    profile_guidance,
     suggested_bounds,
     validate_model_fields,
 )
+from tsfm_lab.workflows import PROFILE_NAMES
 
 _ADAPTERS = tuple(entry["adapter_id"] for entry in catalog_entries())
 
@@ -42,6 +45,12 @@ class _Back(Exception):
 def _required(value: str) -> None:
     if not value.strip():
         raise ConfigError("Enter a value, or /cancel to stop setup")
+
+
+def _declared_units(value: str) -> None:
+    _required(value)
+    if value.strip().casefold() == "unspecified":
+        raise ConfigError("Declare the target's units for this usage profile")
 
 
 def _positive(value: str) -> int:
@@ -86,7 +95,16 @@ def _question(ask, emit, label, default="", choices=(), validate=None) -> str:
 
 
 class _Guide:
-    def __init__(self, ask, emit, workspace, demo_path, adapter, ttm_demo_path=None):
+    def __init__(
+        self,
+        ask,
+        emit,
+        workspace,
+        demo_path,
+        adapter,
+        ttm_demo_path=None,
+        profile_demo_paths=None,
+    ):
         self.ask, self.emit = ask, emit
         self.workspace, self.demo_path = Path(workspace), Path(demo_path).resolve()
         self.arguments = {"workspace": self.workspace, "base_directory": Path.cwd()}
@@ -94,10 +112,25 @@ class _Guide:
         self.fields["dataset_path"] = str(self.demo_path)
         self._ordinary_demo_path = self.demo_path
         self._ttm_demo_path = Path(ttm_demo_path).resolve() if ttm_demo_path else None
+        self._profile_demo_paths = {
+            profile: Path(path).resolve()
+            for profile, path in (profile_demo_paths or {}).items()
+        }
         self._checkpoint_profile = None
         self.dataset = self.capabilities = None
         self._model = None
         self._evaluation_started = False
+        self._example_declarations = {}
+        self._example_path = None
+
+    def profile(self):
+        self.set(
+            "usage_profile",
+            "Usage profile",
+            choices=PROFILE_NAMES,
+            default=self.fields["usage_profile"] or "generic",
+        )
+        self.emit(profile_guidance(self.fields["usage_profile"]))
 
     def set(self, key, label, *, choices=(), validate=None, default=None):
         self.fields[key] = _question(
@@ -212,16 +245,19 @@ class _Guide:
             "horizon": "1",
             "evaluation_start": "2000-01-01T01:00:00Z",
             "evaluation_end": "2000-01-01T02:00:00Z",
+            "usage_profile": "",
         }
         config = config_from_fields(prototype, **self.arguments)
         model = build_model(config.model, config.runtime)
         self._model = model
         self.capabilities = model.metadata().capabilities
-        next_demo = (
-            self._ttm_demo_path
-            if self.fields["adapter"] == "ttm_r2"
-            else self._ordinary_demo_path
-        )
+        next_demo = self._profile_demo_paths.get(self.fields["usage_profile"])
+        if next_demo is None:
+            next_demo = (
+                self._ttm_demo_path
+                if self.fields["adapter"] == "ttm_r2"
+                else self._ordinary_demo_path
+            )
         if next_demo is not None:
             if (
                 Path(self.fields["dataset_path"]).expanduser().resolve()
@@ -256,7 +292,17 @@ class _Guide:
     def data(self):
         self.set("dataset_path", "Dataset path", validate=self._data_path)
         if Path(self.fields["dataset_path"]).expanduser().resolve() == self.demo_path:
-            selected = demo_fields(self.demo_path)
+            mapped = self.fields["usage_profile"] in self._profile_demo_paths
+            selected = (
+                profile_example_fields(self.fields["usage_profile"], self.demo_path)
+                if mapped
+                else demo_fields(self.demo_path)
+            )
+            preserve_units = (
+                self._example_path == self.demo_path
+                and self._example_declarations.get("units")
+                and self.fields["units"] != self._example_declarations["units"]
+            )
             for key in (
                 "timestamp_column",
                 "target_column",
@@ -264,8 +310,39 @@ class _Guide:
                 "timezone",
                 "units",
             ):
-                self.fields[key] = selected[key]
+                if key != "units" or not preserve_units:
+                    self.fields[key] = selected[key]
+            for key in (
+                "finance_target_kind",
+                "energy_measurement",
+                "weather_variable",
+                "weather_station",
+                "weather_measurement_semantics",
+            ):
+                if not self.fields[key] or (
+                    mapped and self._example_path != self.demo_path
+                ):
+                    self.fields[key] = selected[key]
+            if mapped:
+                self._example_path = self.demo_path
+                self._example_declarations = {
+                    key: selected[key]
+                    for key in (
+                        "units",
+                        "finance_target_kind",
+                        "energy_measurement",
+                        "weather_variable",
+                        "weather_station",
+                        "weather_measurement_semantics",
+                    )
+                    if selected[key]
+                }
         else:
+            for key, value in self._example_declarations.items():
+                if self.fields[key] == value:
+                    self.fields[key] = "unspecified" if key == "units" else ""
+            self._example_declarations = {}
+            self._example_path = None
             for key, label, validator in (
                 ("timestamp_column", "Timestamp column", _required),
                 ("target_column", "Target column", _required),
@@ -275,16 +352,80 @@ class _Guide:
                     "Source timezone (optional; - leaves it unspecified)",
                     None,
                 ),
-                ("units", "Target units", _required),
             ):
                 self.set(key, label, validate=validator)
             if self.fields["timezone"] == "-":
                 self.fields["timezone"] = ""
+        self.measurement()
+        if (
+            self.fields["usage_profile"] != "generic"
+            or Path(self.fields["dataset_path"]).expanduser().resolve()
+            != self.demo_path
+        ):
+            label = {
+                "finance": "Financial target units",
+                "energy": "Power or energy units",
+                "temperature": "Temperature units",
+                "weather": "Weather measurement units",
+            }.get(self.fields["usage_profile"], "Target units")
+            self.set(
+                "units",
+                label,
+                validate=(
+                    _required
+                    if self.fields["usage_profile"] == "generic"
+                    else _declared_units
+                ),
+            )
         self.dataset = inspect_data(self.fields, **self.arguments)
         validate_model_frequency(self._model, self.dataset.frequency)
         self.emit(
+            profile_guidance(self.fields["usage_profile"], self.dataset.frequency)
+        )
+        self.emit(
             f"Validated {len(self.dataset.values)} observations of {self.dataset.target_name} ({self.dataset.units}), frequency {self.dataset.frequency}."
         )
+
+    def measurement(self):
+        profile = self.fields["usage_profile"]
+        if profile == "finance":
+            self.set(
+                "finance_target_kind",
+                "Finance target kind",
+                choices=("close_price", "return", "other"),
+            )
+            if self.fields["finance_target_kind"] == "other":
+                self.set(
+                    "finance_measurement", "Finance measurement", validate=_required
+                )
+        elif profile == "energy":
+            self.set(
+                "energy_measurement",
+                "Energy measurement",
+                choices=("power", "energy", "other"),
+            )
+            if self.fields["energy_measurement"] == "other":
+                self.set("energy_quantity", "Energy quantity", validate=_required)
+        elif profile == "weather":
+            self.set("weather_variable", "Weather variable", validate=_required)
+            self.set("weather_station", "Weather station", validate=_required)
+            self.set(
+                "weather_measurement_semantics",
+                "Weather measurement semantics",
+                choices=(
+                    "instantaneous",
+                    "interval_mean",
+                    "interval_total",
+                    "interval_max",
+                    "other",
+                ),
+            )
+            if self.fields["weather_measurement_semantics"] == "other":
+                self.set(
+                    "weather_description",
+                    "Weather semantics description",
+                    validate=_required,
+                )
 
     def _limits(self):
         size, caps = len(self.dataset.values), self.capabilities
@@ -368,10 +509,12 @@ class _Guide:
         while True:
             try:
                 if phase == 0:
-                    self.model()
+                    self.profile()
                 elif phase == 1:
-                    self.data()
+                    self.model()
                 elif phase == 2:
+                    self.data()
+                elif phase == 3:
                     self.evaluation()
                 else:
                     prepared = prepare_experiment(self.fields, **self.arguments)
@@ -387,7 +530,7 @@ class _Guide:
                         return prepared.config
                     if answer == "no":
                         return None
-                    phase = 2
+                    phase = 3
                     continue
                 phase += 1
             except _Back:
@@ -406,7 +549,7 @@ class _Guide:
                     answer = "back"
                 if answer == "cancel":
                     return None
-                phase = max(0, phase - 1) if answer == "back" else min(phase, 2)
+                phase = max(0, phase - 1) if answer == "back" else min(phase, 3)
 
 
 def build_experiment(
@@ -418,11 +561,20 @@ def build_experiment(
     adapter: str | None = None,
     demo: bool = False,
     ttm_demo_path: Path | None = None,
+    profile_demo_paths: dict[str, Path] | None = None,
 ) -> ExperimentConfig | None:
     """Ask inline questions and return a reviewed config without execution or writes."""
     try:
         if not demo:
-            return _Guide(ask, emit, workspace, demo_path, adapter, ttm_demo_path).run()
+            return _Guide(
+                ask,
+                emit,
+                workspace,
+                demo_path,
+                adapter,
+                ttm_demo_path,
+                profile_demo_paths,
+            ).run()
         if adapter in CHECKPOINT_REPOSITORIES:
             raise ConfigError("Use guided setup to select a pretrained checkpoint")
         fields = demo_fields(demo_path)

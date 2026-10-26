@@ -30,6 +30,7 @@ from tsfm_lab.tui.view_data import (
     record_details,
     task_summary,
 )
+from tsfm_lab.workflow_views import history_profile, ohlc_handoff, profile_context
 
 
 def _row(table: DataTable, *values, key=None) -> None:
@@ -149,6 +150,7 @@ class HistoryScreen(_View):
         self.records: dict[str, dict] = {}
         self.order: list[str] = []
         self.selected: set[str] = set()
+        self.profiles: dict[str, str] = {}
 
     def compose(self) -> ComposeResult:
         yield Static("Experiment history", classes="view-title")
@@ -169,7 +171,7 @@ class HistoryScreen(_View):
 
     def on_mount(self) -> None:
         self.query_one("#history-table", DataTable).add_columns(
-            "", "Experiment", "Status", "ID", "Created UTC"
+            "", "Experiment", "Profile", "Status", "ID", "Created UTC"
         )
         self.action_refresh()
 
@@ -184,7 +186,7 @@ class HistoryScreen(_View):
         status = self.query_one("#history-status", Static)
         status.update("Loading saved experiments…")
         try:
-            records = await asyncio.to_thread(ExperimentStore(self.workspace).list_runs)
+            records, self.profiles = await asyncio.to_thread(self._read_history)
             self.records = {record["run_id"]: record for record in records}
             self.order = list(self.records)
             self._populate()
@@ -197,10 +199,19 @@ class HistoryScreen(_View):
             self.records.clear()
             self.order.clear()
             self.selected.clear()
+            self.profiles.clear()
             self.query_one("#history-table", DataTable).clear()
             status.update(Text(f"History unavailable: {exc}"))
             self.query_one("#history-view", Button).disabled = True
             self.query_one("#history-compare", Button).disabled = True
+
+    def _read_history(self):
+        store = ExperimentStore(self.workspace)
+        records = store.list_runs()
+        profiles = {
+            record["run_id"]: history_profile(store, record) for record in records
+        }
+        return records, profiles
 
     def _populate(self) -> None:
         table = self.query_one("#history-table", DataTable)
@@ -212,6 +223,7 @@ class HistoryScreen(_View):
                 table,
                 "✓" if run_id in self.selected else "",
                 record.get("name", ""),
+                self.profiles.get(run_id, "Unavailable"),
                 record["status"],
                 run_id[:8],
                 record.get("created_at", "")[:16].replace("T", " "),
@@ -292,6 +304,9 @@ class ResultsScreen(_View):
                 yield DataTable(id="forecast-preview", classes="view-table")
                 with Collapsible(title="Model and reproducibility", collapsed=True):
                     yield Static("", id="run-details", markup=False)
+                yield Static(
+                    "", id="workflow-followup", classes="view-message", markup=False
+                )
                 yield Static("Export forecasts to a new file", classes="view-heading")
                 yield Input(
                     str(self.workspace / "exports" / f"{self.run_id}.csv"),
@@ -334,16 +349,31 @@ class ResultsScreen(_View):
         try:
             manifest, result, frame = await asyncio.to_thread(self._read)
             if result is None:
+                profile = await asyncio.to_thread(
+                    history_profile, ExperimentStore(self.workspace), manifest
+                )
                 self.query_one("#result-summary", Static).update(
-                    Text(f"{manifest['name']} · {manifest['status']}")
+                    Text(
+                        f"{manifest['name']} · {manifest['status']}\nUsage profile: {profile}"
+                    )
                 )
                 self.query_one("#result-status", Static).update(
                     Text(error_text(manifest.get("error")))
                 )
                 return
             config = result["configuration"]
+            context = profile_context(config)
             self.query_one("#result-summary", Static).update(
-                Text(task_summary(config["dataset"], config["evaluation"]))
+                Text(
+                    "\n".join(
+                        [
+                            context[0],
+                            task_summary(config["dataset"], config["evaluation"]),
+                            *context[1:],
+                            f"Forecast task: {config['evaluation']['point_statistic']} · Output: {', '.join(sorted(frame.point_statistic.unique()))}",
+                        ]
+                    )
+                )
             )
             self.query_one("#result-status", Static).update(
                 Text(f"{manifest['name']} · Completed · {len(frame)} forecast cases")
@@ -366,6 +396,11 @@ class ResultsScreen(_View):
             for row in preview_rows(frame):
                 _row(preview, *row)
             self.query_one("#run-details", Static).update(Text(record_details(result)))
+            followup = ohlc_handoff(result, frame, self.workspace, self.run_id)
+            self.query_one("#workflow-followup", Static).update(
+                Text("\n".join(followup))
+            )
+            self.query_one("#workflow-followup").display = bool(followup)
             self.completed = True
             self.query_one("#completed-result").display = True
             self.query_one("#export-button", Button).disabled = False
@@ -437,28 +472,50 @@ class ComparisonScreen(_View):
             self._load(), group="comparison-read", exclusive=True, exit_on_error=False
         )
 
+    def _read_comparison(self):
+        result = compare_runs(self.run_ids, self.workspace)
+        store = ExperimentStore(self.workspace)
+        profiles = {
+            run_id: history_profile(store, {"run_id": run_id, "status": "completed"})
+            for run_id in self.run_ids
+        }
+        return result, profiles
+
     async def _load(self) -> None:
         try:
-            result = await asyncio.to_thread(compare_runs, self.run_ids, self.workspace)
+            result, profiles = await asyncio.to_thread(self._read_comparison)
             task = result["task"]
             self.query_one("#comparison-summary", Static).update(
                 Text(task_summary(task["dataset"], task["evaluation"]))
             )
             table = self.query_one("#comparison-table", DataTable)
             names = list(result["runs"][0]["metrics"])
+            native = "point_semantics" in result
             table.add_columns(
-                "Experiment", "Model", "Precision", *(name.upper() for name in names)
+                "Experiment",
+                "Profile",
+                "Model",
+                *(("Output",) if native else ()),
+                "Precision",
+                *(name.upper() for name in names),
             )
             for run in result["runs"]:
                 _row(
                     table,
                     run["name"],
+                    profiles[run["run_id"]],
                     run["model"]["adapter_id"],
+                    *((", ".join(run["output_statistics"]),) if native else ()),
                     run["runtime"]["dtype"],
                     *(metric_text(run["metrics"][name]) for name in names),
                 )
             self.query_one("#comparison-status", Static).update(
-                "Matching forecast tasks and observed cases."
+                "\n".join(
+                    [
+                        "Matching forecast tasks and observed cases.",
+                        *([result["point_semantics"]] if native else []),
+                    ]
+                )
             )
         except Exception as exc:
             self.query_one("#comparison-summary", Static).update(

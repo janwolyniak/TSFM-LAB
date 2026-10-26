@@ -334,3 +334,24 @@ other curated families, deterministic for baselines. Its comparison policy is
 Task, dataset, case keys, context, horizon, stride, and metric rules must match.
 Legacy median results keep their old validation and comparison representation.
 OHLC derivation and independent reload require the median parent task.
+
+## Usage workflow metadata
+
+An optional `workflow` block in schema-1 YAML and resolved result configuration
+identifies Generic, Finance, Energy, Temperature, or Weather. It has its own
+schema version and strict options. The Python runner accepts it as an optional
+keyword argument; forecasting adapters receive only their existing requests.
+See [usage profiles](usage-profiles.md) for the full field contract.
+
+Absence remains absence in serialization and displays as Generic. Explicit
+workflow metadata is detached, validated before model loading/artifact creation,
+and bound between the initial configuration and completed result. The checked
+setup accessor works across lifecycle states without reading source files or
+model libraries. Reload validates stored semantics/units and evaluated positive
+close-price actuals; unavailable full source history cannot be revalidated.
+
+Profiles supply interpretation and domain-specific input checks without changing
+the dataset fingerprint, forecasting request, metrics, or controlled-comparison
+identity. Values are never converted, imputed, resampled, or clipped. Existing
+manual finance report rules remain authoritative; profile-based report hints
+supply no execution values or eligibility override.

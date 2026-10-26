@@ -14,8 +14,10 @@ from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, R
 
 from tsfm_lab.config import ExperimentConfig
 from tsfm_lab.execution import ManagedRun
+from tsfm_lab.repl.text import literal
 from tsfm_lab.tui.views import HistoryScreen, ModelScreen, ResultsScreen
 from tsfm_lab.tui.wizard import WizardScreen
+from tsfm_lab.workflows import PROFILE_NAMES, workflow_summary
 
 _STAGES = {
     "pending": "Waiting to start",
@@ -81,8 +83,13 @@ class RunningScreen(Screen):
             yield Label(self.config.name, id="running-title")
             dataset, spec = self.config.dataset, self.config.evaluation
             yield Label(
-                f"{dataset['target_column']} · {dataset['units']} · {dataset['frequency']}\n"
-                f"Context {spec.context_length} · Horizon {spec.horizon} observations · Stride {spec.stride}",
+                Text(
+                    literal(
+                        f"Usage {workflow_summary(self.config.workflow)}\n"
+                        f"{dataset['target_column']} · {dataset['units']} · {dataset['frequency']}\n"
+                        f"Context {spec.context_length} · Horizon {spec.horizon} observations · Stride {spec.stride}"
+                    )
+                ),
                 id="execution-target",
             )
             yield Label("Preparing experiment", id="execution-stage")
@@ -141,6 +148,7 @@ class LabApp(App):
         super().__init__()
         self.workspace = Path(workspace).expanduser().resolve()
         self.demo_path = Path(demo_path) if demo_path else None
+        self.profile_demo_paths = {}
         self.worker_factory = worker_factory
         self.active_run = None
         self._quitting = False
@@ -151,6 +159,13 @@ class LabApp(App):
             self.demo_path = self._resources.enter_context(
                 as_file(files("tsfm_lab.resources").joinpath("seasonal.csv"))
             )
+        self.profile_demo_paths = {
+            profile: self._resources.enter_context(
+                as_file(files("tsfm_lab.resources").joinpath(f"{profile}-demo.csv"))
+            )
+            for profile in PROFILE_NAMES
+            if profile != "generic"
+        }
         self.push_screen(HomeScreen())
         self.set_interval(0.1, self._poll_execution)
 
@@ -179,7 +194,12 @@ class LabApp(App):
     def action_new_experiment(self) -> None:
         if isinstance(self.screen, HomeScreen) and self._read_workspace():
             self.push_screen(
-                WizardScreen(self.workspace, self.demo_path), self._configured
+                WizardScreen(
+                    self.workspace,
+                    self.demo_path,
+                    profile_demo_paths=self.profile_demo_paths,
+                ),
+                self._configured,
             )
 
     def action_models(self) -> None:
@@ -189,7 +209,12 @@ class LabApp(App):
     def _selected_model(self, adapter) -> None:
         if adapter:
             self.push_screen(
-                WizardScreen(self.workspace, self.demo_path, initial_adapter=adapter),
+                WizardScreen(
+                    self.workspace,
+                    self.demo_path,
+                    initial_adapter=adapter,
+                    profile_demo_paths=self.profile_demo_paths,
+                ),
                 self._configured,
             )
 

@@ -1,12 +1,14 @@
 """Whole keyboard workflow and UI stop semantics, using disposable local runs."""
 
 import asyncio
+from dataclasses import replace
 
 import pandas as pd
 import pytest
 
 pytest.importorskip("textual")
 
+from textual.app import App  # noqa: E402
 from textual.widgets import Button, DataTable, Footer, Label, ProgressBar  # noqa: E402
 
 from tsfm_lab.application import run_from_config  # noqa: E402
@@ -34,6 +36,38 @@ async def activate(pilot, app, widget_id):
             return
         await pilot.press("tab")
     raise AssertionError(f"Keyboard could not reach {widget_id}")
+
+
+def test_running_profile_metadata_is_literal_and_strips_terminal_controls(
+    config_factory,
+):
+    config = replace(
+        load_config(config_factory()),
+        workflow={
+            "schema_version": 1,
+            "profile": "weather",
+            "options": {
+                "variable": "wind [/red]",
+                "station": "[red]station[/red]\x1b[31m",
+                "measurement_semantics": "instantaneous",
+            },
+        },
+    )
+
+    class ProfileApp(App):
+        def on_mount(self):
+            self.push_screen(RunningScreen(config))
+
+    async def exercise():
+        app = ProfileApp()
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            rendered = str(app.screen.query_one("#execution-target", Label).render())
+            assert "wind [/red]" in rendered
+            assert "[red]station[/red]" in rendered
+            assert "\x1b" not in rendered
+
+    asyncio.run(exercise())
 
 
 def test_keyboard_demo_runs_in_spawn_worker_and_matches_shell(config_factory, tmp_path):

@@ -40,6 +40,8 @@ SOURCE_FILES = {
     "docs/ttm.md",
     "docs/ttm-contract.md",
     "docs/p4-ttm-verification.md",
+    "docs/usage-profiles.md",
+    "docs/p5-profiles-verification.md",
     "docs/p3-tirex2-verification.md",
     "docs/finance-extension.md",
     "docs/model-catalog.md",
@@ -66,12 +68,25 @@ SOURCE_FILES = {
     "src/tsfm_lab/models/ttm.py",
     "src/tsfm_lab/models/ttm_profile.py",
     "src/tsfm_lab/point_tasks.py",
+    "src/tsfm_lab/workflows.py",
+    "src/tsfm_lab/workflow_views.py",
     "scripts/build_distribution.py",
     "scripts/verify_distribution.py",
     "research/fev_compatibility/README.md",
     "research/fev_compatibility/run_study.py",
     "research/fev_compatibility/results.json",
 }
+SOURCE_FILES |= (
+    {
+        f"examples/datasets/{profile}-demo.csv"
+        for profile in ("finance", "energy", "temperature", "weather")
+    }
+    | {
+        f"examples/configurations/usage-{profile}.yaml"
+        for profile in ("generic", "finance", "energy", "temperature", "weather")
+    }
+    | {"examples/datasets/finance-demo-ohlc.csv"}
+)
 
 
 def _allowed(names):
@@ -119,6 +134,8 @@ def inspect_wheel(path, *, name, version):
             "tsfm_lab/resources/seasonal.csv",
             "tsfm_lab/resources/ttm-seasonal.csv",
             "tsfm_lab/point_tasks.py",
+            "tsfm_lab/workflows.py",
+            "tsfm_lab/workflow_views.py",
             "tsfm_lab/models/ttm.py",
             "tsfm_lab/models/ttm_profile.py",
             "tsfm_lab/repl/session.py",
@@ -136,6 +153,10 @@ def inspect_wheel(path, *, name, version):
             "tsfm_lab/models/tirex2_profile.py",
             "tsfm_lab/models/verification.py",
             "tsfm_lab/models/_verification_evidence.py",
+        }
+        required |= {
+            f"tsfm_lab/resources/{profile}-demo.csv"
+            for profile in ("finance", "energy", "temperature", "weather")
         }
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")

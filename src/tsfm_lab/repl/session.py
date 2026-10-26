@@ -16,6 +16,7 @@ from tsfm_lab.repl.prompt import COMMANDS, TerminalInput
 from tsfm_lab.repl.records import RecordCommands
 from tsfm_lab.repl.text import literal
 from tsfm_lab.repl.wizard import build_experiment
+from tsfm_lab.workflows import PROFILE_NAMES, workflow_summary
 
 
 class TerminalSession:
@@ -29,6 +30,7 @@ class TerminalSession:
         self.records = RecordCommands(self.console, self.workspace)
         self.demo_path = None
         self.ttm_demo_path = None
+        self.profile_demo_paths = {}
         self.last_run = None
         self.known_ids = []
         self.closed = False
@@ -54,6 +56,13 @@ class TerminalSession:
             self.ttm_demo_path = resources.enter_context(
                 as_file(files("tsfm_lab.resources").joinpath("ttm-seasonal.csv"))
             )
+            self.profile_demo_paths = {
+                profile: resources.enter_context(
+                    as_file(files("tsfm_lab.resources").joinpath(f"{profile}-demo.csv"))
+                )
+                for profile in PROFILE_NAMES
+                if profile != "generic"
+            }
             self._welcome()
             while not self.closed:
                 try:
@@ -144,6 +153,7 @@ class TerminalSession:
             workspace=self.workspace,
             demo_path=self.demo_path,
             ttm_demo_path=self.ttm_demo_path,
+            profile_demo_paths=self.profile_demo_paths,
             adapter=arguments[0] if arguments else None,
             demo=demo,
         )
@@ -165,6 +175,7 @@ class TerminalSession:
         self.records.workspace = self.workspace
         spec = config.evaluation
         self.emit(f"\n{config.name} · {config.model['adapter_id']}", "bold")
+        self.emit(f"Usage  {workflow_summary(config.workflow)}")
         self.emit(
             f"Target {config.dataset['target_column']} · {config.dataset['units']} · {config.dataset['frequency']} · horizon {spec.horizon}"
         )

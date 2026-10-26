@@ -15,6 +15,7 @@ from tsfm_lab.exports import ExportError, export_predictions
 from tsfm_lab.models.catalog import catalog_entries
 from tsfm_lab.models.verification import verification_label
 from tsfm_lab.repl.text import literal
+from tsfm_lab.workflow_views import history_profile, ohlc_handoff, profile_context
 
 
 def _metric(value: dict) -> str:
@@ -130,11 +131,12 @@ class RecordCommands:
             return records
         self._print(f"Experiments in {store.workspace}")
         self._table(
-            ("ID", "Experiment", "Status", "Created UTC"),
+            ("ID", "Experiment", "Profile", "Status", "Created UTC"),
             (
                 (
                     record["run_id"][:8],
                     record.get("name", ""),
+                    history_profile(store, record),
                     record["status"],
                     (
                         _utc(record["created_at"])
@@ -217,7 +219,11 @@ class RecordCommands:
         result, predictions = store.load_result(resolved)
         configuration = result["configuration"]
         self._print(f"{manifest['name']} · {resolved}")
+        context = profile_context(configuration)
+        self._print(context[0])
         self._task(configuration["dataset"], configuration["evaluation"])
+        for line in context[1:]:
+            self._print(line)
         self._print(
             f"Forecast output: {', '.join(sorted(predictions['point_statistic'].unique()))}"
         )
@@ -280,6 +286,8 @@ class RecordCommands:
                         f"Adapter reference: {check['repository']} @ {check['revision'][:12]} · {check['device']}/{check['dtype']}"
                     )
         self._print(f"Export full forecasts with /export {resolved[:8]} <path.csv>.")
+        for line in ohlc_handoff(result, predictions, self.workspace, resolved):
+            self._print(line)
         return {"manifest": manifest, "result": result, "predictions": predictions}
 
     def compare(self, run_ids: list[str]) -> dict:
@@ -292,10 +300,17 @@ class RecordCommands:
         native = "point_semantics" in result
         if native:
             self._print(result["point_semantics"])
+        profiles = {
+            run_id: history_profile(
+                self._store(), {"run_id": run_id, "status": "completed"}
+            )
+            for run_id in resolved
+        }
         names = list(result["runs"][0]["metrics"])
         self._table(
             (
                 "Experiment",
+                "Profile",
                 "Model",
                 *(("Output",) if native else ()),
                 "Precision",
@@ -304,6 +319,7 @@ class RecordCommands:
             (
                 (
                     run["name"],
+                    profiles[run["run_id"]],
                     run["model"]["adapter_id"],
                     *((", ".join(run["output_statistics"]),) if native else ()),
                     run["runtime"]["dtype"],

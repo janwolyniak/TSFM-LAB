@@ -172,3 +172,19 @@ baselines can use different forecasting rules while sharing the same task.
 An undefined MASE retains its reason rather than being printed as zero. The
 synthetic example scores verify arithmetic and make no pretrained-model or
 trading-performance claim.
+
+## Usage workflow metadata
+
+Schema-1 configuration accepts an optional `workflow` block with a schema version,
+profile, and exact profile options. The five choices are Generic, Finance,
+Energy, Temperature, and Weather; see [usage profiles](usage-profiles.md).
+Non-generic profiles require declared dataset units. Finance close-price data
+must be positive; other legitimate negative observations remain unchanged.
+
+Resolved workflow metadata is checked in initial configuration and result, with
+agreement required before completion and on reload. It does not enter dataset
+fingerprints or numerical comparison keys. Profile-only changes retain forecast
+values/scores and comparison eligibility. Existing files without metadata display
+as Generic without rewritten JSON or hashes. Text history/show/compare includes
+profile and measurement context; JSON keeps its existing result/manifest shapes
+with the optional workflow block inside the appropriate configuration.

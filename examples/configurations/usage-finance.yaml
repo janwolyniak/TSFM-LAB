@@ -1,0 +1,31 @@
+schema_version: 1
+name: usage-finance-demo
+workflow:
+  schema_version: 1
+  profile: finance
+  options:
+    target_kind: close_price
+model:
+  source: builtin
+  adapter_id: seasonal_naive
+  options:
+    seasonal_period: 24
+dataset:
+  path: ../datasets/finance-demo.csv
+  timestamp_column: timestamp
+  target_column: close
+  frequency: 1h
+  units: toy_quote_per_asset
+evaluation:
+  context_length: 48
+  horizon: 1
+  stride: 1
+  evaluation_start: '2026-01-03T00:00:00Z'
+  evaluation_end: '2026-01-03T16:00:00Z'
+  seasonal_period: 24
+  metrics:
+  - mae
+  - rmse
+  - mase
+output:
+  directory: ../../results

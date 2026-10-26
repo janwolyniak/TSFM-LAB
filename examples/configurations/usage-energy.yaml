@@ -1,0 +1,29 @@
+schema_version: 1
+name: usage-energy-demo
+workflow:
+  schema_version: 1
+  profile: energy
+  options:
+    measurement: power
+model:
+  source: builtin
+  adapter_id: last_value
+dataset:
+  path: ../datasets/energy-demo.csv
+  timestamp_column: timestamp
+  target_column: power
+  frequency: 1h
+  units: kW
+evaluation:
+  context_length: 48
+  horizon: 4
+  stride: 4
+  evaluation_start: '2026-01-03T00:00:00Z'
+  evaluation_end: '2026-01-03T16:00:00Z'
+  seasonal_period: 24
+  metrics:
+  - mae
+  - rmse
+  - mase
+output:
+  directory: ../../results

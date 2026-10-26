@@ -1,0 +1,28 @@
+schema_version: 1
+name: usage-temperature-demo
+workflow:
+  schema_version: 1
+  profile: temperature
+  options: {}
+model:
+  source: builtin
+  adapter_id: last_value
+dataset:
+  path: ../datasets/temperature-demo.csv
+  timestamp_column: timestamp
+  target_column: temperature
+  frequency: 1h
+  units: degC
+evaluation:
+  context_length: 48
+  horizon: 4
+  stride: 4
+  evaluation_start: '2026-01-03T00:00:00Z'
+  evaluation_end: '2026-01-03T16:00:00Z'
+  seasonal_period: 24
+  metrics:
+  - mae
+  - rmse
+  - mase
+output:
+  directory: ../../results

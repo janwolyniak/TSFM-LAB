@@ -17,6 +17,11 @@ from tsfm_lab.models.catalog import (
 )
 from tsfm_lab.models.factory import build_model
 from tsfm_lab.point_tasks import validate_model_frequency
+from tsfm_lab.workflows import (
+    normalize_workflow,
+    validate_workflow_dataset,
+    workflow_summary,
+)
 
 _DEFAULTS = {
     "name": "New experiment",
@@ -40,6 +45,15 @@ _DEFAULTS = {
     "mase_period": "4",
     "evaluation_start": "",
     "evaluation_end": "",
+    "usage_profile": "",
+    "finance_target_kind": "",
+    "finance_measurement": "",
+    "energy_measurement": "",
+    "energy_quantity": "",
+    "weather_variable": "",
+    "weather_station": "",
+    "weather_measurement_semantics": "",
+    "weather_description": "",
 }
 _LABELS = {
     "seasonal_period": "Baseline seasonal period",
@@ -72,6 +86,84 @@ def demo_fields(path: Path) -> dict[str, str]:
         "dataset_path": str(path),
         "units": "synthetic_units",
     }
+
+
+def profile_example_fields(profile: str, path: Path) -> dict[str, str]:
+    """Describe original fictional examples without converting their observations."""
+    choices = {
+        "finance": (
+            "close",
+            "toy_quote_per_asset",
+            {"finance_target_kind": "close_price"},
+        ),
+        "energy": ("power", "kW", {"energy_measurement": "power"}),
+        "temperature": ("temperature", "degC", {}),
+        "weather": (
+            "wind_speed",
+            "m/s",
+            {
+                "weather_variable": "wind_speed",
+                "weather_station": "synthetic-station",
+                "weather_measurement_semantics": "instantaneous",
+            },
+        ),
+    }
+    if profile not in choices:
+        return demo_fields(path)
+    target, units, options = choices[profile]
+    return {
+        **demo_fields(path),
+        "usage_profile": profile,
+        "target_column": target,
+        "units": units,
+        **options,
+    }
+
+
+def workflow_from_fields(fields: dict[str, str]) -> dict | None:
+    """Serialize only the selected profile's reviewed options."""
+    profile = fields.get("usage_profile", "")
+    if not profile:
+        return None
+    options = {}
+    if profile == "finance":
+        options["target_kind"] = fields["finance_target_kind"]
+        if options["target_kind"] == "other":
+            options["measurement"] = fields["finance_measurement"]
+    elif profile == "energy":
+        options["measurement"] = fields["energy_measurement"]
+        if options["measurement"] == "other":
+            options["quantity"] = fields["energy_quantity"]
+    elif profile == "weather":
+        options = {
+            "variable": fields["weather_variable"],
+            "station": fields["weather_station"],
+            "measurement_semantics": fields["weather_measurement_semantics"],
+        }
+        if options["measurement_semantics"] == "other":
+            options["description"] = fields["weather_description"]
+    try:
+        return normalize_workflow(
+            {"schema_version": 1, "profile": profile, "options": options}
+        )
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
+
+
+def profile_guidance(profile: str, frequency: str = "") -> str:
+    guidance = {
+        "finance": "Declare the measured financial target and its units. OHLC reports require separate execution data and explicit timing and cost inputs.",
+        "energy": "Power and energy are different measurements. Keep the input units and interval; no conversion or aggregation is applied.",
+        "temperature": "Keep the declared temperature units, including legitimate negative readings. Values are not clipped or converted.",
+        "weather": "Use one measured variable from one station and declare whether each value is instantaneous or summarizes an interval.",
+    }.get(
+        profile,
+        "Evaluate historical forecasts against observed targets on the declared regular time grid.",
+    )
+    if profile in {"energy", "temperature", "weather"} and frequency:
+        if fixed_interval(frequency) == fixed_interval("1h"):
+            guidance += " Seasonal examples for hourly data: 24 observations per day or 168 per week. Choose lags explicitly; current settings are retained."
+    return guidance
 
 
 def _draft(fields: dict[str, str]) -> dict[str, str]:
@@ -134,7 +226,7 @@ def _dataset(fields: dict[str, str]) -> dict:
 
 
 def _mapping(fields: dict[str, str], workspace: Path) -> dict:
-    return {
+    mapping = {
         "schema_version": 1,
         "name": fields["name"],
         "model": _model(fields),
@@ -151,6 +243,10 @@ def _mapping(fields: dict[str, str], workspace: Path) -> dict:
         },
         "output": {"directory": str(workspace)},
     }
+    workflow = workflow_from_fields(fields)
+    if workflow is not None:
+        mapping["workflow"] = workflow
+    return mapping
 
 
 def _minimal_mapping(workspace: Path) -> dict:
@@ -185,7 +281,9 @@ def inspect_data(
     mapping["dataset"] = _dataset(_draft(fields))
     config = config_from_mapping(mapping, base_directory=base_directory)
     try:
-        return load_dataset(config.dataset)
+        dataset = load_dataset(config.dataset)
+        validate_workflow_dataset(workflow_from_fields(_draft(fields)), dataset)
+        return dataset
     except (ValueError, OSError, ImportError) as exc:
         raise ConfigError(str(exc)) from exc
 
@@ -235,7 +333,7 @@ class PreparedExperiment:
         season = model["options"].get("seasonal_period")
         baseline = f"\nBaseline seasonal period: {season}" if season else ""
         return (
-            f"{config.name}\n\nModel: {display_name}\nTarget: {config.dataset['target_column']} "
+            f"{config.name}\n\nUsage: {workflow_summary(config.workflow)}\nModel: {display_name}\nTarget: {config.dataset['target_column']} "
             f"({config.dataset['units']}) · Frequency: {config.dataset['frequency']}\n"
             f"Context: {spec.context_length} observations · Horizon: {spec.horizon} observations\n"
             f"Forecast task: {spec.point_statistic}\n"
@@ -258,6 +356,7 @@ def prepare_experiment(
     )
     try:
         dataset = load_dataset(config.dataset)
+        validate_workflow_dataset(config.workflow, dataset)
         start, end = evaluation_bounds(dataset, config.evaluation)
         model = build_model(config.model, config.runtime)
         validate_model_frequency(model, dataset.frequency)

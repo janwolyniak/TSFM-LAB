@@ -239,3 +239,26 @@ Threshold selection, dataset reuse, checkpoint pretraining overlap, and supplied
 execution/cost assumptions limit any empirical interpretation. Backtested results
 are hypothetical performance; see the [SEC performance guidance](https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-47).
 See [evaluation methodology](evaluation.md) for the separate forecasting contract.
+
+## Finance workflow hints
+
+The optional Finance usage profile records whether the target is a close price,
+return, or another named measurement. A close-price profile requires positive
+observations and explicit quote units. After a median-task, stride-1 result with
+positive selected lead-1 actuals and forecasts, terminal result views offer the
+existing OHLC command with every required input left explicit.
+
+This offer changes no finance calculation or manual eligibility rule. The
+`--price-target` declaration, separate aligned OHLC data, original dataset
+identity, positive prices, timing, threshold, costs, capital, and accounting
+checks remain required for every report. Generic and older runs retain the same
+manual route; native-point runs remain ineligible. Forecast-only return/other
+finance data is supported without inferred trading assumptions.
+
+The [profile finance example](../examples/configurations/usage-finance.yaml)
+uses an hourly synthetic close series and a lag-24 baseline. Its matching
+[OHLC fixture](../examples/datasets/finance-demo-ohlc.csv) is fictional: each bar
+opens 30 minutes before its close, leaving an explicit 30-minute gap after the
+previous close. Use it only to exercise the contract, with the explicit inputs
+from the command example above and the profile example as `--source-config`.
+It represents no trading venue, realistic execution, or predictive result.

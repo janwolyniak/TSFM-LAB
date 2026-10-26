@@ -17,6 +17,7 @@ from tsfm_lab.artifact_validation import (
     StoreError,
     validate_predictions,
 )
+from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
 
 _ACTIVE = ("pending", "preparing", "loading", "running", "evaluating", "saving")
 _TERMINAL = {"completed", "failed", "cancelled"}
@@ -70,6 +71,18 @@ def _identity(raw: bytes) -> dict:
     return {"sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw)}
 
 
+def _workflow(configuration):
+    if not isinstance(configuration, dict):
+        raise StoreError("Workflow configuration must be an object")
+    workflow = normalize_workflow(configuration.get("workflow"))
+    if workflow is not None:
+        dataset = configuration.get("dataset")
+        if not isinstance(dataset, dict):
+            raise StoreError("Workflow configuration requires dataset metadata")
+        validate_workflow_units(workflow, dataset.get("units"))
+    return workflow
+
+
 class ExperimentStore:
     """One private writer directory per UUID; manifests become completed last."""
 
@@ -93,6 +106,7 @@ class ExperimentStore:
             raise ValueError("Experiment name must be nonempty")
         if not isinstance(configuration, dict) or not isinstance(source_yaml, str):
             raise ValueError("Expected configuration object and original YAML text")
+        _workflow(configuration)
         artifacts = {
             "configuration.json": _json(configuration),
             "input.yaml": source_yaml.encode(),
@@ -187,9 +201,13 @@ class ExperimentStore:
     def _result(self, run_id: str, manifest: dict) -> tuple[dict, pd.DataFrame]:
         contents = self._verified(run_id, manifest)
         try:
-            _decode(contents["configuration.json"])
+            initial = _decode(contents["configuration.json"])
             contents["input.yaml"].decode("utf-8")
             result = _decode(contents["result.json"])
+            if _workflow(initial) != _workflow(result["configuration"]):
+                raise StoreError(
+                    "Workflow metadata disagrees with the initial configuration"
+                )
             if (
                 type(result.get("schema_version")) is not int
                 or result.get("schema_version") != 1
@@ -229,6 +247,12 @@ class ExperimentStore:
             raise StoreError(f"Invalid result snapshot: {exc}") from exc
         result.pop("predictions", None)
         frame = validate_predictions(predictions, result)
+        if _workflow(self.load_configuration(run_id)) != _workflow(
+            result["configuration"]
+        ):
+            raise StoreError(
+                "Workflow metadata disagrees with the initial configuration"
+            )
         if cancel_check and cancel_check():
             raise KeyboardInterrupt("Experiment cancellation requested before saving")
         if manifest["status"] != "saving":
@@ -289,6 +313,19 @@ class ExperimentStore:
         if manifest["status"] != "completed":
             raise StoreError("Only completed experiments have reloadable results")
         return self._result(run_id, manifest)
+
+    def load_configuration(self, run_id: str) -> dict:
+        """Read a detached, checked setup snapshot without source files or runtimes."""
+        manifest = self.get_manifest(run_id)
+        raw = _read(self._directory(run_id) / "configuration.json")
+        if _identity(raw) != manifest["artifacts"]["configuration.json"]:
+            raise StoreError("Configuration checksum or size mismatch")
+        configuration = _decode(raw)
+        try:
+            _workflow(configuration)
+        except (TypeError, ValueError, KeyError, AttributeError) as exc:
+            raise StoreError(f"Invalid workflow configuration: {exc}") from exc
+        return configuration
 
     def list_runs(self) -> list[dict]:
         if self.root.is_symlink():

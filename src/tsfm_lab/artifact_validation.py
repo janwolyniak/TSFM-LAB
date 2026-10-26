@@ -202,6 +202,11 @@ def _schema(result):
     runtime = _object(config["runtime"], "runtime configuration")
     for key in ("series_id", "target_name", "units", "frequency"):
         _text(dataset[key], f"dataset {key}")
+    if "workflow" in config:
+        from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
+
+        workflow = normalize_workflow(config["workflow"])
+        validate_workflow_units(workflow, dataset["units"])
     interval = fixed_interval(dataset["frequency"])
     for key in ("adapter_id", "adapter_version", "family", "source"):
         _text(model[key], f"model {key}")
@@ -421,6 +426,14 @@ def validate_predictions(frame: pd.DataFrame, result: dict) -> pd.DataFrame:
     try:
         config, spec, interval = _schema(result)
         frame = _frame(frame)
+        workflow = config.get("workflow")
+        if (
+            workflow is not None
+            and workflow["profile"] == "finance"
+            and workflow["options"]["target_kind"] == "close_price"
+            and (frame.actual <= 0).any()
+        ):
+            raise StoreError("Finance close-price actuals must be strictly positive")
         _grid(frame, result, config, spec, interval)
         _scores(frame, result, spec)
     except (KeyError, TypeError, ValueError, OverflowError, AttributeError) as exc:

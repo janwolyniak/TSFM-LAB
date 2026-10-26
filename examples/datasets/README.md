@@ -48,3 +48,34 @@ y[i] = 50 + 0.01*i + 5*sin(2*pi*i/24) + 2*cos(2*pi*i/168)
 The [512-profile example](../configurations/ttm-512-96.yaml) scores positions
 512–527 in four windows, with horizon/stride 4 and MASE lag 24. It checks the
 workflow only; it provides no model ranking or domain-performance evidence.
+
+## Domain usage examples
+
+The four `*-demo.csv` files are original synthetic data under Apache-2.0, with
+1,600 hourly UTC observations starting at 2026-01-01 00:00 UTC. Identical copies
+are bundled for terminal setup. Each file has `timestamp` and one target column.
+Values are rounded to eight decimal places, with `i=0,...,1599`:
+
+| File / target | Declared units | Construction |
+| --- | --- | --- |
+| `finance-demo.csv` / `close` | `toy_quote_per_asset` | `100 + 0.02*i + 3*sin(2*pi*i/24)` |
+| `energy-demo.csv` / `power` | `kW` | `50 + 0.005*i + 10*sin(2*pi*i/24) + 4*cos(2*pi*i/168)` |
+| `temperature-demo.csv` / `temperature` | `degC` | `-3 + 6*sin(2*pi*i/24) + 2*cos(2*pi*i/168)` |
+| `weather-demo.csv` / `wind_speed` | `m/s` | `5 + 1.5*sin(2*pi*i/24) + 0.4*cos(2*pi*i/168)` |
+
+The weather example declares a fictional `synthetic-station` and instantaneous
+wind speed. These files represent no measured station, energy installation,
+financial asset, or empirical domain result. Temperature includes negative
+values, which must survive import, forecasts, and exports unchanged.
+
+The [usage configs](../../docs/usage-profiles.md) use domain context 48, targets
+48–63, MASE lag 24, and 16 forecast cases. Finance uses seasonal-naive lag 24 with
+horizon/stride 1; the other domain examples use last-value with horizon/stride 4.
+Generic retains the original short seasonal fixture/settings.
+
+`finance-demo-ohlc.csv` is separate original synthetic execution data. Its close
+column exactly matches `finance-demo.csv` on the full grid. Row i opens 30 minutes
+before its close, with `open=close-0.3+0.1*sin(i/7)`, `high=max(open,close)+0.5`,
+and `low=min(open,close)-0.5`, all rounded to eight decimal places. Its explicit
+30-minute interbar gap is fictional. Users must still supply every timing/cost
+assumption; the fixture implies no actual exchange, fill model, or trading rule.

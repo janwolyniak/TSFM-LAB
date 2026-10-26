@@ -10,6 +10,7 @@ import yaml
 
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
 from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES, catalog_info
+from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
 
 MAX_CONFIG_BYTES = 1024 * 1024
 
@@ -59,6 +60,7 @@ class ExperimentConfig:
     output_directory: Path
     source_yaml: str
     source_path: Path
+    workflow: dict[str, Any] | None = None
 
     def resolved_dict(self) -> dict[str, Any]:
         evaluation = asdict(self.evaluation)
@@ -73,6 +75,11 @@ class ExperimentConfig:
             "evaluation": evaluation,
             "runtime": copy.deepcopy(self.runtime),
             "output": {"directory": str(self.output_directory)},
+            **(
+                {"workflow": normalize_workflow(self.workflow)}
+                if self.workflow is not None
+                else {}
+            ),
         }
 
 
@@ -257,7 +264,7 @@ def _runtime(value: Any, model: dict[str, Any]) -> dict[str, Any]:
 
 def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig:
     required = {"schema_version", "model", "dataset", "evaluation"}
-    allowed = required | {"name", "runtime", "output"}
+    allowed = required | {"name", "runtime", "output", "workflow"}
     fields = _mapping(raw, "configuration", allowed, required)
     if _integer(fields["schema_version"], "schema_version") != 1:
         raise ConfigError("Only schema_version 1 is supported")
@@ -278,9 +285,12 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
         if evaluation.context_length < model["options"]["seasonal_period"]:
             raise ConfigError("context_length must contain a complete baseline season")
     output = _mapping(fields.get("output", {}), "output", {"directory"})
+    dataset = _dataset(fields["dataset"], source_path.parent)
+    workflow = normalize_workflow(fields.get("workflow"))
+    validate_workflow_units(workflow, dataset["units"])
     return ExperimentConfig(
         name=_text(fields.get("name", source_path.stem), "name"),
-        dataset=_dataset(fields["dataset"], source_path.parent),
+        dataset=dataset,
         model=model,
         evaluation=evaluation,
         runtime=_runtime(fields.get("runtime", {}), model),
@@ -289,6 +299,7 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
         ),
         source_yaml=source_yaml,
         source_path=source_path,
+        workflow=workflow,
     )
 
 
