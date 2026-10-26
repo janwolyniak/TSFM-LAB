@@ -107,6 +107,45 @@ ADAPTER_PROFILES = (
             ),
         ),
     ),
+    AdapterProfile(
+        "chronos_2",
+        "chronos",
+        "Chronos-2",
+        "tsfm_lab.models.chronos2",
+        "Chronos2",
+        "Chronos2Model",
+        "Chronos2Pipeline",
+        "t5",
+        8192,
+        1024,
+        0,
+        (
+            ("chronos-forecasting", "==2.2.0"),
+            ("torch", ">=2.8,<2.9"),
+            ("transformers", ">=4.55,<4.56"),
+            ("huggingface-hub", "==0.34.4"),
+            ("safetensors", ">=0.6,<0.7"),
+            ("accelerate", ">=1.12,<1.13"),
+        ),
+        (
+            CheckpointVariant(
+                "autogluon/chronos-2-small",
+                "small",
+                "Small",
+                "ddec01313e50b6bc58ebaa92ede81bc24a3d9f9a",
+                111749048,
+                27934624,
+            ),
+            CheckpointVariant(
+                "amazon/chronos-2",
+                "standard",
+                "Standard",
+                "29ec3766d36d6f73f0696f85560a422f50e8498c",
+                477930472,
+                119477664,
+            ),
+        ),
+    ),
 )
 
 

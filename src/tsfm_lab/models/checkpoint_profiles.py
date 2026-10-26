@@ -82,15 +82,20 @@ def config_metadata(config: dict) -> dict:
     architecture, pipeline, model_type = _IDENTITIES[adapter]
     if config.get("model_type") != model_type:
         raise ValueError("Checkpoint model_type disagrees with its architecture")
-    if adapter == "chronos_bolt":
+    if adapter in {"chronos_bolt", "chronos_2"}:
         if config.get("chronos_pipeline_class") != pipeline:
-            raise ValueError("Checkpoint is not a supported Chronos-Bolt pipeline")
+            raise ValueError("Checkpoint is not a supported Chronos pipeline")
         options = config["chronos_config"]
         if not isinstance(options, dict):
             raise ValueError("chronos_config must be an object")
-        context, horizon = options["context_length"], options["prediction_length"]
-        _bolt_bounds(context, horizon)
-        quantiles = options["quantiles"]
+        if adapter == "chronos_bolt":
+            context, horizon = options["context_length"], options["prediction_length"]
+            _bolt_bounds(context, horizon)
+            quantiles = options["quantiles"]
+        else:
+            from tsfm_lab.models.chronos2_profile import validate_config
+
+            context, horizon, quantiles = validate_config(config)
     else:
         for key, expected in _TIMESFM_CONFIG.items():
             if type(config.get(key)) is not type(expected) or config[key] != expected:
@@ -122,6 +127,10 @@ def validate_record_profile(record: dict) -> str:
     )
     if adapter == "chronos_bolt":
         _bolt_bounds(context, horizon)
+    elif adapter == "chronos_2":
+        from tsfm_lab.models.chronos2_profile import validate_native
+
+        validate_native(context, horizon, record["quantiles"])
     elif (
         type(context) is not int
         or context != _TIMESFM_CONFIG["context_length"]

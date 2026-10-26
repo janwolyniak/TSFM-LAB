@@ -52,6 +52,7 @@ pythonpath = ["src"]
 addopts = "--strict-config --strict-markers"
 markers = [
     "chronos_smoke: explicit local checkpoint and installed runtime required; never downloads",
+    "chronos2_smoke: explicit local or cached Chronos-2 checkpoint and installed runtime required; never downloads",
     "timesfm_smoke: explicit local TimesFM 2.5 checkpoint and installed runtime required; never downloads",
 ]
 

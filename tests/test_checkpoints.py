@@ -392,7 +392,7 @@ def test_wrong_config_revision_is_rejected_before_weights(hub):
 
 
 @pytest.mark.parametrize(
-    "repository", ["unknown/model", "amazon/chronos-2", "amazon/chronos-bolt-large"]
+    "repository", ["unknown/model", "amazon/chronos-3", "amazon/chronos-bolt-large"]
 )
 def test_unknown_repositories_fail_before_optional_imports(monkeypatch, repository):
     monkeypatch.setattr(checkpoints, "_hub", lambda: pytest.fail("Hub access"))

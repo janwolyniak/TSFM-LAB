@@ -1,13 +1,15 @@
 # Next feature release plan
 
 Working target: **v0.2.0**, following the prepared v0.1.0 release.
-Scope agreed with the owner on 26 October 2026. P1 is implemented and verified
-locally; P2–P8 remain future work. The existing package version and publication
+Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and verified
+locally; P3–P8 remain future work. The existing package version and publication
 status remain unchanged.
 
 P1 behavior is described in the [catalog guide](model-catalog.md), with checks
-recorded in the [P1 verification record](p1-catalog-verification.md). Individual
-release criteria below stay open until the corresponding implementation is
+recorded in the [P1 verification record](p1-catalog-verification.md).
+Chronos-2 behavior and checks are documented in its [guide](chronos2.md) and
+[P2 verification record](p2-chronos2-verification.md).
+Individual release criteria below stay open until the corresponding implementation is
 verified.
 
 The release will let a user start an experiment in the terminal, choose its
@@ -259,8 +261,9 @@ inference work. Integrate through the [contribution workflow](../CONTRIBUTING.md
 | P7 Natural-language setup and explanations | Implement the versioned draft, clarification, normal validators/review, and grounded explanations in the terminal. | End-to-end fake-provider tests cover intent preservation, missing fields, unsupported future targets, invalid responses, explanations, and manual fallback. |
 | P8 Release qualification | Update guides/examples, build source and wheel, and run the installed workflow and configured CI. | Current release checklist passes with exact source/artifact identities and documented representative/variant verification status. |
 
-The first implementation slice is **P1**. It establishes the common catalog and
-terminal boundaries before introducing three new optional model runtimes.
+**P1 and P2 are complete locally.** The common catalog and terminal boundaries
+now include Chronos-2 Small/standard. **P3 TiRex-2** is next; settle its runtime
+compatibility decision before installation, as described above.
 
 ## Release acceptance
 

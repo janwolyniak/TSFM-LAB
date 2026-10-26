@@ -319,6 +319,7 @@ def test_catalog_lists_runnable_variants_and_keeps_existing_json_fields():
         "seasonal_naive",
         "chronos_bolt",
         "timesfm_2p5",
+        "chronos_2",
     }
     required = {"adapter_id", "family", "capabilities", "license", "repositories"}
     assert all(required <= item.keys() for item in items)

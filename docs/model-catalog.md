@@ -16,7 +16,7 @@ tsfm models info amazon/chronos-bolt-base --json
 ```
 
 The active terminal exposes this information through `/models`. Use
-`/new chronos_bolt` or `/new timesfm_2p5` to choose a family and checkpoint during
+`/new chronos_bolt`, `/new timesfm_2p5`, or `/new chronos_2` to choose a family and checkpoint during
 guided setup. See the [terminal guide](tui.md) and [CLI guide](cli.md) for the
 complete workflow. Last value and seasonal naive remain available as baselines.
 
@@ -34,6 +34,8 @@ CLI repository information also exposes that variant under `selected_checkpoint`
 | `chronos_bolt` | Small: `amazon/chronos-bolt-small` | 2,048 / 64 | 190,888,824 | Recorded for the reference checkpoint. |
 | `chronos_bolt` | Base: `amazon/chronos-bolt-base` | 2,048 / 64 | 821,203,576 | Metadata/API compatibility checked; individual inference not run. |
 | `timesfm_2p5` | 2.5 200M: `google/timesfm-2.5-200m-pytorch` | 16,256 / 128 | 925,181,104 | Recorded for the reference checkpoint. |
+| `chronos_2` | Small: `autogluon/chronos-2-small` | 8,192 / 1,024 | 111,749,048 | Recorded for the reference checkpoint. |
+| `chronos_2` | Standard: `amazon/chronos-2` | 8,192 / 1,024 | 477,930,472 | Metadata/API compatibility checked; individual inference not run. |
 
 Weight-file size describes stored bytes, not required runtime memory. Catalog
 status applies to its listed reference revision. A different requested revision
@@ -45,7 +47,7 @@ The pretrained adapters currently support CPU float32 median forecasts, with
 batch size one. TimesFM records its native context of 16,384, while the adapter
 reserves room for its output patch and accepts at most 16,256 historical values.
 Its native quantile head does not expand the adapter's 128-step horizon.
-See the [Chronos guide](chronos.md) and [TimesFM guide](timesfm.md).
+See the [Bolt guide](chronos.md), [Chronos-2 guide](chronos2.md), and [TimesFM guide](timesfm.md).
 
 ### Bolt Base reference
 
@@ -101,7 +103,9 @@ windows and 16 forecast cases on the bundled synthetic series, with exact offlin
 cached replay. Their records document the checks actually run:
 [Tiny](milestone3-verification.md) and
 [Small/TimesFM](milestone6-verification.md).
-They establish bounded integration evidence, without a model ranking, general
+Chronos-2 Small's separate [P2 check](p2-chronos2-verification.md) uses a pristine
+Chronos 2.2.0 runtime and records its own exact configuration/weight identities.
+These checks establish bounded integration evidence, without a model ranking, general
 accuracy claim, device certification, or benchmark result.
 
 ### Saved snapshots and older records
@@ -128,15 +132,15 @@ not signed maintainer attestations or authentication of a rewritten workspace.
 
 ## Future optional-runtime gates
 
-Chronos-2, TiRex-2, and TTM are planned integrations, not adapters made available
-by P1. The 26 October 2026 audit compares declared dependency requirements with
+TiRex-2 and TTM remain planned integrations. Chronos-2 is implemented in P2.
+The 26 October 2026 audit compares declared dependency requirements with
 the current Python 3.11–3.13, Torch 2.8, Transformers 4.55, and Hub 0.34.4 stack.
 Declared compatibility is not an executed integration test.
 
 **Chronos-2 (P2).** Existing `chronos-forecasting==2.2.0` includes
 `Chronos2Pipeline`; Python ≥3.10, Torch ≥2.2/<3, and Transformers ≥4.41/<5 admit
-the current stack. Its distinct architecture/profile, safe local loading, and
-representative Small check still need implementation.
+the current stack. P2 adds its distinct architecture/profile, safe local loading,
+and representative Small check without changing the shared dependency pins.
 See the [pinned runtime requirements](https://github.com/amazon-science/chronos-forecasting/blob/75a2dfe228e39d55283f477c01399b9e53d89661/pyproject.toml).
 
 **TiRex-2 (P3).** `tirex-2==0.4.0` admits Python ≥3.11 and Torch ≥2.8, but
@@ -154,8 +158,8 @@ native-point task semantics. Do not relabel a point head as a verified median.
 See the [pinned 0.3.4 requirements](https://github.com/ibm-granite/granite-tsfm/blob/4d4c6cf0e345c985d84f6292a4f397caf5e2ba78/pyproject.toml)
 and [pinned 0.3.11 requirements](https://github.com/ibm-granite/granite-tsfm/blob/dfe846e6c1f1b0086b4a7b0831249ac8aeb7dcd7/pyproject.toml).
 
-P1 does not install these runtimes or introduce an environment manager. P2 can
-start with the current compatible runtime. Resolve the conflicting execution
+P1 introduced no environment manager. P2 uses the compatible Chronos runtime;
+its authorized verification uses an isolated pristine package copy. Resolve the conflicting execution
 design before P3/P4 implementation; shared dependency changes
 need existing-adapter regression checks. TimesFM 2.0 and 3.0 are separate model
 generations outside the current 2.5 adapter, rather than larger variants covered

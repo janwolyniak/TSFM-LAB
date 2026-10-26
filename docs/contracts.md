@@ -75,7 +75,7 @@ reason; invalid bounds or lengths fail before calling a model.
 The current configuration boundary validates adapter/source/options as
 dictionaries. `ModelSpec` below is a conceptual grouping rather than a current
 dataclass. Curated Hub and compatible standalone local checkpoints are supported
-for Chronos-Bolt and TimesFM 2.5; there is no arbitrary-repository loader.
+for Chronos-Bolt, Chronos-2, and TimesFM 2.5; there is no arbitrary-repository loader.
 Each adapter has its own repository allowlist and validated architecture profile.
 
 Input configuration supplies adapter/source/options and, for a Hub checkpoint,
@@ -89,7 +89,7 @@ the YAML boundary.
 
 - `family`: a catalog grouping such as `baseline`, `chronos`, or `timesfm`.
 - `adapter_id` and `adapter_version`: implementation identity, for example
-  `last_value`, `seasonal_naive`, `chronos_bolt`, or `timesfm_2p5`.
+  `last_value`, `seasonal_naive`, `chronos_bolt`, `chronos_2`, or `timesfm_2p5`.
 - `source`: `builtin`, `huggingface`, or `local`.
 - Source-specific identity: repository plus requested/resolved revision, or
   local checkpoint path plus a file/checksum manifest. Built-ins have neither.
@@ -107,13 +107,18 @@ it never silently truncates history, changes the horizon, removes a covariate, o
 changes the requested device. The later `auto` policy may resolve to CPU, but
 records that choice before execution.
 
-Both checkpoint adapters currently require CPU, float32 model arithmetic, and
+All checkpoint adapters currently require CPU, float32 model arithmetic, and
 batch size 1. Normalized outputs retain float64 target-unit values. TimesFM 2.5
 supports context lengths 1–16,256 and horizons 1–128; its stored native context
 limit is 16,384, while the adapter reserves space for the rounded output patch.
 It requires the process's default Torch dtype to be float32 and fails explicitly
 otherwise; it does not change that global setting. See the
 [TimesFM guide](timesfm.md) for its pinned runtime and genuine median semantics.
+Chronos-2 supports context lengths 1–8,192 and horizons 1–1,024, independent
+univariate requests, and exact native 0.5 quantiles. It also requires the default
+Torch dtype to be float32. Its persisted `forecast_options` require
+`cross_learning: false` and `limit_prediction_length: true`; reload validates
+these flags without importing optional runtimes. See [Chronos-2](chronos2.md).
 
 ## ForecastRequest
 
