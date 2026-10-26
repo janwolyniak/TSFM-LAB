@@ -42,6 +42,24 @@ _COLUMNS = {
     "prediction",
     "point_statistic",
 }
+_FINANCE_STRATEGY_FIELDS = (
+    "equity",
+    "net_return",
+    "traded_notional",
+    "entry_fee",
+    "exit_fee",
+    "entry_slippage",
+    "exit_slippage",
+    "short_financing",
+)
+_FINANCE_COLUMNS = {
+    "origin",
+    "open_timestamp",
+    "close_timestamp",
+    "signal_position",
+    "cash_equity",
+    "buy_and_hold_equity",
+} | {f"strategy_{name}" for name in _FINANCE_STRATEGY_FIELDS}
 _BLOCK_OPTIONAL = """import importlib.abc
 import json
 import sys
@@ -321,10 +339,12 @@ class Verifier:
         self.records(workspace, identifiers)
         self.exports(workspace, identifiers, start, values)
         self.invalid_configuration(dataset)
+        self.finance()
         self.optional_boundaries()
         return {
             "baseline_run_ids": identifiers,
             "forecast_cases_per_run": 16,
+            "finance_cases": 4,
             "checks": self.passed,
         }
 
@@ -602,10 +622,217 @@ class Verifier:
         )
         self.done("invalid_configuration_fails_before_artifacts")
 
+    def finance_inputs(self):
+        directory = self.root / "finance-inputs"
+        directory.mkdir()
+        prices = (100, 102, 101, 103, 100, 105, 104, 106)
+        start = datetime(2026, 1, 1, tzinfo=UTC)
+        dataset, bars = directory / "closes.csv", directory / "ohlc.csv"
+        with dataset.open("w", newline="", encoding="utf-8") as output:
+            writer = csv.writer(output)
+            writer.writerow(("timestamp", "close"))
+            writer.writerows(
+                ((start + timedelta(hours=index)).isoformat(), price)
+                for index, price in enumerate(prices)
+            )
+        with bars.open("w", newline="", encoding="utf-8") as output:
+            writer = csv.writer(output)
+            writer.writerow(
+                ("open_timestamp", "close_timestamp", "open", "high", "low", "close")
+            )
+            for index, close in enumerate(prices):
+                closing = start + timedelta(hours=index)
+                opening = prices[index - 1] if index else prices[0]
+                writer.writerow(
+                    (
+                        (closing - timedelta(minutes=45)).isoformat(),
+                        closing.isoformat(),
+                        opening,
+                        max(opening, close) + 1,
+                        min(opening, close) - 1,
+                        close,
+                    )
+                )
+        configuration = self.config("seasonal_naive", dataset, directory / "workspace")
+        configuration["model"]["options"]["seasonal_period"] = 2
+        configuration["dataset"].update(
+            target_column="close", units="synthetic_quote_per_asset"
+        )
+        configuration["evaluation"].update(
+            context_length=2,
+            horizon=1,
+            stride=1,
+            seasonal_period=2,
+            evaluation_start=(start + timedelta(hours=4)).isoformat(),
+            evaluation_end=(start + timedelta(hours=8)).isoformat(),
+        )
+        path = directory / "source.yaml"
+        path.write_text(json.dumps(configuration, indent=2) + "\n", encoding="utf-8")
+        return directory, path, bars, directory / "workspace"
+
+    def finance_arithmetic(self, report, identifier):
+        evaluation = report["evaluation"]
+        strategy = evaluation["strategy"]
+        # Independently calculated from the fixture's four explicit forecast cases.
+        expected = (
+            1027.4274027598157,
+            1077.2895110990087,
+            1085.719300113609,
+            1085.719300113609,
+        )
+        require(
+            report["parent"]["run_id"] == identifier
+            and evaluation["cases"] == 4
+            and evaluation["signal_positions"] == [-1, 1, -1, 0]
+            and [row["actual_close"] for row in report["cases"]]
+            == [100, 105, 104, 106],
+            "Finance report changed the saved parent, cases, or causal signals",
+        )
+        require(
+            len(strategy["curve"]) == 4
+            and all(
+                math.isclose(row["equity"], value, rel_tol=1e-12)
+                for row, value in zip(strategy["curve"], expected, strict=True)
+            ),
+            "Costed finance equity differs from the independent fixture arithmetic",
+        )
+        for name, value in (
+            ("fees", 3.1085335685808443),
+            ("slippage", 1.2434134274323377),
+            ("short_financing", 0.6227509276803264),
+        ):
+            require(
+                math.isclose(strategy["metrics"][name], value, rel_tol=1e-12),
+                f"Finance {name} differs from explicit-cost arithmetic",
+            )
+        benchmarks = evaluation["benchmarks"]
+        require(
+            benchmarks["cash"]["metrics"]["final_capital"] == 1000
+            and benchmarks["cash"]["metrics"]["total_costs"] == 0
+            and math.isclose(
+                benchmarks["buy_and_hold"]["metrics"]["final_capital"],
+                1027.6864447314064,
+                rel_tol=1e-12,
+            ),
+            "Costed buy-and-hold or zero-interest cash benchmark is incorrect",
+        )
+
+    def finance_export(self, report_path, report):
+        path = self.root / "finance-equity.csv"
+        identity = self.json_command("finance", "export", report_path, "--output", path)
+        raw = path.read_bytes()
+        reader = csv.DictReader(io.StringIO(raw.decode("utf-8")))
+        rows = list(reader)
+        require(
+            identity["rows"] == len(rows) == 4
+            and identity["sha256"] == hashlib.sha256(raw).hexdigest()
+            and len(reader.fieldnames) == len(_FINANCE_COLUMNS)
+            and set(reader.fieldnames) == _FINANCE_COLUMNS,
+            "Finance export schema, count, or checksum is incorrect",
+        )
+        evaluation = report["evaluation"]
+        for index, row in enumerate(rows):
+            case = report["cases"][index]
+            require(
+                all(
+                    row[name] == case[name]
+                    for name in ("origin", "open_timestamp", "close_timestamp")
+                )
+                and int(row["signal_position"])
+                == evaluation["signal_positions"][index],
+                "Finance export lost case timing or signal alignment",
+            )
+            for name in _FINANCE_STRATEGY_FIELDS:
+                require(
+                    float(row[f"strategy_{name}"])
+                    == evaluation["strategy"]["curve"][index][name],
+                    "Finance CSV disagrees with checked strategy costs or equity",
+                )
+            for path_name, column in (
+                ("cash", "cash_equity"),
+                ("buy_and_hold", "buy_and_hold_equity"),
+            ):
+                series = evaluation["benchmarks"][path_name]
+                require(
+                    float(row[column]) == series["curve"][index]["equity"],
+                    "Finance CSV disagrees with the checked equity report",
+                )
+        refused = self.command(
+            "finance", "export", report_path, "--output", path, expected=1
+        )
+        require(
+            not refused.stdout
+            and "already exists" in refused.stderr
+            and path.read_bytes() == raw,
+            "Finance export overwrote or damaged an existing destination",
+        )
+
+    def finance(self):
+        self.check = "finance_workflow"
+        directory, configuration, bars, workspace = self.finance_inputs()
+        parent = self.json_command("run", configuration)
+        require(
+            parent["status"] == "completed" and parent["counts"]["forecast_cases"] == 4,
+            "Finance fixture baseline did not retain four lead-1 cases",
+        )
+        report_path = self.root / "finance-report.json"
+        arguments = (
+            "finance",
+            "backtest",
+            parent["run_id"],
+            "--workspace",
+            workspace,
+            "--source-config",
+            configuration,
+            "--ohlc",
+            bars,
+            "--price-target",
+            "--initial-capital",
+            "1000",
+            "--threshold-bps",
+            "100",
+            "--fee-bps",
+            "5",
+            "--slippage-bps",
+            "2",
+            "--short-financing-bps",
+            "3",
+            "--signal-latency-seconds",
+            "60",
+            "--output",
+            report_path,
+        )
+        report = self.json_command(*arguments)
+        raw = report_path.read_bytes()
+        require(
+            strict_json(raw.decode("utf-8")) == report,
+            "Saved finance report differs from backtest JSON output",
+        )
+        self.finance_arithmetic(report, parent["run_id"])
+        refused = self.command(*arguments, expected=1)
+        require(
+            not refused.stdout
+            and "already exists" in refused.stderr
+            and report_path.read_bytes() == raw,
+            "Finance backtest overwrote or damaged an existing report",
+        )
+        directory.rename(self.root / "finance-sources-unavailable")
+        require(
+            not directory.exists() and not workspace.exists(),
+            "Finance fixture source paths unexpectedly remain available",
+        )
+        require(
+            self.json_command("finance", "show", report_path) == report,
+            "Finance reload required unavailable source data or changed the report",
+        )
+        self.finance_export(report_path, report)
+        self.done("finance_backtest_self_contained_reload_export_and_overwrite_refusal")
+
     def optional_boundaries(self):
         self.check = "optional_dependency_boundaries"
         probe = _BLOCK_OPTIONAL + """
 import tsfm_lab.repl.session
+import tsfm_lab.finance_commands
 print(json.dumps({'optional_loaded': sorted(blocked.intersection(sys.modules))}))
 """
         require(

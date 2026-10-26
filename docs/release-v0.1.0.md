@@ -1,7 +1,7 @@
 # TSFM Lab v0.1.0
 
 TSFM Lab's first release provides a local workflow for evaluating time-series
-forecasts, from simple baselines to an optional pretrained Chronos-Bolt model.
+forecasts, from simple baselines to optional Chronos-Bolt and TimesFM 2.5 models.
 Use the Python core, scriptable shell commands, or the interactive terminal to
 run and inspect reproducible experiments.
 
@@ -27,6 +27,9 @@ Release, release tag, and PyPI publication have not been created by this work.
   setup, saved-result, comparison, and export contracts.
 - Source-to-wheel builds, archive-content validation, and verification of an
   ordinary installation outside the source checkout.
+- A separate hypothetical OHLC report workflow from saved lead-1 price
+  forecasts, with explicit latency/costs, long/flat/short accounting, cash and
+  costed buy-and-hold benchmarks, and checked report reload/equity export.
 
 ## Requirements and installation
 
@@ -73,8 +76,10 @@ for complete setup and usage.
 - Windows and Python/platform combinations outside the configured matrix remain
   unverified. Synthetic example scores check arithmetic and do not establish a
   model advantage on real data.
-- Financial analysis, trading workflows, additional model families, model
-  training, and a hosted service are outside this release.
+- The [finance extension](finance-extension.md) is a bounded simulation with
+  explicit next-open/target-close fills; it supplies no broker execution or
+  live trading. Additional model families, model training, and a hosted service
+  are outside this release.
 - Project code uses Apache License 2.0. Checkpoints, model implementations, and
   datasets retain their own licenses.
 

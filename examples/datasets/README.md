@@ -15,3 +15,21 @@ to 1; last-value has MAE=MASE=2.5 and RMSE=sqrt(8.5).
 
 These are constructed arithmetic checks of the pipeline. They are not empirical
 results about pretrained models or real demand forecasts.
+
+## Synthetic OHLC example
+
+`ohlc.csv` is an original, hand-constructed fixture under the same Apache-2.0
+license. Its twelve closing prices are
+`[100,105,102,108,103,110,104,112,105,113,106,114]`; opens are
+`[99,103,104,105,107,106,109,108,111,109,112,110]`.
+For every row, `high=max(open,close)+2` and `low=min(open,close)-1`.
+Each fictional daily session opens at 09:00 UTC and closes at 16:00 UTC, including
+weekends. This artificial calendar provides an explicit 17-hour observation gap;
+it represents no real venue, asset, trading calendar, or market data source.
+
+The [finance configuration](../configurations/finance-seasonal-naive.yaml) uses
+context 4, seasonal-naive lag 2, horizon 1, stride 1, eight evaluation bars, and
+`toy_quote_per_asset` units. It exercises the separate
+[OHLC timing and accounting contract](../../docs/finance-extension.md).
+Constructed signals and returns demonstrate implementation behavior and provide
+no evidence of predictive ability or investment returns.

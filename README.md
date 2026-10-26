@@ -12,12 +12,14 @@
 [Terminal walkthrough](docs/tui.md) ·
 [Chronos-Bolt](docs/chronos.md) ·
 [TimesFM](docs/timesfm.md) ·
+[OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
-Python core, scriptable commands, an interactive terminal, and an optional
-Chronos-Bolt and TimesFM 2.5 adapters. Financial analysis remains a later extension.
+Python core, scriptable commands, an interactive terminal, and optional
+Chronos-Bolt and TimesFM 2.5 adapters. A separate finance extension evaluates
+hypothetical OHLC strategies from saved price forecasts.
 
 ## Project status
 
@@ -32,6 +34,9 @@ Chronos-Bolt and TimesFM 2.5 adapters. Financial analysis remains a later extens
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
   experiments, and recorded runtime provenance. Additional model families remain
   later work.
+- **Evaluate price decisions:** derive long/flat/short signals from saved lead-1
+  forecasts, require explicit OHLC timing and costs, and inspect verified
+  strategy, cash, and buy-and-hold reports without rerunning a model.
 
 ### Release status
 
@@ -147,6 +152,30 @@ The [verification record](docs/milestone6-verification.md) covers the real CPU
 workflow and expanded Chronos-Bolt Small checks. It makes no real-data advantage
 claim.
 
+## Evaluate a hypothetical price strategy
+
+Run the [synthetic OHLC example](examples/configurations/finance-seasonal-naive.yaml)
+and use its returned UUID as `RUN_ID`:
+
+```sh
+tsfm run examples/configurations/finance-seasonal-naive.yaml --json
+tsfm finance backtest RUN_ID --workspace results \
+  --source-config examples/configurations/finance-seasonal-naive.yaml \
+  --ohlc examples/datasets/ohlc.csv --price-target \
+  --initial-capital 1000 --threshold-bps 100 --fee-bps 5 --slippage-bps 2 \
+  --short-financing-bps 3 --signal-latency-seconds 60 \
+  --output results/finance/report.json
+tsfm finance show results/finance/report.json --json
+tsfm finance export results/finance/report.json --output results/finance/equity.csv
+```
+
+The strategy enters at the next bar's open and exits at that bar's close.
+Entry must be strictly later than the origin close plus declared latency;
+touching continuous bars fail even with zero latency. All assumptions above
+are required inputs, and the numbers are illustrative. This is a constructed
+accounting demonstration. See the [finance contract](docs/finance-extension.md)
+for data requirements, exact formulas, and limitations.
+
 ## Use the Python core
 
 ```python
@@ -236,8 +265,9 @@ The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
 family, followed by TimesFM 2.5; other Chronos variants and TimesFM 3.0 remain
-unsupported. The proposed [finance contract](docs/finance-extension.md) and
-[benchmarking bridge](docs/benchmarking-extension.md) describe separate next stages.
+unsupported. The [finance contract](docs/finance-extension.md) defines the separate
+OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
+the bounded compatibility findings before further benchmark integration.
 
 ## Contributing
 

@@ -18,10 +18,13 @@ The first local release candidate provides:
   guided setup, comparison, and saved-record workflows.
 - A bundled original seasonal demo, an educational direct-Python adapter example,
   installation/evaluation/extension guides, and source/wheel verification tools.
+- A separate lead-1, stride-1 OHLC finance extension with explicit latency,
+  long/flat/short signals, two-leg costs, short financing, costed benchmarks,
+  self-contained checked JSON reports, and CSV equity exports.
 
 The verified real model integrations are Chronos-Bolt Tiny/Small and TimesFM 2.5
 on CPU. Other families, GPU/MPS, panels, covariates, probability
-scoring, training, and domain-specific trading evaluations remain outside this
+scoring, training, broker execution, and live trading remain outside this
 candidate. Synthetic examples establish arithmetic and integration behavior,
 without a forecasting-advantage claim.
 
@@ -29,4 +32,6 @@ See the [release verification record](docs/milestone5-verification.md) for local
 evidence and outstanding platform/publication gates. No package release has been
 published.
 The [second-family record](docs/milestone6-verification.md) adds current CPU
-integration evidence; finance and broader benchmarking remain separately scoped.
+integration evidence. The [finance record](docs/milestone7-verification.md)
+documents the separately agreed accounting extension; the bounded
+[fev study](docs/benchmarking-extension.md) does not replace core scoring.

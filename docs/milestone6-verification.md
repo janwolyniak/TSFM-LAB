@@ -101,9 +101,11 @@ The checks above passed for the preparation tree. Final artifacts are rebuilt
 from its committed revision and identified in external manifests. Any subsequent
 remote matrix/integration is a separate gate recorded in repository history.
 
-The pre-feature main matrix passed all six Linux/macOS Python 3.11–3.13 jobs at
-[run 40233446539](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40233446539).
-That result is not a claim that this new feature's remote matrix has run.
+The owner authorized publication and merge after CI. The final feature commit
+`6754764` passed the six-job push and pull-request matrices, and
+[PR #2](https://github.com/janwolyniak/TSFM-LAB/pull/2) merged with a merge commit
+at `b8d5647`. All six Linux/macOS Python 3.11–3.13 post-merge jobs passed in
+[run 40240609625](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40240609625).
 GPU/MPS, Windows, other runtimes/checkpoints, probability scoring, and finance
 remain outside this verification. No new training, paid compute, or package
 publication was performed. `PLAN.md`, downloaded weights, environments, full

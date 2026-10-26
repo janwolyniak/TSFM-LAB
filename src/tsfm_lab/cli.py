@@ -15,6 +15,7 @@ from tsfm_lab.comparison import compare_runs
 from tsfm_lab.config import ConfigError
 from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.exports import export_predictions
+from tsfm_lab.finance_commands import finance
 from tsfm_lab.model_commands import models
 from tsfm_lab.terminal import interactive_terminal, launch_tui
 
@@ -26,6 +27,7 @@ experiments = typer.Typer(help="Inspect saved experiments.", no_args_is_help=Tru
 app.add_typer(models, name="models")
 app.add_typer(datasets, name="datasets")
 app.add_typer(experiments, name="experiments")
+app.add_typer(finance, name="finance")
 
 Workspace = Annotated[Path, typer.Option("--workspace", "-w")]
 JsonOutput = Annotated[bool, typer.Option("--json")]

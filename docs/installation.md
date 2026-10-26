@@ -6,10 +6,12 @@ published to PyPI. Commands such as `pip install tsfm-lab==0.1.0` from a package
 index are therefore not an installation route for this release candidate.
 
 Package metadata requires Python 3.11 or newer. The configured test matrix covers
-Python 3.11, 3.12, and 3.13 on Linux and macOS. The pre-TimesFM `main` revision
-`0e3eb70` passed all six jobs in
-[run 40233446539](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40233446539).
-That result does not establish the new adapter's full platform/runtime matrix.
+Python 3.11, 3.12, and 3.13 on Linux and macOS. The TimesFM milestone's merged
+`main` revision `b8d5647` passed all six jobs in
+[run 40240609625](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40240609625).
+That routine matrix uses mocked models and does not establish optional model
+inference on every platform. The later finance candidate has its own
+[verification record](milestone7-verification.md).
 Local model checks use Python 3.13 on macOS and are documented separately in the
 [Chronos](chronos.md) and [TimesFM](timesfm.md) guides. See the
 [release verification record](milestone5-verification.md) for prior installation
@@ -150,6 +152,11 @@ Exports refuse an existing destination, so choose a new filename for another
 export. YAML dataset/output paths resolve against the configuration file's
 directory; `--workspace` resolves against the current working directory. The
 [CLI guide](cli.md) explains custom configurations and comparison rules.
+
+The same `[cli]` installation supports the separate
+[hypothetical OHLC workflow](finance-extension.md), including saved-report
+verification and CSV equity export. Python finance APIs require only the base
+NumPy/pandas installation; optional inference runtimes are unnecessary.
 
 The repository ignores `.venv/`, `results/`, `model-cache/`, and build artifacts.
 The supplied YAML examples write under `results/`; placing exports under

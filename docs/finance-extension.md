@@ -1,137 +1,241 @@
-# Proposed first finance extension
+# Finance: saved forecasts and explicit OHLC execution
 
-Status: proposal pending owner agreement. This document specifies a possible next
-stage; it does not add finance commands, reporting, or a trading engine.
+The first finance module evaluates completed forecast records under policy
+`ohlc_next_open_to_target_close_v1`. It imports the original price series and a
+separate OHLC file, checks their identities and timing, and builds a hypothetical
+cash/share ledger. It does not construct a model, load weights, download prices,
+or place orders. Existing price-forecast scores retain their meaning.
 
-The owner chose to agree trading rules before finance coding. The three pending
-decisions are timing, permitted positions, and explicit cost/risk inputs. The
-following is the concrete first-version proposal, not an approved strategy.
+## Run the synthetic example
 
-## Proposed first trading contract
+From a source checkout or unpacked source distribution with the CLI installed,
+create the supplied stride-1 baseline experiment:
 
-- The forecast target is explicitly declared to be a positive price. Import the
-  original dataset and require its canonical identity to match the saved run.
-- Select lead 2 from a run with horizon at least 2 and stride 1. At origin `t`,
-  form the signal from `forecast_price[t+2] / observed_price[t] - 1`. The future
-  entry price must not affect that signal.
-- Enter at the input price at `t+1` and exit or rebalance at `t+2`. Each holding
-  interval spans one observation; consecutive intervals share a boundary but do
-  not overlap. Require complete coverage and reject any different timing grid.
-  These are idealized fills at the supplied observation prices, with a full
-  observation of delay; they do not assert that an origin close was executable.
-- Use a fixed, explicitly supplied threshold in basis points: a strict excess
-  gives a long signal, a strict negative excess gives a short signal when
-  permitted, and ties stay flat. Never choose thresholds on evaluated outcomes.
-- Choose unit long/flat/short target exposures or long/flat only. No target has
-  gross exposure above one. Mark-to-market drift is recorded; this is not a
-  continuous intraperiod margin or liquidation model.
-- Require initial capital, one-way fee basis points, one-way slippage basis
-  points, and a per-observation short-financing rate for every report. A zero
-  value must be explicitly supplied; there is no assumed exchange fee schedule.
-- Account for actual cash and asset units. At each rebalance, proportional costs
-  apply to the absolute traded notional. Solve for target units against equity
-  after those costs, rather than charging only changes in a direction label.
-  Charge short financing on the interval's entry short notional. Liquidate the
-  final position and include its costs in the final period's return.
-- Reject a nonpositive marked equity path rather than silently clipping losses
-  or presenting a partial path as completed. This discrete model cannot detect
-  an unobserved intraperiod margin event.
-- Include cash at zero interest and a costed buy-and-hold position over exactly
-  the same observation interval. Report cumulative return, period-end equity
-  and maximum drawdown, traded-notional turnover, and sample volatility of net
-  interval returns. Volatility is undefined with fewer than two returns. Calendar
-  annualization, Sharpe, taxes, and a separate risk-free curve remain outside the
-  first contract.
+```sh
+tsfm run examples/configurations/finance-seasonal-naive.yaml --json
+```
 
-Acceptance must cover independent self-financing cash/unit calculations,
-initial/final costs, a constant-price cost-free long-to-short turnover of two,
-zero trading costs for a flat path, threshold ties, short financing, future-price
-perturbations, benchmark alignment, and insufficient-volatility-history status.
-The existing forecast metrics and artifacts keep their original meaning.
+Use its returned UUID in place of `RUN_ID`. The following cost and threshold
+values are explicit demonstration assumptions, not a venue fee schedule or a
+recommended trading rule:
 
-## First slice: saved-forecast diagnostics
+```sh
+tsfm finance backtest RUN_ID \
+  --workspace results \
+  --source-config examples/configurations/finance-seasonal-naive.yaml \
+  --ohlc examples/datasets/ohlc.csv \
+  --price-target \
+  --initial-capital 1000 \
+  --threshold-bps 100 \
+  --fee-bps 5 \
+  --slippage-bps 2 \
+  --short-financing-bps 3 \
+  --signal-latency-seconds 60 \
+  --output results/finance/report.json \
+  --json
+```
 
-Start with return and direction diagnostics computed from completed, validated
-forecast records. Keep model execution and the generic price-unit scores
-unchanged. Loading a financial diagnostic must require neither model weights nor
-an inference runtime. The existing [evaluation contract](evaluation.md) and
-[artifact validation](../src/tsfm_lab/artifact_validation.py) remain authoritative.
+The forecast command creates the parent experiment. The finance command consumes
+that saved run; `--source-config` supplies only the original dataset import and
+does not execute the configuration's model. The original dataset's canonical
+identity must match the parent run, including its import semantics and units.
+The supplied example is constructed data for checking accounting and integration.
 
-The proposed inputs are:
+Show a checked report or export its capital paths:
 
-- One completed experiment loaded through the existing checked experiment store.
-- An explicit declaration that its target represents positive prices, with the
-  recorded series identity and target units. Do not infer this from a file name.
-- Explicitly supplied original price data, imported with the run's recorded
-  column, timezone, frequency, and format rules. Its canonical dataset fingerprint
-  must match the saved run before extracting origin prices. A separate price
-  table with unverified provenance is outside this first slice.
-- One selected lead `h`, with `1 <= h <= horizon`; recommend `h = 1` initially.
-  Keep every `(series_id, origin, target_timestamp, lead)` case for that lead.
-- A selected return convention: recommend simple returns by default, with an
-  explicit log-return option. Both conventions use the same origin-price basis.
+```sh
+tsfm finance show results/finance/report.json --json
+tsfm finance export results/finance/report.json \
+  --output results/finance/equity.csv --json
+```
 
-For each case, let `P0` be the observed price at the forecast origin, `P1` the
-actual price at the selected target timestamp, and `F1` its saved price forecast:
+The CSV has one row per selected close, with the signal, strategy equity/returns,
+transaction costs, and both benchmark equities. `--json` selects machine-readable
+command output. Report and export destinations must be new paths; existing files
+and symlinks are refused. Report inspection and
+export recalculate the embedded cases without opening the original dataset,
+OHLC file, workspace, or model checkpoint.
 
-| Convention | Forecast-implied return | Actual return |
-| --- | --- | --- |
-| Simple | `F1 / P0 - 1` | `P1 / P0 - 1` |
-| Log | `log(F1 / P0)` | `log(P1 / P0)` |
+## Required inputs and identity
 
-All three prices must be finite and strictly positive. Reject invalid values,
-missing origins, duplicate keys, mismatched actuals, and incomplete coverage.
-Do not clip negative forecasts, fill missing prices, silently reorder inputs, or
-derive an origin price from a future target. A target-to-target return is a
-different diagnostic and must not be substituted for an origin-to-target return.
+The parent must be a completed experiment accepted by the existing
+[artifact validator](../src/tsfm_lab/artifact_validation.py). Its forecast stride
+must be 1. Every successful origin contributes its lead-1 forecast, even when the
+parent horizon is longer; no origin is silently dropped. All cases use the saved
+median or deterministic point statistic and the parent series identity.
 
-Report MAE/RMSE of the implied returns, their convention and horizon, and
-three-category directional accuracy. The recommended zero-move rule uses exact
-signs `-1`, `0`, and `1`; a zero forecast is correct only for an actual zero move.
-Report the count of each actual/forecast category and the full denominator.
-Keep existing price-unit metrics beside these diagnostics. A transformed price
-forecast is an implied return forecast; do not label it an expected return or a
-new probabilistic output. Overlapping target periods are not independent samples.
+`--price-target` explicitly declares that the imported target is a price. The
+original dataset must declare quote units per asset unit; `unspecified` is
+rejected. Origin prices, actual closes, selected forecasts, and all OHLC prices
+must be finite and strictly positive. Negative forecasts are rejected, not clipped.
 
-Persist the parent run ID, model/checkpoint identity, imported price-data
-fingerprint, selected lead, return/zero-move conventions, diagnostic version,
-case counts, and derived values in a separate derived report. Its exact file or
-command interface remains part of the implementation proposal, not an extension
-of the current generic forecast schema.
+The OHLC CSV has exactly these six columns; their order may vary:
 
-## Acceptance before calling the first slice complete
-
-- Independently check `P0=100`, `F1=110`, `P1=105`: simple returns are `0.10` and
-  `0.05`, with absolute error `0.05`; log error is `log(110/105)`.
-- Check positive, negative, and zero moves, including a flat forecast against a
-  nonzero actual move and a nonzero forecast against a flat actual.
-- Verify exact selected-lead coverage, timestamp alignment, units, and dataset
-  identity. Reject missing/duplicate origins and a changed original dataset.
-- Verify that changing observations beyond an earlier case's target cannot alter
-  that earlier diagnostic. A changed actual at its target must change its error,
-  while leaving the stored forecast unchanged.
-- Preserve deterministic/median forecast provenance and original-unit scores;
-  reject corrupted parent artifacts through the existing store checks.
-- Reload the derived report without accessing weights, downloading data, or
-  rerunning inference. No profitability claim follows from passing these tests.
-
-## Trading requires a separate owner decision
-
-Approve the diagnostic scope and conventions above before implementation. Before
-adding an executable strategy, agree each of the following explicitly:
-
-| Decision | Proposed simple starting point or required clarification |
+| Column | Meaning |
 | --- | --- |
-| Signal | One fixed threshold, chosen before evaluation; decide whether its basis is the origin price or forecasted entry/exit prices. |
-| Timing and fills | Specify forecast availability, execution delay, entry/exit prices, and required price columns; do not assume an origin close remains executable after inference. |
-| Horizon and overlap | One selected lead and a written holding/rebalancing rule; reject ambiguous overlapping trades. |
-| Positions and costs | Unit long/flat/short exposure without leverage; explicit fees, slippage, borrowing/funding assumptions, turnover, and initial/final liquidation. |
-| Capital and risk | Specify compounding, loss handling, market calendar, annualization, and any risk-free return. |
-| Benchmarks | Cash and buy-and-hold under the same price, capital, and cost conventions. |
+| `open_timestamp` | Actual opening time of the bar. |
+| `close_timestamp` | Actual closing time, matching the forecast target grid. |
+| `open` | Entry reference price. |
+| `high` | Highest observed price during the bar. |
+| `low` | Lowest observed price during the bar. |
+| `close` | Closing reference price and original forecast target. |
 
-Trading acceptance must additionally check independent capital-path arithmetic,
-zero costs for a flat position, two units of turnover on a long-to-short flip,
-causal signal timing, terminal liquidation, and explicitly undefined Sharpe for
-zero variance. Such work belongs in a finance module consuming generic forecasts;
-it must not change the meaning of forecasting accuracy or imply realistic fills
-from diagnostic origin prices alone.
+Use explicit timezone-aware timestamps, preferably UTC. Naive OHLC timestamps
+require `--ohlc-timezone TIMEZONE`; this is separate from the source
+configuration's dataset timezone. Each bar must open strictly before it closes;
+bars cannot overlap. Both timestamp columns must be
+unique and ascending, and closing times must follow the declared fixed frequency.
+Prices must satisfy `low <= open/close <= high`. Import never sorts, fills, or
+infers opening times.
+
+The entire OHLC closing grid and every close value must exactly match the
+original dataset, including history outside the evaluated interval. Series,
+frequency, and units must agree. An evaluation-only slice, revised source series,
+or independently normalized price table does not satisfy this identity check.
+See the [dataset contract](contracts.md#dataset) for canonical source identity.
+
+## Signal, timing, and holding period
+
+For origin close `C0`, the saved lead-1 target-close forecast `F` gives the signal
+basis `F / C0 - 1`. With threshold `tau = threshold_bps / 10000`:
+
+- A strict excess above `tau` selects long (`+1`).
+- A strict excess below `-tau` selects short (`-1`).
+- Threshold ties and values inside the band select flat (`0`).
+
+Comparison uses policy `decimal_shortest_float64_v1`: imported float64 prices and
+the threshold are converted through their shortest decimal strings, then compared
+in price-difference basis points. For example, `F=101`, `C0=100`, and a 100-bps
+threshold is a flat tie. This avoids a false signal caused by dividing binary
+floating-point numbers and subtracting one. No broad tolerance widens the band.
+Choose the fixed threshold before evaluating outcomes; the module does not tune it.
+
+Enter at the next bar's explicit open `O` and liquidate at that same bar's close
+`C`, which is the lead-1 target. Entry is allowed only when:
+
+```text
+open_timestamp > origin_close_timestamp + signal_latency
+```
+
+Equality fails, including with zero latency. Contiguous bars whose next open and
+previous close share a timestamp are therefore outside this execution contract.
+Do not fabricate a timestamp gap to admit them. The synthetic OHLC example
+deliberately includes a declared opening gap; this does not establish realistic
+latency or fills for a live market.
+
+The future opening price never affects the signal. Its realized effect enters
+position sizing and P&L. A close-to-close forecast-implied return is different
+from the realized holding return `C / O - 1`; the report retains both bases.
+
+Every nonflat bar has a separate entry and exit, including consecutive bars with
+the same direction. The strategy holds cash between bars and does not net a new
+signal against a carried position. No overnight or interbar price change earns
+strategy P&L while flat.
+
+## Cash, units, and costs
+
+Every report requires initial capital, threshold, one-way fees, one-way slippage,
+short financing, and latency. Explicit zero values are allowed; none is inferred.
+Values must be finite and nonnegative, initial capital must be positive, and
+combined one-way fee/slippage must be below 10,000 bps.
+
+Let `E` be pre-entry equity, `z` the selected position, `c` the combined one-way
+fee/slippage fraction, and `b` the per-held-bar short-financing fraction:
+
+```text
+q           = z * E / (O * (1 + c))
+entry_cash  = E - q * O - c * abs(q) * O
+next_equity = entry_cash + q * C - c * abs(q) * C
+              - b * abs(q) * O * indicator(z == -1)
+```
+
+Here `q` is signed asset units. Sizing targets unit gross exposure against equity
+after entry costs. Prices can subsequently change that exposure before the close;
+there is no intrabar rebalancing. Entry and exit fees/slippage apply separately to
+their actual absolute notionals, with each component recorded in the ledger.
+Slippage is a proportional cash charge against the supplied reference price.
+Short financing is charged on entry short notional for each held bar, not on
+ending equity and not as an annual rate. Flat bars incur no trading costs.
+
+Before completing a short bar, the ledger checks marked equity at the observed
+bar high using its post-entry cash and signed shares. Nonpositive marked equity
+is rejected, even if the closing price would restore a profit. Nonpositive ending
+equity after exit costs/financing, nonfinite arithmetic, and unrepresentable
+nonzero positions are also rejected. No partial or clipped capital path is saved
+as a completed result. This check is not a broker margin or liquidation model.
+
+At a constant price, with `E=100` and combined one-way costs `c=0.01`, either
+direction ends at approximately `98.01980198` before short financing. With zero
+costs and constant equity, each traded bar contributes turnover 2; two bars
+contribute turnover 4 whether their directions repeat or flip.
+
+## Benchmarks, diagnostics, and metrics
+
+The report includes cash at zero interest and costed buy-and-hold. Buy-and-hold
+buys once at the first selected open, marks those shares at each selected close,
+and sells at the last selected close. It pays only that entry and final exit. It
+retains exposure across interbar gaps, unlike the strategy. Both use the same
+initial capital, quote units, calendar endpoints, and transaction-cost rates.
+For a single bar, buy-and-hold and an all-long strategy have the same ledger.
+
+Each capital path reports:
+
+| Quantity | Definition |
+| --- | --- |
+| Cumulative return | `final_capital / initial_capital - 1`. |
+| Period net return | Change in period-end equity divided by prior equity, with costs included. |
+| Maximum drawdown | Largest loss from a preceding period-end peak, including initial capital as the first peak. |
+| Total turnover | All entry/exit absolute traded notional divided by initial capital. |
+| Row turnover | That row's traded notional divided by pre-entry equity; this differs from total turnover's denominator. |
+| Volatility | Unannualized sample standard deviation of period net returns, `ddof=1`. |
+
+Volatility is `null` with reason `insufficient_returns` for fewer than two returns.
+A constant return path with at least two observations has zero volatility.
+The report records fees, slippage, financing, cash, shares, notionals, and gross
+and net P&L separately. Drawdown is measured at period ends, not at every intrabar
+high/low. No annualization, Sharpe ratio, or risk-free curve is supplied.
+
+Return diagnostics compare the saved forecast-implied simple return
+`(F-C0)/C0` with the actual close-to-close return `(C-C0)/C0`. They report MAE,
+RMSE, and three-category directional accuracy using exact negative/zero/positive
+signs, with category counts and the full denominator. A zero forecast move is
+correct only for an actual zero move. These diagnostics do not use the trading
+threshold and do not replace the parent's price-unit forecast scores. A
+transformed point forecast is not an expected-return or calibrated probability
+estimate.
+
+## Saved reports and verification limits
+
+Reports are separate strict JSON artifacts under the finance policy and schema
+version. They retain the parent run ID, copied parent result and artifact
+identities, original-data and OHLC fingerprints, explicit rules, implementation
+and environment provenance, raw selected cases, diagnostics, and capital paths.
+The source experiment remains unchanged.
+
+Saving validates and recalculates the report, adds its SHA-256 content fingerprint,
+and atomically publishes it without replacing an existing destination. Reload
+rejects duplicate JSON keys, nonfinite values, unsupported schemas/policies,
+inconsistent metadata, checksum failures, and arithmetic inconsistent with the
+embedded cases. Selected lead-1 price errors must also reproduce the copied
+parent's recorded per-lead scores. Recalculated floating-point values use relative
+tolerance `1e-12` and zero absolute tolerance. The JSON limit is 64 MiB.
+Reload and export need no model runtime or original source files. Stored input
+identities describe what was checked at
+creation; detached reload recalculates the embedded cases rather than rereading
+the complete source series or parent predictions file. A copied predictions-file
+hash alone cannot authenticate the selected rows without that file. These are
+integrity and internal-consistency checks, not external data authentication.
+
+This is a hypothetical reference-price simulation. It assumes fractional units
+and supplied OHLC prices, without liquidity, order-book depth, partial fills,
+market impact beyond the explicit slippage charge, taxes, dividends, corporate
+actions, borrow availability, or venue-specific margin/funding rules. All input
+price columns must use a consistent adjustment basis. The short high check cannot
+establish realistic borrowing, margin, or liquidation behavior; real short sales
+have additional obligations. See the [SEC short-selling explanation](https://www.sec.gov/investor/pubs/regsho.htm).
+
+No forecast or strategy superiority follows from passing synthetic checks.
+Threshold selection, dataset reuse, checkpoint pretraining overlap, and supplied
+execution/cost assumptions limit any empirical interpretation. Backtested results
+are hypothetical performance; see the [SEC performance guidance](https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-47).
+See [evaluation methodology](evaluation.md) for the separate forecasting contract.
