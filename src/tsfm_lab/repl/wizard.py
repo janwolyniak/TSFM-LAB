@@ -104,24 +104,43 @@ class _Guide:
         adapter,
         ttm_demo_path=None,
         profile_demo_paths=None,
+        seed_fields=None,
+        explicit_fields=(),
+        checkpoint_variant=None,
     ):
         self.ask, self.emit = ask, emit
         self.workspace, self.demo_path = Path(workspace), Path(demo_path).resolve()
         self.arguments = {"workspace": self.workspace, "base_directory": Path.cwd()}
         self.fields = default_fields(adapter or "last_value")
         self.fields["dataset_path"] = str(self.demo_path)
+        supplied = dict(seed_fields or {})
+        variant = supplied.pop("checkpoint_variant", None)
+        if set(supplied) - set(self.fields) or any(
+            not isinstance(value, str) for value in supplied.values()
+        ):
+            raise ConfigError("The assisted setup contains invalid form fields")
+        self._provided = set(supplied) | set(explicit_fields)
+        self._assisted = seed_fields is not None
+        self.fields.update(supplied)
+        if self._assisted and "units" not in supplied:
+            self.fields["units"] = ""
+            self._provided.add("units")
         self._ordinary_demo_path = self.demo_path
         self._ttm_demo_path = Path(ttm_demo_path).resolve() if ttm_demo_path else None
         self._profile_demo_paths = {
             profile: Path(path).resolve()
             for profile, path in (profile_demo_paths or {}).items()
         }
-        self._checkpoint_profile = None
+        self._checkpoint_profile = checkpoint_variant or variant
         self.dataset = self.capabilities = None
         self._model = None
         self._evaluation_started = False
         self._example_declarations = {}
         self._example_path = None
+
+    def _default(self, key, value):
+        if key not in self._provided:
+            self.fields[key] = value
 
     def profile(self):
         self.set(
@@ -148,8 +167,9 @@ class _Guide:
         information = catalog_info(self.fields["adapter"])
         if self.fields["adapter"] != previous_adapter:
             statistic = information["point_statistic"]
-            self.fields["point_statistic"] = (
-                statistic if statistic in information["supported_tasks"] else "median"
+            self._default(
+                "point_statistic",
+                statistic if statistic in information["supported_tasks"] else "median",
             )
         self.set(
             "point_statistic", "Forecast task", choices=information["supported_tasks"]
@@ -161,7 +181,8 @@ class _Guide:
         elif self.fields["adapter"] in CHECKPOINT_REPOSITORIES:
             repositories = CHECKPOINT_REPOSITORIES[self.fields["adapter"]]
             if self.fields["repository"] not in repositories:
-                self.fields.update(repository=repositories[0], revision="")
+                self._default("repository", repositories[0])
+                self._default("revision", "")
             self.emit(
                 "Use an existing cached or local checkpoint; setup does not download models."
             )
@@ -194,7 +215,7 @@ class _Guide:
                     if item["repository"] == self.fields["repository"]
                 ]
                 selected = variants[0]
-                if len(variants) > 1:
+                if len(variants) > 1 or self._checkpoint_profile is not None:
                     previous_profile = self._checkpoint_profile
                     default_profile = next(
                         (
@@ -204,9 +225,7 @@ class _Guide:
                         ),
                         None,
                     )
-                    if default_profile is None and previous_profile in {
-                        item["variant"] for item in variants
-                    }:
+                    if previous_profile is not None:
                         default_profile = previous_profile
                     self._checkpoint_profile = _question(
                         self.ask,
@@ -224,7 +243,10 @@ class _Guide:
                     self.fields["repository"] != previous_repository
                     or not self.fields["revision"]
                 ):
-                    self.fields["revision"] = selected["reference_revision"]
+                    if self.fields["repository"] != previous_repository:
+                        self.fields["revision"] = selected["reference_revision"]
+                    else:
+                        self._default("revision", selected["reference_revision"])
                 self.set("revision", "Exact checkpoint SHA", validate=self._sha)
                 self.set("cache_dir", "Cache directory (optional; - uses the default)")
                 if self.fields["cache_dir"] == "-":
@@ -233,10 +255,18 @@ class _Guide:
                 self.set(
                     "checkpoint_path", "Local checkpoint directory", validate=_required
                 )
-        validate_model_fields(self.fields, **self.arguments)
+        validate_model_fields(
+            {**self.fields, "name": "Model validation"}, **self.arguments
+        )
         prototype = {
             **self.fields,
+            "name": "Model validation",
             "dataset_path": str(self.demo_path),
+            "timestamp_column": "timestamp",
+            "target_column": "demand",
+            "frequency": "1h",
+            "timezone": "UTC",
+            "units": "unspecified",
             "context_length": (
                 self.fields["seasonal_period"]
                 if self.fields["adapter"] == "seasonal_naive"
@@ -263,10 +293,10 @@ class _Guide:
                 Path(self.fields["dataset_path"]).expanduser().resolve()
                 == self.demo_path
             ):
-                self.fields["dataset_path"] = str(next_demo)
+                self._default("dataset_path", str(next_demo))
             self.demo_path = next_demo
         if self.capabilities.min_context == self.capabilities.max_context:
-            self.fields["context_length"] = str(self.capabilities.min_context)
+            self._default("context_length", str(self.capabilities.min_context))
         record = getattr(model, "configuration", lambda: {})().get("checkpoint")
         if record:
             snapshot = checkpoint_verification(record)
@@ -311,7 +341,7 @@ class _Guide:
                 "units",
             ):
                 if key != "units" or not preserve_units:
-                    self.fields[key] = selected[key]
+                    self._default(key, selected[key])
             for key in (
                 "finance_target_kind",
                 "energy_measurement",
@@ -322,7 +352,7 @@ class _Guide:
                 if not self.fields[key] or (
                     mapped and self._example_path != self.demo_path
                 ):
-                    self.fields[key] = selected[key]
+                    self._default(key, selected[key])
             if mapped:
                 self._example_path = self.demo_path
                 self._example_declarations = {
@@ -339,10 +369,18 @@ class _Guide:
                 }
         else:
             for key, value in self._example_declarations.items():
-                if self.fields[key] == value:
+                if key not in self._provided and self.fields[key] == value:
                     self.fields[key] = "unspecified" if key == "units" else ""
             self._example_declarations = {}
             self._example_path = None
+        if Path(
+            self.fields["dataset_path"]
+        ).expanduser().resolve() != self.demo_path or self._provided & {
+            "timestamp_column",
+            "target_column",
+            "frequency",
+            "timezone",
+        }:
             for key, label, validator in (
                 ("timestamp_column", "Timestamp column", _required),
                 ("target_column", "Target column", _required),
@@ -361,6 +399,8 @@ class _Guide:
             self.fields["usage_profile"] != "generic"
             or Path(self.fields["dataset_path"]).expanduser().resolve()
             != self.demo_path
+            or "units" in self._provided
+            or self._assisted
         ):
             label = {
                 "finance": "Financial target units",
@@ -373,7 +413,7 @@ class _Guide:
                 label,
                 validate=(
                     _required
-                    if self.fields["usage_profile"] == "generic"
+                    if self.fields["usage_profile"] == "generic" and not self._assisted
                     else _declared_units
                 ),
             )
@@ -445,12 +485,13 @@ class _Guide:
                 len(self.dataset.values) - context,
                 self.capabilities.max_horizon or 4,
             )
-            self.fields.update(
-                context_length=str(context),
-                horizon=str(horizon),
-                stride=str(horizon),
-                mase_period=str(min(4, context)),
-            )
+            for key, value in {
+                "context_length": str(context),
+                "horizon": str(horizon),
+                "stride": str(horizon),
+                "mase_period": str(min(4, context)),
+            }.items():
+                self._default(key, value)
             self._evaluation_started = True
         self.set("name", "Experiment name", validate=_required)
 
@@ -478,7 +519,7 @@ class _Guide:
         proposals = suggested_bounds(self.dataset, self.fields)
         for key, value in proposals.items():
             if not self.fields[key]:
-                self.fields[key] = value
+                self._default(key, value)
         self.set(
             "evaluation_start",
             "First target timestamp (inclusive)",
@@ -562,6 +603,9 @@ def build_experiment(
     demo: bool = False,
     ttm_demo_path: Path | None = None,
     profile_demo_paths: dict[str, Path] | None = None,
+    seed_fields: dict[str, str] | None = None,
+    explicit_fields=(),
+    checkpoint_variant: str | None = None,
 ) -> ExperimentConfig | None:
     """Ask inline questions and return a reviewed config without execution or writes."""
     try:
@@ -574,7 +618,12 @@ def build_experiment(
                 adapter,
                 ttm_demo_path,
                 profile_demo_paths,
+                seed_fields,
+                explicit_fields,
+                checkpoint_variant,
             ).run()
+        if seed_fields is not None or explicit_fields or checkpoint_variant is not None:
+            raise ConfigError("Assisted suggestions require guided setup")
         if adapter in CHECKPOINT_REPOSITORIES:
             raise ConfigError("Use guided setup to select a pretrained checkpoint")
         fields = demo_fields(demo_path)

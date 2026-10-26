@@ -41,6 +41,7 @@ class TerminalSession:
         self.known_ids = []
         self.closed = False
         self.connection_manager = connection_manager
+        self.assistant_service = None
 
     def emit(self, value, style=None):
         self.console.print(Text(literal(value), style=style))
@@ -94,6 +95,7 @@ class TerminalSession:
                 "/run": self._run,
                 "/models": self._models,
                 "/connections": self._connections,
+                "/explain": self._explain,
                 "/history": self._history,
                 "/show": self._show,
                 "/compare": self._compare,
@@ -147,6 +149,23 @@ class TerminalSession:
 
     def _setup(self, arguments, *, demo):
         self._count(arguments, 0, 1, "/demo [adapter]" if demo else "/new [adapter]")
+        method = "guided"
+        if not demo:
+            if arguments and arguments[0] in {"guided", "describe"}:
+                method, arguments = arguments[0], []
+            elif not arguments:
+                method = self._setup_ask(
+                    "Setup method", "guided", ("guided", "describe")
+                )
+                if method in {"/cancel", "/back"}:
+                    return
+                if method not in {"guided", "describe"}:
+                    raise ConfigError(
+                        "Choose guided or describe to start an experiment"
+                    )
+        if method == "describe":
+            self._assisted_setup()
+            return
         self.emit(
             (
                 "Original seasonal demo"
@@ -203,6 +222,7 @@ class TerminalSession:
             self.emit(
                 "Next: /compare latest OTHER_ID · /export latest forecasts.csv", "dim"
             )
+            self.emit("Optional: /explain run latest", "dim")
         else:
             message = (
                 "Experiment cancelled"
@@ -227,6 +247,90 @@ class TerminalSession:
         if self.connection_manager is None:
             self.connection_manager = ConnectionManager()
         ConnectionMenu(self.editor, self.emit, manager=self.connection_manager).run()
+
+    def _assistant(self):
+        from tsfm_lab.assistant.service import AssistantService
+        from tsfm_lab.assistant.ui import AssistantFlow
+        from tsfm_lab.connections.manager import ConnectionManager
+
+        if self.connection_manager is None:
+            self.connection_manager = ConnectionManager()
+        if self.assistant_service is None:
+            self.assistant_service = AssistantService(self.connection_manager)
+        return AssistantFlow(
+            self.editor,
+            self.emit,
+            self.assistant_service,
+            connections=lambda: self._connections([]),
+        )
+
+    def _assisted_setup(self):
+        def review(resolution):
+            options = (
+                {}
+                if resolution is None
+                else {
+                    "seed_fields": resolution.seed_fields,
+                    "explicit_fields": resolution.explicit_fields,
+                }
+            )
+            return build_experiment(
+                self._setup_ask,
+                self.emit,
+                workspace=self.workspace,
+                demo_path=self.demo_path,
+                ttm_demo_path=self.ttm_demo_path,
+                profile_demo_paths=self.profile_demo_paths,
+                **options,
+            )
+
+        config = self._assistant().describe(review, default_dataset=self.demo_path)
+        if config is not None:
+            self._execute(config)
+        else:
+            self.emit("Assisted setup finished without starting an experiment.", "dim")
+
+    def _explain(self, arguments):
+        self._count(
+            arguments,
+            2,
+            4,
+            "/explain model ID [ID ...] | /explain run ID | /explain finance REPORT.json",
+        )
+        from tsfm_lab.assistant.evidence import (
+            bounded_json,
+            experiment_evidence,
+            finance_evidence,
+            model_evidence,
+        )
+        from tsfm_lab.experiments import ExperimentStore
+
+        kind, selected = arguments[0], arguments[1:]
+        if kind == "model":
+            contexts = [model_evidence(identifier) for identifier in selected]
+            context = contexts[0]
+            if len(contexts) > 1:
+                context = {
+                    **context,
+                    "kind": "model_comparison",
+                    "data": {"models": [item["data"] for item in contexts]},
+                }
+            question = "Explain these model capabilities and verification limits without ranking forecast quality."
+        elif kind == "run" and len(selected) == 1:
+            identifier = self.records.resolve_id(selected[0])
+            context = experiment_evidence(ExperimentStore(self.workspace), identifier)
+            question = (
+                "Explain the historical evaluation, its scores, units, and limitations."
+            )
+        elif kind == "finance" and len(selected) == 1:
+            context = finance_evidence(Path(selected[0]))
+            question = "Explain these saved hypothetical finance results and explicit assumptions without giving trading advice."
+        else:
+            raise ConfigError(
+                "Use /explain model ID, /explain run ID, or /explain finance REPORT.json"
+            )
+        bounded_json(context)
+        self._assistant().explain(context, default_question=question)
 
     def _setup_ask(self, label, default="", choices=()):
         while True:

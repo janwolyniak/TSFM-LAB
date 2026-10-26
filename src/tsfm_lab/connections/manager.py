@@ -446,10 +446,70 @@ class ConnectionManager:
 
     @public_boundary
     def preview_test(self):
+        return self._preview_message(
+            TEST_TEXT,
+            instructions=TEST_INSTRUCTIONS,
+            output_tokens=32,
+            data_included="Only this fixed connection-check text; no dataset, paths, saved forecasts or environment.",
+            purpose="test",
+            cancel=None,
+        )
+
+    @public_boundary
+    def preview_message(
+        self, text, *, instructions, output_tokens=1024, data_included, cancel=None
+    ):
+        """Approve exact assistant context locally, without refreshing or sending."""
+        return self._preview_message(
+            text,
+            instructions=instructions,
+            output_tokens=output_tokens,
+            data_included=data_included,
+            purpose="message",
+            cancel=cancel,
+        )
+
+    @staticmethod
+    def _check_cancel(cancel):
+        if cancel is not None and not callable(cancel):
+            raise ConnectionError("invalid")
+        if cancel and cancel():
+            raise ConnectionError("cancelled")
+
+    def _preview_message(
+        self, text, *, instructions, output_tokens, data_included, purpose, cancel
+    ):
+        self._check_cancel(cancel)
+        if (
+            type(text) is not str
+            or not text.strip()
+            or type(instructions) is not str
+            or type(output_tokens) is not int
+            or not 1 <= output_tokens <= 4096
+            or type(data_included) is not str
+            or not data_included.strip()
+        ):
+            raise ConnectionError("invalid")
+        if (
+            len((text + instructions).encode()) > self.limits.max_input_bytes
+            or len(data_included.encode()) > 4096
+        ):
+            raise ConnectionError("bounds")
+        with self._lock:
+            return self._make_preview(
+                text, instructions, output_tokens, data_included, purpose, cancel
+            )
+
+    def _make_preview(
+        self, text, instructions, output_tokens, data_included, purpose, cancel
+    ):
         state = self.state.read()
         profile = self._find(state)
         cached = self._models.get(profile["id"])
-        if profile["credential_ref"] is None:
+        if (
+            profile["credential_ref"] is None
+            or profile["credential_ref"] in self._blocked
+        ):
             raise ConnectionError("credentials")
         if (
             cached is None
@@ -457,6 +517,12 @@ class ConnectionManager:
             or profile["model"] not in {item.identifier for item in cached[1]}
         ):
             raise ConnectionError("model")
+        # Previewing must inspect secrets locally; _ready could refresh tokens.
+        credentials = self._store(profile["storage"]).get(profile["credential_ref"])
+        if not isinstance(credentials, Credentials):
+            raise ConnectionError("credentials")
+        if profile["kind"] == "chatgpt_plan":
+            self._bound(profile["account"], credentials)
         token = str(uuid4())
         preview = {
             "id": token,
@@ -467,71 +533,94 @@ class ConnectionManager:
             "provider": KINDS[profile["kind"]][0],
             "usage": KINDS[profile["kind"]][1],
             "model": profile["model"],
-            "text": TEST_TEXT,
-            "instructions": TEST_INSTRUCTIONS,
-            "output_tokens": None if profile["kind"] == "chatgpt_plan" else 32,
+            "text": text,
+            "instructions": instructions,
+            "output_tokens": (
+                None if profile["kind"] == "chatgpt_plan" else output_tokens
+            ),
             "local_limits": {
                 "seconds": self.limits.timeout_seconds,
                 "received_bytes": self.limits.max_response_bytes,
             },
-            "data_included": "Only this fixed connection-check text; no dataset, paths, saved forecasts or environment.",
+            "data_included": data_included,
         }
+        self._public_safe(preview, credentials)
+        self._check_cancel(cancel)
+        self._check_preview_state(self.state.read(), state["generation"], profile)
         self._previews.clear()
         self._previews[token] = (
             copy.deepcopy(preview),
             state["generation"],
             copy.deepcopy(profile),
             time(),
+            purpose,
+            output_tokens,
         )
         return preview
 
     @public_boundary
     def submit_test(self, preview, *, confirmed, cancel=None):
+        return self._submit_message(
+            preview, confirmed=confirmed, cancel=cancel, purpose="test"
+        )
+
+    @public_boundary
+    def submit_message(self, preview, *, confirmed, cancel=None):
+        """Spend one matching approval on at most one selected-route generation."""
+        return self._submit_message(
+            preview, confirmed=confirmed, cancel=cancel, purpose="message"
+        )
+
+    @staticmethod
+    def _check_preview_state(state, generation, profile):
+        if (
+            state["generation"] != generation
+            or state["selected"] != profile["id"]
+            or ConnectionManager._find(state, profile["id"]) != profile
+        ):
+            raise ConnectionError("state")
+
+    def _submit_message(self, preview, *, confirmed, cancel, purpose):
         from tsfm_lab.connections.providers import generate
 
         if type(preview) is not dict:
             raise ConnectionError("permission")
-        pending = self._previews.pop(preview.get("id"), None)
+        with self._lock:
+            pending = self._previews.pop(preview.get("id"), None)
         if confirmed is not True:
             raise ConnectionError("permission")
-        if pending is None or pending[0] != preview or time() - pending[3] > 300:
-            raise ConnectionError("state")
-        state = self.state.read()
-        profile = self._find(state)
         if (
-            state["generation"] != pending[1]
-            or profile["id"] != preview["connection_id"]
-            or profile != pending[2]
-            or profile["model"] != preview["model"]
+            pending is None
+            or pending[0] != preview
+            or not 0 <= time() - pending[3] <= 300
+            or pending[4] != purpose
         ):
             raise ConnectionError("state")
+        self._check_cancel(cancel)
+        profile, approved = pending[2], pending[0]
+        self._check_preview_state(self.state.read(), pending[1], profile)
         profile, credentials = self._ready(profile["id"], cancel)
-        before_send = self.state.read()
-        if (
-            before_send["generation"] != pending[1]
-            or before_send["selected"] != profile["id"]
-            or self._find(before_send, profile["id"]) != pending[2]
-        ):
-            raise ConnectionError("state")
+        self._check_preview_state(self.state.read(), pending[1], pending[2])
+        self._public_safe(approved, credentials)
+        self._check_cancel(cancel)
         answer = generate(
             profile["kind"],
             credentials,
             self.transport,
             model=profile["model"],
-            instructions=TEST_INSTRUCTIONS,
-            text=TEST_TEXT,
-            output_tokens=32,
+            instructions=approved["instructions"],
+            text=approved["text"],
+            output_tokens=pending[5],
             limits=self.limits,
             cancel=cancel,
             workspace_id=profile["workspace_id"],
         )
-        current = self.state.read()
-        if (
-            current["generation"] != pending[1]
-            or current["selected"] != profile["id"]
-            or self._find(current, profile["id"]) != pending[2]
-        ):
-            raise ConnectionError("state")
+        self._check_cancel(cancel)
+        self._check_preview_state(self.state.read(), pending[1], pending[2])
+        if type(answer) is not str:
+            raise ConnectionError("response")
+        self._public_safe(answer, credentials)
+        self._check_cancel(cancel)
         return answer
 
     @public_boundary

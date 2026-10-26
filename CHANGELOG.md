@@ -2,6 +2,13 @@
 
 ## Next feature release in development
 
+- Add optional natural-language experiment drafts and clarifications, preserving
+  prior choices and the selected local dataset through normal guided review.
+- Add explanations of catalog models, checked experiments and saved finance reports
+  with bounded, path-free evidence and separately displayed authoritative facts.
+  Every request requires explicit preview/confirmation; no generated code or actions
+  can start a run, change artifacts, or select another billing route.
+
 - Add four explicit assistant connection routes, hidden credential prompts,
   session/native-vault storage, discovery/selection, and a confirmed fixed
   connection check. Qualification uses fake credentials and simulated providers;

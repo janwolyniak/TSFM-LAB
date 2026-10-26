@@ -1212,7 +1212,7 @@ print(json.dumps({'copied': 5, 'optional_loaded': sorted(blocked.intersection(sy
         self.done("five_usage_profiles_saved_reload_and_metadata_only_comparison")
 
     def connections(self):
-        self.check = "fake_connections_without_provider_dependencies"
+        self.check = "fake_connections_and_assistance_without_provider_dependencies"
         directory = self.root / "connection-metadata"
         require(
             self.json_command("connections", "list", "--state-directory", directory)
@@ -1226,6 +1226,11 @@ print(json.dumps({'copied': 5, 'optional_loaded': sorted(blocked.intersection(sy
 import time
 from pathlib import Path
 from types import SimpleNamespace
+from importlib.resources import files
+from tsfm_lab.assistant.drafts import resolve_draft
+from tsfm_lab.assistant.evidence import model_evidence
+from tsfm_lab.assistant.service import AssistantService
+from tsfm_lab.repl.wizard import build_experiment
 from tsfm_lab.connections.contracts import KINDS
 from tsfm_lab.connections.credentials import Credentials
 from tsfm_lab.connections.manager import ConnectionManager
@@ -1236,6 +1241,7 @@ fake_secret = 'fake-installed-connection-secret-12345678'
 class Fake:
     kind = None
     calls = []
+    answer = 'confirmed'
     def send(self, request, **kwargs):
         self.calls.append(request)
         if request.method == 'GET':
@@ -1246,11 +1252,11 @@ class Fake:
                 'gemini_api': {'models':[{'name':'models/fake-model','supportedGenerationMethods':['generateContent']}]},
             }[self.kind]
         elif self.kind == 'anthropic_api':
-            payload = {'type':'message','role':'assistant','stop_reason':'end_turn','content':[{'type':'text','text':'confirmed'}]}
+            payload = {'type':'message','role':'assistant','stop_reason':'end_turn','content':[{'type':'text','text':self.answer}]}
         elif self.kind == 'gemini_api':
-            payload = {'candidates':[{'finishReason':'STOP','content':{'role':'model','parts':[{'text':'confirmed'}]}}]}
+            payload = {'candidates':[{'finishReason':'STOP','content':{'role':'model','parts':[{'text':self.answer}]}}]}
         else:
-            payload = {'status':'completed','output':[{'type':'message','role':'assistant','status':'completed','content':[{'type':'output_text','text':'confirmed'}]}]}
+            payload = {'status':'completed','output':[{'type':'message','role':'assistant','status':'completed','content':[{'type':'output_text','text':self.answer}]}]}
         if request.method == 'POST' and self.kind == 'chatgpt_plan':
             frame = {'type':'response.completed','response':payload}
             return HTTPResponse(200, ('data: '+json.dumps(frame)+'\\n\\n').encode(),headers={'content-type':'text/event-stream'})
@@ -1260,6 +1266,7 @@ transport = Fake()
 manager = ConnectionManager(StateStore(Path('connection-metadata')),transport=transport,oauth_factory=lambda _:SimpleNamespace(revoke=lambda *a,**kw:True))
 for kind in KINDS:
     transport.kind = kind
+    transport.answer = 'confirmed'
     if kind == 'chatgpt_plan':
         item = manager.add_plan('Installed fake plan',storage='session')
         account = {'issuer':'https://auth.openai.com','subject':'fake-account','client_id':'fake-issued-client'}
@@ -1273,19 +1280,40 @@ for kind in KINDS:
     preview = manager.preview_test()
     assert fake_secret not in json.dumps(preview)
     assert manager.submit_test(preview,confirmed=True) == 'confirmed'
+    assistant = AssistantService(manager)
+    proposal = {'schema_version':1,'state':'ready','intent':'historical_evaluation','dataset_ref':'selected_dataset','fields':{'usage_profile':'generic','adapter':'last_value','timestamp_column':'timestamp','target_column':'demand','frequency':'1h','units':'synthetic_units','context_length':'8','horizon':'4','stride':'4','mase_period':'4','evaluation_start':'2026-01-01T16:00:00Z','evaluation_end':'2026-01-02T08:00:00Z','point_statistic':'median'},'explicit_fields':[],'assumptions':[],'missing_fields':[]}
+    transport.answer = json.dumps(proposal)
+    preview = assistant.preview_draft('Evaluate historical demand with context 8, horizon 4 and stride 4.')
+    draft = assistant.submit_draft(preview,confirmed=True)
+    dataset = Path(str(files('tsfm_lab.resources').joinpath('seasonal.csv')))
+    resolved = resolve_draft(draft,dataset_refs={'selected_dataset':dataset})
+    assert resolved.state == 'ready'
+    questions = []
+    def ask(label,default='',choices=()):
+        questions.append(label)
+        return default
+    assert build_experiment(ask,lambda _:None,workspace=Path('must-not-create'),demo_path=dataset,seed_fields=resolved.seed_fields,explicit_fields=resolved.explicit_fields) is None
+    assert questions.count('Run experiment?') == 1
+    assert not Path('must-not-create').exists()
+    transport.answer = json.dumps({'schema_version':1,'annotations':[{'text':'This is the supported baseline model.','evidence_ids':['/data/adapter_id']}]})
+    preview = assistant.preview_explanation('Explain this model.',model_evidence('last_value'))
+    assert str(dataset) not in preview['text'] and fake_secret not in json.dumps(preview)
+    assert assistant.submit_explanation(preview,confirmed=True)[0].text == 'This is the supported baseline model.'
     manager.disconnect(item['id'])
-assert len(transport.calls) == 8
+assert len(transport.calls) == 16
 assert not manager.session._secrets
 assert fake_secret not in manager.state.path.read_text()
 assert not blocked.intersection(sys.modules)
-print(json.dumps({'fake_routes':4,'inference_requests':4,'optional_loaded':[]}))
+print(json.dumps({'fake_routes':4,'inference_requests':12,'optional_loaded':[]}))
 """
         require(
             strict_json(self.command("-c", probe, python=True).stdout)
-            == {"fake_routes": 4, "inference_requests": 4, "optional_loaded": []},
-            "Installed fake connection workflow failed",
+            == {"fake_routes": 4, "inference_requests": 12, "optional_loaded": []},
+            "Installed fake connection and language workflow failed",
         )
-        self.done("four_fake_connections_without_provider_dependencies_or_secret_files")
+        self.done(
+            "four_fake_connections_drafts_and_explanations_without_provider_dependencies"
+        )
 
     def managed_worker(self, dataset):
         self.check = "installed_clean_worker"

@@ -201,7 +201,7 @@ class ConnectionMenu:
 
     def run(self):
         self.emit(
-            "Assistant connections · Setup and connection checks. Experiment drafting and explanations arrive separately."
+            "Assistant connections · Setup and connection checks. Language setup and explanations are available in the main tsfm terminal."
         )
         actions = {
             "status": self._profiles,

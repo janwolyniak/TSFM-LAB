@@ -30,6 +30,7 @@ COMMANDS = {
     "/run": "Run a saved YAML configuration",
     "/models": "Browse the local model catalog",
     "/connections": "Manage optional assistant connections",
+    "/explain": "Explain a model, checked experiment, or saved finance report",
     "/history": "List saved experiments",
     "/show": "Read a saved result",
     "/compare": "Compare matching experiments",

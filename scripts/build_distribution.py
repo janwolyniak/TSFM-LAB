@@ -33,6 +33,18 @@ CONNECTION_MODULES = {
         "vault",
     )
 } | {"tsfm_lab/connection_commands.py", "tsfm_lab/worker_entry.py"}
+ASSISTANT_MODULES = {
+    f"tsfm_lab/assistant/{name}.py"
+    for name in (
+        "__init__",
+        "drafts",
+        "resolution",
+        "evidence",
+        "protocol",
+        "service",
+        "ui",
+    )
+}
 
 SOURCE_FILES = {
     "LICENSE",
@@ -114,6 +126,8 @@ SOURCE_FILES |= (
     | {"examples/datasets/finance-demo-ohlc.csv"}
 )
 SOURCE_FILES |= {f"src/{name}" for name in CONNECTION_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in ASSISTANT_MODULES}
+SOURCE_FILES |= {"docs/language-assistance.md", "docs/p7-language-verification.md"}
 
 
 def _allowed(names):
@@ -186,6 +200,7 @@ def inspect_wheel(path, *, name, version):
             for profile in ("finance", "energy", "temperature", "weather")
         }
         required |= CONNECTION_MODULES
+        required |= ASSISTANT_MODULES
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")
         if not required <= names:
