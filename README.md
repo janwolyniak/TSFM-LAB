@@ -2,8 +2,8 @@
 
 **Local time-series forecast evaluation with reproducible experiments.**
 
-[![Source version: 0.1.0](https://img.shields.io/badge/source-v0.1.0-2563eb)](pyproject.toml)
-[![Release: in preparation](https://img.shields.io/badge/release-in_preparation-d97706)](docs/release-v0.1.0.md)
+[![Source version: 0.2.0](https://img.shields.io/badge/source-v0.2.0-2563eb)](pyproject.toml)
+[![GitHub release: v0.2.0](https://img.shields.io/badge/GitHub_release-v0.2.0-15803d)](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
 [![Python checks](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml/badge.svg?branch=main&event=push)](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](docs/installation.md)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-15803d)](LICENSE)
@@ -17,7 +17,7 @@
 [TTM](docs/ttm.md) ·
 [Usage profiles](docs/usage-profiles.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
-[Release notes](docs/release-v0.1.0.md) ·
+[Release notes](docs/release-v0.2.0.md) ·
 [Research origin and citation](#research-origin-and-citation) ·
 [Contributing](CONTRIBUTING.md)
 
@@ -50,18 +50,27 @@ to acknowledge the study when using TSFM Lab in your work.
 - **Choose a workflow:** select Generic, Finance, Energy, Temperature, or Weather
   in `/new`. Profile-specific questions preserve declared units and measurement
   semantics; history and reports show the selected usage without changing scores.
+- **Use optional assistance:** describe an experiment for editable setup choices,
+  or request explanations of checked models, results, and finance reports. Four
+  connection routes keep account/model/usage selection explicit; outgoing content
+  and execution require review. See the [assistant guide](docs/language-assistance.md).
 - **Evaluate price decisions:** derive long/flat/short signals from saved lead-1
   forecasts, require explicit OHLC timing and costs, and inspect verified
   strategy, cash, and buy-and-hold reports without rerunning a model.
 
 ### Release status
 
-The source version is **0.1.0**. The first GitHub Release is being prepared;
-no GitHub or PyPI package release has been published. See the
-[draft release notes](docs/release-v0.1.0.md),
-[release verification record](docs/milestone5-verification.md), and
-[publication checklist](docs/releasing.md). The CI badge above tracks checks on
-`main`; it does not indicate that a package has been published.
+The source version is **0.2.0**, distributed through the
+[GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
+as a source archive and installable wheel with SHA-256 checksums. PyPI publication
+is separate and has not been performed. See the [release notes](docs/release-v0.2.0.md),
+[release verification record](docs/v0.2.0-verification.md), and
+[release procedure](docs/releasing.md).
+
+Hosted CI is skipped for this release under the owner's explicit exception;
+local checks and installed-package verification are recorded instead. The CI
+badge tracks `main` and does not certify this release. Live assistant-provider
+and native credential-vault compatibility remain unqualified.
 
 ## Run the offline example
 
@@ -308,11 +317,12 @@ See the [Milestone 1 record](docs/verification.md) and
 [original terminal record](docs/milestone4-verification.md), plus the
 [prompt rework record](docs/terminal-rework.md), for evidence and limits.
 
-The [release guide](docs/releasing.md) describes artifact verification and the
-remaining publication gates. The repository has not published a package release.
-The [P8 qualification record](docs/p8-release-verification.md) and
-[next feature release notes](docs/release-v0.2.0.md) describe the local candidate
-and its remaining integration, CI, version, and publication gates.
+The [release guide](docs/releasing.md) describes artifact verification and
+publication. The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
+provides packages; PyPI publication remains separate.
+The [P8 preparation record](docs/p8-release-verification.md) preserves the earlier
+qualification evidence. The [v0.2.0 verification record](docs/v0.2.0-verification.md)
+describes final release checks, the CI exception, and remaining verification limits.
 
 ## Design and implementation plan
 

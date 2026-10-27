@@ -4,22 +4,26 @@ Optional assistant connections have a separate `[connections]` extra; see the
 [connection guide](connections.md). Forecasting and saved-record operations do
 not require provider packages or credentials.
 
-Install a supplied source checkout, source archive, or wheel into a dedicated
-Python environment. The current package version is `0.1.0`; it has not been
-published to PyPI. Commands such as `pip install tsfm-lab==0.1.0` from a package
-index are therefore not an installation route for this release candidate.
+Install **v0.2.0** from the wheel or source archive attached to the
+[GitHub Release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0),
+or from its tagged source checkout, into a dedicated Python environment. The
+release assets are `tsfm_lab-0.2.0-py3-none-any.whl`, `tsfm_lab-0.2.0.tar.gz`,
+`verification.json`, and `SHA256SUMS`. Check downloaded files against `SHA256SUMS`
+before installing. The verification manifest records the exact source revision,
+artifact identities, local check results, and CI exception.
+This release uses GitHub distribution; it does not include a PyPI upload.
+`pip install tsfm-lab==0.2.0` from a package index is not the documented route.
 
 Package metadata requires Python 3.11 or newer. The configured test matrix covers
-Python 3.11, 3.12, and 3.13 on Linux and macOS. The TimesFM milestone's merged
-`main` revision `b8d5647` passed all six jobs in
-[run 40240609625](https://github.com/janwolyniak/TSFM-LAB/actions/runs/40240609625).
-That routine matrix uses mocked models and does not establish optional model
-inference on every platform. The later finance candidate has its own
-[verification record](milestone7-verification.md).
-Local model checks use Python 3.13 on macOS and are documented separately in the
-[Chronos](chronos.md) and [TimesFM](timesfm.md) guides. See the
-[release verification record](milestone5-verification.md) for prior installation
-evidence; the build helper emits artifact hashes in a separate manifest.
+Python 3.11, 3.12, and 3.13 on Linux and macOS. On 27 October 2026, the owner
+waived hosted CI for the final v0.2.0 release because the account allowance was
+exhausted. The final release therefore relies on its recorded local checks;
+its full platform matrix was not verified. Earlier matrix results do not verify
+this release revision. See the [release notes](release-v0.2.0.md) and
+[final verification record](v0.2.0-verification.md) for evidence and limits.
+Representative model checks are documented in the individual model guides.
+Assistant checks use simulated providers and fake credentials; live provider
+compatibility and native OS credential-vault behavior remain unqualified.
 
 ## Install from a checkout or source archive
 
@@ -30,12 +34,12 @@ For a published source revision, clone
 ```sh
 git clone https://github.com/janwolyniak/TSFM-LAB.git
 cd TSFM-LAB
+git checkout v0.2.0
 ```
 
-Check out the published commit or tag named by its maintainer before installing.
-The locally prepared implementation is not made available remotely merely by
-building a release candidate. For a supplied source archive, unpack it and enter
-the directory containing `pyproject.toml` instead.
+For `tsfm_lab-0.2.0.tar.gz`, unpack it and enter the directory containing
+`pyproject.toml` instead. The GitHub-generated source snapshots are separate
+from the built source-distribution asset named above.
 
 From that directory, on macOS or Linux:
 
@@ -61,7 +65,7 @@ Create and activate an environment as above. Install the wheel using its actual
 local path; the example filename is the current package version:
 
 ```sh
-python -m pip install '/absolute/path/tsfm_lab-0.1.0-py3-none-any.whl[cli,parquet]'
+python -m pip install '/absolute/path/tsfm_lab-0.2.0-py3-none-any.whl[cli,parquet]'
 python -m pip check
 tsfm --version
 ```
@@ -95,7 +99,7 @@ See the individual [Chronos-2](chronos2.md), [TiRex-2](tirex2.md), and
 [TTM](ttm.md) guides before installing additional runtimes. Use their maintained
 constraints and supported variant settings; model extras have distinct native
 requirements and are not interchangeable. The [P8 qualification record](p8-release-verification.md)
-identifies the current local candidate and outstanding release gates.
+and [release notes](release-v0.2.0.md) identify the release evidence and its limits.
 
 ## Find the installed command
 

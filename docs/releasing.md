@@ -1,16 +1,32 @@
-# Building and verifying a release candidate
+# Building, verifying, and publishing v0.2.0
 
 A release candidate consists of a reviewed source revision, its source archive
 and wheel, and a verification record that identifies exactly what was exercised.
-The steps below prepare local artifacts. Uploading packages, publishing a GitHub
-release, pushing a tag, or publishing branches requires separate owner
-authorization under [CONTRIBUTING.md](../CONTRIBUTING.md).
+On 27 October 2026, the owner authorized finalizing **v0.2.0**, its Git tag, and
+its GitHub Release assets, with hosted CI skipped because the account allowance
+was exhausted. This authorization is already in force for this release; no
+additional publication approval is needed. The distribution destination is the
+[v0.2.0 GitHub Release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0).
+It includes the wheel, source distribution, `verification.json`, and `SHA256SUMS`; it does not include
+a PyPI upload. Other releases and dependency/resource changes retain the
+[contribution workflow's permission boundaries](../CONTRIBUTING.md).
+
+The release sequence is:
+
+1. Finalize the v0.2.0 version, notes, documentation, and integrated source;
+   commit that complete state and record its exact revision.
+2. Build a fresh source archive and its wheel from that committed revision.
+3. Verify artifact identity, archive contents, and an ordinary isolated wheel
+   installation; retain hashes, check reports, and the CI exception.
+4. Create tag `v0.2.0` at that verified revision and publish the four exact assets
+   through the authorized GitHub Release. Verify the tag target and uploaded hashes.
 
 ## Prepare the source and environment
 
-Use the intended committed revision with a clean task-owned diff, the agreed
-version in `pyproject.toml` and `src/tsfm_lab/__init__.py`, current documentation,
-and the repository's configured checks passing. Follow the maintained
+Use the final integrated revision with a clean task-owned diff, version `0.2.0`
+in `pyproject.toml` and `src/tsfm_lab/__init__.py`, and current documentation.
+Run applicable local checks and record hosted CI as waived, not passed. Follow
+the maintained
 [development and merge workflow](../CONTRIBUTING.md), rather than creating an
 independent release branch policy here.
 
@@ -33,10 +49,12 @@ declared by the repository's build requirements and constraints.
 
 ## Build the source archive and wheel
 
-From the repository root, choose a fresh output directory:
+After freezing the committed source, record its revision and choose a fresh
+output directory from the repository root:
 
 ```sh
-python scripts/build_distribution.py --out-dir /tmp/tsfm-dist
+TSFM_RELEASE_REVISION="$(git rev-parse HEAD)"
+python scripts/build_distribution.py --out-dir /tmp/tsfm-v0.2.0-dist
 ```
 
 The helper builds a source archive, then invokes pip to unpack it and build a
@@ -52,7 +70,7 @@ See the [Python packaging guide](https://packaging.python.org/en/latest/tutorial
 for the distinction between source archives, wheels, and publication.
 
 For the current version, the expected artifact names are
-`tsfm_lab-0.1.0.tar.gz` and `tsfm_lab-0.1.0-py3-none-any.whl`. Treat the helper's
+`tsfm_lab-0.2.0.tar.gz` and `tsfm_lab-0.2.0-py3-none-any.whl`. Treat the helper's
 actual metadata and reported paths as authoritative when the version changes.
 
 A reproducible procedure fixes source revision, tools, dependency versions, and
@@ -93,10 +111,10 @@ the constraints and verification script:
 TSFM_SOURCE_ROOT="$PWD"
 TSFM_SMOKE_ROOT="$(mktemp -d)"
 python3 -m venv "$TSFM_SMOKE_ROOT/environment"
-"$TSFM_SMOKE_ROOT/environment/bin/python" -m pip install -c "$TSFM_SOURCE_ROOT/requirements-dev.txt" '/absolute/path/tsfm_lab-0.1.0-py3-none-any.whl[cli,parquet]'
+"$TSFM_SMOKE_ROOT/environment/bin/python" -m pip install -c "$TSFM_SOURCE_ROOT/requirements-dev.txt" '/absolute/path/tsfm_lab-0.2.0-py3-none-any.whl[cli,parquet]'
 "$TSFM_SMOKE_ROOT/environment/bin/python" -m pip check
 cd "$TSFM_SMOKE_ROOT"
-PATH="$TSFM_SMOKE_ROOT/environment/bin:$PATH" "$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/scripts/verify_distribution.py" --wheel /absolute/path/tsfm_lab-0.1.0-py3-none-any.whl
+PATH="$TSFM_SMOKE_ROOT/environment/bin:$PATH" "$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/scripts/verify_distribution.py" --wheel /absolute/path/tsfm_lab-0.2.0-py3-none-any.whl
 ```
 
 Replace the wheel path with the just-built artifact. Keep the environment and
@@ -105,8 +123,9 @@ the current-directory import path, so a source checkout cannot accidentally
 satisfy package imports. Use a regular wheel installation, not an editable
 installation, for this acceptance check.
 
-The `--wheel` option checks installed package bytes against that wheel before the workflow
-checks. A same-version older installation is not sufficient. The verifier also
+The `--wheel` option checks installed package bytes against that wheel before
+the workflow checks. A same-version older installation is not sufficient. The
+verifier also
 requires a virtual environment without inherited system site packages.
 
 The verification script exercises the installed command and bundled resources
@@ -126,11 +145,12 @@ not establish every optional model runtime or platform combination.
 
 ## Bind artifacts to the committed source
 
-After committing the intended source, rebuild into a fresh directory and verify
-its source archive and wheel together:
+Verify the source archive and wheel from the frozen source against its recorded
+revision. Run this command from the source root used above:
 
 ```sh
-python scripts/verify_release_identity.py --revision HEAD --source /absolute/path/tsfm_lab-0.1.0.tar.gz --wheel /absolute/path/tsfm_lab-0.1.0-py3-none-any.whl
+cd "$TSFM_SOURCE_ROOT"
+python "$TSFM_SOURCE_ROOT/scripts/verify_release_identity.py" --revision "$TSFM_RELEASE_REVISION" --source /absolute/path/tsfm_lab-0.2.0.tar.gz --wheel /absolute/path/tsfm_lab-0.2.0-py3-none-any.whl
 ```
 
 The identity check compares packaged files with the selected Git revision and
@@ -151,18 +171,25 @@ finance report produced by the documented older revision. It checks current
 readers against old bytes, including dataset identity and preservation of the
 input files. See the fixture's [provenance and reproduction instructions](../tests/fixtures/release_legacy_v1/README.md).
 
-The [v0.2.0 scope notes](release-v0.2.0.md) and
-[P8 qualification record](p8-release-verification.md) describe the next feature
-candidate. Its package metadata remains `0.1.0` until an explicit release-version
-decision. Local qualification does not complete remote CI, prerequisite PR review,
-integration, version selection, or publication.
+The [v0.2.0 release notes](release-v0.2.0.md) and
+[P8 qualification record](p8-release-verification.md) document the included scope,
+local qualification, and the release's verification limits. A source change
+after freezing invalidates the previous artifact identity: commit the final
+change, record the new revision, rebuild, and repeat affected checks before tagging.
 
 ## Record the verification ceiling
 
-The configured CI matrix covers Python 3.11–3.13 on Linux and macOS. The local
-release check exercises the actual Python 3.13 macOS environment named in
-[milestone5-verification.md](milestone5-verification.md). Do not describe the
-remaining matrix as verified until its jobs have passed for the release candidate.
+The configured CI matrix covers Python 3.11–3.13 on Linux and macOS. The owner
+explicitly waived hosted CI for the final v0.2.0 release on 27 October 2026.
+Record this as an exception with local check evidence; skipped jobs are not
+successful checks and the final release's platform matrix remains unverified.
+Keep the configured workflow and repository protections intact. The existing
+integration exception uses `[skip ci]` in the authorized release commits.
+
+Assistant qualification uses simulated responses and fake credentials. Live
+provider/account compatibility and native OS credential-vault behavior remain
+unqualified. No real credentials, new model downloads, or additional model
+inference are required to qualify these release artifacts.
 
 Keep prior milestone records as historical evidence. A previous wheel's hash,
 installed-module check, or Chronos smoke result does not identify a newly built
@@ -171,30 +198,27 @@ the final candidate. Distinguish a baseline install check from the separately
 bounded Chronos integration evidence; neither supports a general forecasting or
 trading performance claim.
 
-## Review before publication
+## Publish the authorized GitHub Release
 
-The local candidate is ready for a publication decision when its acceptance
+The local candidate is ready for the authorized publication when its acceptance
 criteria are met, artifact contents and hashes are reviewed, installation
 instructions work from the delivered source/wheel, and all material limitations
 are recorded. Include any unrun remote CI/platform checks in that review.
 
-Present the precise artifacts, source revision, verification record, and intended
-publication destination to the owner. Publication approval is separate from
-approval to implement, install dependencies, build local artifacts, or run tests.
-Until that approval is given, retain the candidate locally and report its status
-without uploading, tagging, or claiming that PyPI/GitHub publication has occurred.
+Use the [v0.2.0 notes](release-v0.2.0.md) and finalize their GitHub Release body
+with the precise source revision, local check results, hosted-CI waiver, and
+artifact hashes. Keep historical milestone records and the v0.1.0 preparation
+notes as historical evidence. A GitHub Release does not imply PyPI publication.
 
-For the first GitHub Release, start from the
-[prepared release notes](release-v0.1.0.md). Once publication is authorized,
-finalize the README's release badge/status and the changelog, remove the notes'
-preparation-status paragraph, and change their documentation links from `main`
-to `v0.1.0`. A GitHub Release does not imply PyPI publication. Do not use a public
-Shields GitHub-release lookup for this private repository.
+Create `verification.json` after the source freeze, recording the exact commit,
+artifact identities, local checks, and CI exception. Generate `SHA256SUMS` for
+`tsfm_lab-0.2.0.tar.gz`, `tsfm_lab-0.2.0-py3-none-any.whl`, and `verification.json`
+using their final bytes and filenames. Create tag `v0.2.0` at
+`TSFM_RELEASE_REVISION`, then attach those three files and `SHA256SUMS` to the
+GitHub Release. Do not substitute earlier preparation builds
+or GitHub's automatically generated source snapshots for the checked assets.
 
-Review, commit, and integrate that final wording before freezing the release
-revision. Rebuild the source distribution and wheel from that exact revision
-and repeat the affected installation checks; the preparation candidate's hashes
-do not identify these new artifacts. Create tag `v0.1.0` at the verified revision
-and attach its wheel, source distribution, and `SHA256SUMS` to the authorized
-GitHub Release. Include the exact source revision, check results, and artifact
-hashes in the release body so the tag and downloadable files agree.
+After publication, verify the remote tag resolves to the frozen revision,
+all uploaded asset hashes match `SHA256SUMS`, and the release body identifies
+the same revision and evidence. Report the GitHub Release URL and the verification
+limits. No additional approval step is required for this already authorized release.

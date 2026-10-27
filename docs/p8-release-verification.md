@@ -1,7 +1,9 @@
 # P8 release qualification
 
 Date: 27 October 2026. Scope: local qualification of the
-[v0.2.0 feature plan](next-release-plan.md). Package metadata remains `0.1.0`.
+[v0.2.0 feature plan](next-release-plan.md). The preparation checks recorded below
+used package metadata `0.1.0`. Final release metadata and renewed checks are
+documented in the [v0.2.0 release record](v0.2.0-verification.md).
 The candidate includes P7's language-assistance implementation and current `main`
 documentation. P7 was integrated through [PR #10](https://github.com/janwolyniak/TSFM-LAB/pull/10)
 before publishing the P8 candidate.
@@ -60,7 +62,7 @@ Use the [release guide](releasing.md) to reproduce the checks. Final artifact
 identity and installed verification must pass before treating those files as
 the local candidate; the preliminary build does not identify final artifacts.
 
-## Remaining acceptance gates
+## Gates recorded at preparation
 
 - On 27 October 2026, the owner explicitly authorized pushing and merging the
   ongoing P7/P8 work without new GitHub CI because the account's allowance was
@@ -79,3 +81,7 @@ the local candidate; the preliminary build does not identify final artifacts.
 - Branch/PR publication and integration are authorized under that exception.
   Release tags, GitHub Release assets, and package uploads still require separate
   authorization. No package publication is implied by merging these changes.
+
+The owner subsequently authorized finalizing version `0.2.0` and publishing the
+GitHub release while keeping CI skipped. That authorization covers release tags
+and GitHub assets; PyPI and new live-provider/model checks remain separate.
