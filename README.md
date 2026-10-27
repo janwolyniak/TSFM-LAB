@@ -18,12 +18,21 @@
 [Usage profiles](docs/usage-profiles.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.1.0.md) ·
+[Research origin and citation](#research-origin-and-citation) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
 Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, and Granite TTM R2 adapters. A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
+
+TSFM Lab extends the smaller, finance-focused model-testing pipeline developed
+for [Zeroshot_forecasting](https://github.com/janwolyniak/Zeroshot_forecasting)
+into a broader, domain-independent evaluation platform. The projects remain in
+separate repositories: Zeroshot_forecasting contains the financial research
+study and its supporting experiments; TSFM Lab provides reusable tooling for
+new forecasting evaluations. See [research origin and citation](#research-origin-and-citation)
+to acknowledge the study when using TSFM Lab in your work.
 
 ## Project status
 
@@ -322,6 +331,34 @@ family, followed by TimesFM 2.5, Chronos-2, TiRex-2, and TTM. Further work follo
 [next release plan](docs/next-release-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
 OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
 the bounded compatibility findings before further benchmark integration.
+
+## Research origin and citation
+
+The related [Zeroshot_forecasting project](https://github.com/janwolyniak/Zeroshot_forecasting)
+studies forecast quality and financial decision value in hourly Bitcoin. Its
+working paper by Jan Wołyniak and Robert Ślepaczuk is
+[*From Forecast Error to Trading Outcomes: A Decision-Layer Evaluation of Frozen
+Models in Hourly Bitcoin*](https://github.com/janwolyniak/Zeroshot_forecasting/blob/main/main.tex).
+It provides the research background for TSFM Lab's development.
+
+If you use TSFM Lab in academic work, please cite this working paper and identify
+the TSFM Lab repository and the version or commit used for your experiments.
+The paper citation is also available in [CITATION.cff](CITATION.cff).
+
+```bibtex
+@unpublished{wolyniak_slepaczuk_forecast_decision,
+  author = {Wo{\l}yniak, Jan and {\'S}lepaczuk, Robert},
+  title = {From Forecast Error to Trading Outcomes: A Decision-Layer Evaluation of Frozen Models in Hourly {Bitcoin}},
+  note = {Working paper},
+  url = {https://github.com/janwolyniak/Zeroshot_forecasting/blob/main/main.tex}
+}
+```
+
+The two projects have separate evaluation contracts. TSFM Lab's
+[OHLC extension](docs/finance-extension.md) uses explicit next-open-to-target-close
+execution, latency, and costs; it does not reproduce the paper's decision policy
+or empirical results automatically. Cite the underlying models and datasets
+separately where applicable.
 
 ## Contributing
 
