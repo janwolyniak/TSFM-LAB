@@ -5,7 +5,8 @@ Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and ve
 locally. P3 TiRex-2, P4 TTM, and P5 usage profiles are implemented and verified locally;
 P6 connections are implemented and verified with fake credentials/providers;
 P7 language assistance is implemented and verified with fake providers;
-P8 local qualification is implemented; final integration and candidate CI remain.
+P8 local qualification is implemented. The owner authorized integration without
+new hosted CI on 27 October 2026; its candidate matrix remains unverified.
 The existing package version and publication
 status remain unchanged.
 
@@ -284,9 +285,9 @@ explanations; see its [guide](language-assistance.md) and
 [verification](p7-language-verification.md). P8's local qualification adds
 committed-source and installed-wheel identity checks, genuine pre-profile saved
 artifacts, and updated [release notes](release-v0.2.0.md); see the
-[P8 verification record](p8-release-verification.md) for checks and remaining
-integration, candidate CI, and version gates. Live connection qualification and
-publication remain separate from implementation.
+[P8 verification record](p8-release-verification.md) for local checks, the
+owner-approved CI exception, and remaining candidate verification/version gates.
+Live connection qualification and publication remain separate from implementation.
 
 ## Release acceptance
 

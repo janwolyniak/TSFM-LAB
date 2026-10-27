@@ -2,8 +2,9 @@
 
 Date: 27 October 2026. Scope: local qualification of the
 [v0.2.0 feature plan](next-release-plan.md). Package metadata remains `0.1.0`.
-The candidate depends on P7's unmerged language-assistance implementation and
-includes current `main` documentation. Its review and integration remain separate.
+The candidate includes P7's language-assistance implementation and current `main`
+documentation. P7 was integrated through [PR #10](https://github.com/janwolyniak/TSFM-LAB/pull/10)
+before publishing the P8 candidate.
 
 ## Qualification checks
 
@@ -61,14 +62,20 @@ the local candidate; the preliminary build does not identify final artifacts.
 
 ## Remaining acceptance gates
 
-- The six-job Linux/macOS Python 3.11–3.13 matrix must pass for the final candidate.
-  Local macOS checks do not establish those remote results.
-- P7 requires review and explicit integration authorization. This local dependent
-  branch does not merge its existing pull request into `main`.
+- On 27 October 2026, the owner explicitly authorized pushing and merging the
+  ongoing P7/P8 work without new GitHub CI because the account's allowance was
+  exhausted. This waives the hosted-CI integration gate for these changes only.
+  Push and merge commits use `[skip ci]`; repository protections and workflow
+  settings are unchanged.
+- The original P7 revision passed the six-job Linux/macOS Python 3.11–3.13 matrix
+  before this exception. P8 and the updated integration candidates rely on the
+  local evidence above and source-tree equality checks. Their new platform matrix
+  remains unverified; skipped CI is not a successful CI result.
 - The final release version must be selected before freezing release metadata.
   Rebuild and repeat affected qualification for that final revision.
 - Live provider/OS-vault qualification, new model downloads, and further model
   inference are outside this local qualification. Prior representative evidence
   remains bounded by its recorded implementation and checkpoint identities.
-- Branch/PR publication, release tags, GitHub Release assets, and package uploads
-  require separate authorization. No publication is implied by local artifacts.
+- Branch/PR publication and integration are authorized under that exception.
+  Release tags, GitHub Release assets, and package uploads still require separate
+  authorization. No package publication is implied by merging these changes.
