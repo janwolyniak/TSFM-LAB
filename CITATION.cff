@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: >-
+  If you use TSFM Lab in academic work, please cite the working paper in
+  preferred-citation and identify the TSFM Lab repository and version or commit
+  used for your experiments. See README.md for the relationship between the
+  projects and their separate evaluation contracts.
+type: software
+title: "TSFM Lab"
+authors:
+  - family-names: "Wołyniak"
+    given-names: "Jan"
+repository-code: "https://github.com/janwolyniak/TSFM-LAB"
+license: Apache-2.0
+preferred-citation:
+  type: unpublished
+  title: >-
+    From Forecast Error to Trading Outcomes: A Decision-Layer Evaluation of
+    Frozen Models in Hourly Bitcoin
+  authors:
+    - family-names: "Wołyniak"
+      given-names: "Jan"
+    - family-names: "Ślepaczuk"
+      given-names: "Robert"
+  notes: "Working paper"
+  url: "https://github.com/janwolyniak/Zeroshot_forecasting/blob/main/main.tex"
