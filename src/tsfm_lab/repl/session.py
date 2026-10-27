@@ -22,14 +22,29 @@ from tsfm_lab.workflows import PROFILE_NAMES, workflow_summary
 class TerminalSession:
     def __init__(
         self,
-        workspace=Path("results"),
+        workspace=None,
         *,
         console=None,
         editor=None,
         runner=execute,
         connection_manager=None,
+        preference_store=None,
     ):
-        self.workspace = Path(workspace).expanduser().resolve()
+        self.preference_store = preference_store
+        self.preferences = preference_store.load() if preference_store else None
+        self._workspace_override = (
+            Path(workspace).expanduser().resolve() if workspace is not None else None
+        )
+        selected = (
+            workspace
+            if workspace is not None
+            else (
+                self.preferences.results_directory
+                if self.preferences
+                else Path("results")
+            )
+        )
+        self.workspace = Path(selected).expanduser().resolve()
         self.console = console or Console(markup=False, highlight=False)
         self.editor = editor
         self.runner = runner
@@ -72,6 +87,8 @@ class TerminalSession:
                 if profile != "generic"
             }
             self._welcome()
+            if self.preferences and self.preferences.onboarding_status == "new":
+                self._configure_preferences(first_launch=True)
             while not self.closed:
                 try:
                     self.dispatch(self.editor.read())
@@ -92,6 +109,8 @@ class TerminalSession:
                 "/help": self._help,
                 "/demo": self._demo,
                 "/new": self._new,
+                "/setup": self._setup_preferences,
+                "/settings": self._settings,
                 "/run": self._run,
                 "/models": self._models,
                 "/connections": self._connections,
@@ -188,6 +207,7 @@ class TerminalSession:
             profile_demo_paths=self.profile_demo_paths,
             adapter=arguments[0] if arguments else None,
             demo=demo,
+            preferences=self.preferences,
         )
         if config is not None:
             self._execute(config)
@@ -199,6 +219,9 @@ class TerminalSession:
         self._execute(load_config(arguments[0]))
 
     def _execute(self, config):
+        from tsfm_lab.preferences import validate_directory
+
+        validate_directory(config.output_directory)
         if self.workspace != config.output_directory:
             self.known_ids = []
             self.last_run = None
@@ -281,6 +304,7 @@ class TerminalSession:
                 demo_path=self.demo_path,
                 ttm_demo_path=self.ttm_demo_path,
                 profile_demo_paths=self.profile_demo_paths,
+                preferences=self.preferences,
                 **options,
             )
 
@@ -354,9 +378,71 @@ class TerminalSession:
 
     def _export(self, arguments):
         self._count(arguments, 2, 3, "/export ID PATH [csv|json|parquet]")
-        self.records.export(
-            arguments[0], arguments[1], arguments[2] if len(arguments) == 3 else None
-        )
+        path = Path(arguments[1]).expanduser()
+        selected = arguments[2] if len(arguments) == 3 else None
+        if self.preferences is not None:
+            if not path.is_absolute():
+                path = self.preferences.workspace / path
+            if selected is None and not path.suffix:
+                selected = self.preferences.export_format
+        self.records.export(arguments[0], path, selected)
+
+    def _setup_preferences(self, arguments):
+        self._count(arguments, 0, 0, "/setup")
+        self._configure_preferences()
+
+    def _settings(self, arguments):
+        self._count(arguments, 0, 0, "/settings")
+        from tsfm_lab.repl.onboarding import show_preferences
+
+        self._load_preferences()
+        show_preferences(self.emit, self.preferences, self.preference_store.path)
+        if self._setup_ask("Edit preferences?", "no", ("yes", "no")) in {"yes", "y"}:
+            self._configure_preferences(extras=False)
+
+    def _load_preferences(self):
+        if self.preference_store is None:
+            from tsfm_lab.preferences import PreferenceStore
+
+            self.preference_store = PreferenceStore()
+            self.preferences = self.preference_store.load()
+
+    def _configure_preferences(self, *, first_launch=False, extras=True):
+        from tsfm_lab.repl.onboarding import configure_preferences
+
+        self._load_preferences()
+        try:
+            saved = configure_preferences(
+                self.editor.ask,
+                self.emit,
+                self.preferences,
+                self.preference_store,
+                first_launch=first_launch,
+            )
+            if saved is None:
+                return
+            self.preferences = saved
+            self.workspace = self._workspace_override or saved.results_directory
+            self.records.workspace = self.workspace
+            self.last_run, self.known_ids = None, []
+            self.emit(f"Results directory  {self.workspace}")
+            if self._workspace_override:
+                self.emit(
+                    "This session uses the explicit --workspace directory.", "dim"
+                )
+            if extras and saved.onboarding_status == "completed":
+                if self._setup_ask(
+                    "Set up an optional assistant?", "no", ("yes", "no")
+                ) in {"yes", "y"}:
+                    self._connections([])
+                if self._setup_ask(
+                    "Try the offline baseline demo?", "no", ("yes", "no")
+                ) in {"yes", "y"}:
+                    self._demo([])
+        except (EOFError, KeyboardInterrupt):
+            self.emit("Setup finished. Use /setup to revisit preferences.", "dim")
+        except (OSError, ValueError, ImportError, RuntimeError) as exc:
+            self.emit(f"Setup needs attention: {exc}. Use /setup to retry.", "red")
 
     def _workspace(self, arguments):
         self._count(arguments, 0, 1, "/workspace [DIRECTORY]")

@@ -107,11 +107,18 @@ class _Guide:
         seed_fields=None,
         explicit_fields=(),
         checkpoint_variant=None,
+        preferences=None,
     ):
         self.ask, self.emit = ask, emit
         self.workspace, self.demo_path = Path(workspace), Path(demo_path).resolve()
         self.arguments = {"workspace": self.workspace, "base_directory": Path.cwd()}
         self.fields = default_fields(adapter or "last_value")
+        if preferences is not None:
+            self.arguments["base_directory"] = preferences.workspace
+            self.fields.update(
+                usage_profile=preferences.category,
+                cache_dir=str(preferences.cache_directory),
+            )
         self.fields["dataset_path"] = str(self.demo_path)
         supplied = dict(seed_fields or {})
         variant = supplied.pop("checkpoint_variant", None)
@@ -289,10 +296,7 @@ class _Guide:
                 else self._ordinary_demo_path
             )
         if next_demo is not None:
-            if (
-                Path(self.fields["dataset_path"]).expanduser().resolve()
-                == self.demo_path
-            ):
+            if self._resolved_data_path(self.fields["dataset_path"]) == self.demo_path:
                 self._default("dataset_path", str(next_demo))
             self.demo_path = next_demo
         if self.capabilities.min_context == self.capabilities.max_context:
@@ -315,13 +319,19 @@ class _Guide:
         _required(value)
         if "://" in value or value.startswith("//"):
             raise ConfigError("Choose a local CSV or Parquet file")
-        path = Path(value).expanduser()
+        path = self._resolved_data_path(value)
         if path.suffix.lower() not in {".csv", ".parquet", ".pq"} or not path.is_file():
             raise ConfigError("Choose an existing local CSV or Parquet file")
 
+    def _resolved_data_path(self, value):
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            path = self.arguments["base_directory"] / path
+        return path.resolve()
+
     def data(self):
         self.set("dataset_path", "Dataset path", validate=self._data_path)
-        if Path(self.fields["dataset_path"]).expanduser().resolve() == self.demo_path:
+        if self._resolved_data_path(self.fields["dataset_path"]) == self.demo_path:
             mapped = self.fields["usage_profile"] in self._profile_demo_paths
             selected = (
                 profile_example_fields(self.fields["usage_profile"], self.demo_path)
@@ -373,9 +383,9 @@ class _Guide:
                     self.fields[key] = "unspecified" if key == "units" else ""
             self._example_declarations = {}
             self._example_path = None
-        if Path(
+        if self._resolved_data_path(
             self.fields["dataset_path"]
-        ).expanduser().resolve() != self.demo_path or self._provided & {
+        ) != self.demo_path or self._provided & {
             "timestamp_column",
             "target_column",
             "frequency",
@@ -397,8 +407,7 @@ class _Guide:
         self.measurement()
         if (
             self.fields["usage_profile"] != "generic"
-            or Path(self.fields["dataset_path"]).expanduser().resolve()
-            != self.demo_path
+            or self._resolved_data_path(self.fields["dataset_path"]) != self.demo_path
             or "units" in self._provided
             or self._assisted
         ):
@@ -606,6 +615,7 @@ def build_experiment(
     seed_fields: dict[str, str] | None = None,
     explicit_fields=(),
     checkpoint_variant: str | None = None,
+    preferences=None,
 ) -> ExperimentConfig | None:
     """Ask inline questions and return a reviewed config without execution or writes."""
     try:
@@ -621,6 +631,7 @@ def build_experiment(
                 seed_fields,
                 explicit_fields,
                 checkpoint_variant,
+                preferences,
             ).run()
         if seed_fields is not None or explicit_fields or checkpoint_variant is not None:
             raise ConfigError("Assisted suggestions require guided setup")

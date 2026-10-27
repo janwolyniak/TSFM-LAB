@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — Unreleased
+
+- Begin S1 with optional first-launch onboarding, `/setup`, `/settings`, and
+  atomic nonsecret directory/category/export preferences. Reuse optional assistant
+  connection management and the offline baseline demo; retain explicit option and
+  YAML precedence. Report runtime package compatibility without installing or
+  importing inference frameworks. See [onboarding](docs/onboarding.md).
+
 ## 0.2.0 — 2026-10-27
 
 Released through GitHub with source and wheel assets. Hosted CI is skipped under

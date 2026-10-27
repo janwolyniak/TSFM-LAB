@@ -27,6 +27,8 @@ COMMANDS = {
     "/help": "Commands and shortcuts",
     "/demo": "Try the original seasonal dataset",
     "/new": "Set up an experiment one question at a time",
+    "/setup": "Revisit first-launch setup and runtime diagnostics",
+    "/settings": "View or edit saved preferences",
     "/run": "Run a saved YAML configuration",
     "/models": "Browse the local model catalog",
     "/connections": "Manage optional assistant connections",

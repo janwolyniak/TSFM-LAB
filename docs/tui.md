@@ -23,6 +23,12 @@ imports neither the prompt editor nor any terminal framework.
 
 ## A first session
 
+In the v0.3.0 development checkout, first launch offers optional setup; choose
+`skip` to go directly to the prompt. `/setup` revisits directory choices, runtime
+diagnostics, and optional connection/demo setup. `/settings` shows or edits saved
+defaults. These commands are absent from the published v0.2.0 package. See
+[onboarding](onboarding.md) for persistence, overrides, and cancellation.
+
 Type `/demo`, then answer `y` to run the original synthetic baseline. A short
 summary appears before confirmation, progress stays inline, and the results are
 printed when the worker stops. The prompt returns below the output.
@@ -50,6 +56,8 @@ and scores 1.0 on all three metrics. These are arithmetic checks on
 | Command | Behavior |
 | --- | --- |
 | `/help` | Show commands and keyboard shortcuts. |
+| `/setup` | Revisit optional onboarding and runtime diagnostics (v0.3.0 development). |
+| `/settings` | View or edit saved nonsecret preferences (v0.3.0 development). |
 | `/demo [last_value\|seasonal_naive]` | Review and confirm the bundled offline experiment. |
 | `/new [adapter]` | Ask setup questions one at a time, then review and confirm. |
 | `/run CONFIG.yaml` | Execute a saved configuration and use its configured results directory. |

@@ -62,7 +62,7 @@ def home(
 
 @app.command("ui")
 @_guard
-def interactive(workspace: Workspace = Path("results")):
+def interactive(workspace: Workspace | None = None):
     """Open the interactive terminal; automation should use shell commands."""
     if not interactive_terminal():
         raise ConfigError(

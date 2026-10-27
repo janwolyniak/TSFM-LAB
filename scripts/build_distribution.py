@@ -45,6 +45,11 @@ ASSISTANT_MODULES = {
         "ui",
     )
 }
+ONBOARDING_MODULES = {
+    "tsfm_lab/preferences.py",
+    "tsfm_lab/runtime_diagnostics.py",
+    "tsfm_lab/repl/onboarding.py",
+}
 
 SOURCE_FILES = {
     "LICENSE",
@@ -136,6 +141,15 @@ SOURCE_FILES |= (
 )
 SOURCE_FILES |= {f"src/{name}" for name in CONNECTION_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in ASSISTANT_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in ONBOARDING_MODULES}
+SOURCE_FILES |= {
+    "docs/onboarding.md",
+    "docs/release-v0.3.0-plan.md",
+    "docs/s1-onboarding-verification.md",
+    "tests/test_preferences.py",
+    "tests/test_runtime_diagnostics.py",
+    "tests/test_onboarding.py",
+}
 SOURCE_FILES |= {"docs/language-assistance.md", "docs/p7-language-verification.md"}
 SOURCE_FILES |= {
     f"tests/fixtures/release_legacy_v1/{name}"
@@ -221,6 +235,7 @@ def inspect_wheel(path, *, name, version):
         }
         required |= CONNECTION_MODULES
         required |= ASSISTANT_MODULES
+        required |= ONBOARDING_MODULES
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")
         if not required <= names:

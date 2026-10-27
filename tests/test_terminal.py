@@ -56,3 +56,16 @@ def test_noninteractive_ui_reports_actionable_error(monkeypatch):
     assert result.stdout == ""
     assert "terminal input and output" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+@pytest.mark.parametrize("arguments", [[], ["--version"], ["models", "list", "--json"]])
+def test_script_commands_ignore_even_corrupt_interactive_preferences(
+    arguments, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("TSFM_LAB_SETTINGS_DIR", str(tmp_path))
+    path = tmp_path / "preferences.json"
+    path.write_bytes(b"invalid preferences")
+    result = CliRunner().invoke(app, arguments, input="")
+    assert result.exit_code == 0, result.output
+    assert "First-launch" not in result.output
+    assert path.read_bytes() == b"invalid preferences"

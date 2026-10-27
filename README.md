@@ -334,6 +334,8 @@ describes final release checks, the CI exception, and remaining verification lim
   formulas, aggregation, and comparison requirements.
 - [Development roadmap](docs/roadmap.md): review decisions, implementation tasks,
   and milestone acceptance criteria.
+- [v0.3.0 plan](docs/release-v0.3.0-plan.md): staged release scope; development
+  starts with [first-launch onboarding](docs/onboarding.md), `/setup`, and `/settings`.
 - [Adapter extension guide](docs/adapters.md): the current protocol and a runnable
   direct-Python example, including limits on shell/catalog integration.
 
@@ -341,7 +343,7 @@ The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
 family, followed by TimesFM 2.5, Chronos-2, TiRex-2, and TTM. Further work follows the
-[next release plan](docs/next-release-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
+[v0.3.0 plan](docs/release-v0.3.0-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
 OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
 the bounded compatibility findings before further benchmark integration.
 

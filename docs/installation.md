@@ -4,6 +4,9 @@ Optional assistant connections have a separate `[connections]` extra; see the
 [connection guide](connections.md). Forecasting and saved-record operations do
 not require provider packages or credentials.
 
+The v0.3.0 development checkout adds [first-launch setup](onboarding.md). Its
+preferences and commands are not present in the v0.2.0 release assets below.
+
 Install **v0.2.0** from the wheel or source archive attached to the
 [GitHub Release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0),
 or from its tagged source checkout, into a dedicated Python environment. The
