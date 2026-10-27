@@ -1,14 +1,15 @@
-# Next feature release plan
+# v0.2.0 feature plan
 
-Working target: **v0.2.0**, following the prepared v0.1.0 release.
+Release: **v0.2.0**, distributed through GitHub on 27 October 2026. The earlier
+v0.1.0 candidate was not published separately. See the
+[final release record](v0.2.0-verification.md).
 Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and verified
 locally. P3 TiRex-2, P4 TTM, and P5 usage profiles are implemented and verified locally;
 P6 connections are implemented and verified with fake credentials/providers;
 P7 language assistance is implemented and verified with fake providers;
-P8 local qualification is implemented. The owner authorized integration without
-new hosted CI on 27 October 2026; its candidate matrix remains unverified.
-The existing package version and publication
-status remain unchanged.
+P8 local qualification is implemented. The owner authorized v0.2.0 release
+publication without new hosted CI on 27 October 2026; its new platform matrix
+remains unverified. Package metadata is `0.2.0`; PyPI publication remains separate.
 
 P1 behavior is described in the [catalog guide](model-catalog.md), with checks
 recorded in the [P1 verification record](p1-catalog-verification.md).
@@ -286,8 +287,11 @@ explanations; see its [guide](language-assistance.md) and
 committed-source and installed-wheel identity checks, genuine pre-profile saved
 artifacts, and updated [release notes](release-v0.2.0.md); see the
 [P8 verification record](p8-release-verification.md) for local checks, the
-owner-approved CI exception, and remaining candidate verification/version gates.
-Live connection qualification and publication remain separate from implementation.
+owner-approved CI exception, and remaining verification limits. The
+[final release record](v0.2.0-verification.md) identifies the selected version and
+release checks.
+Live connection qualification remains separate from implementation. GitHub
+publication is authorized for v0.2.0 with the documented CI exception.
 
 ## Release acceptance
 
@@ -310,8 +314,11 @@ Live connection qualification and publication remain separate from implementatio
 - [x] Offline tests cover all profiles and four fake transports, malformed and
   truncated output, quota/authentication errors, timeouts, cancellation, prompt
   injection, unsupported actions, and zero network access while disabled.
-- [ ] Source/wheel contents, clean installed workflows, documentation, formatting,
-  linting, and the supported baseline CI matrix pass for the release candidate.
+- [x] Source/wheel contents, clean installed workflows, documentation, formatting,
+  and linting pass for the release candidate.
+- [ ] A fresh supported baseline CI matrix passes for the final release revision.
+  The owner waived this requirement for v0.2.0 publication; local verification
+  does not establish unrun platform results.
 
 ## Deferred work
 
@@ -323,6 +330,7 @@ forecasts without actuals, panels, covariates, probability scoring, and a hosted
 web application are outside this release's scope.
 
 Resource use and publication follow the existing permission boundaries in
-[CONTRIBUTING.md](../CONTRIBUTING.md). This plan does not install runtimes,
-download weights, connect accounts, make paid requests, bump the version, or
-publish either release.
+[CONTRIBUTING.md](../CONTRIBUTING.md). The original scope plan did not authorize
+installations, downloads, paid requests, or publication. The owner subsequently
+authorized finalizing version `0.2.0` and publishing its GitHub release with CI
+skipped. This does not authorize PyPI uploads or new live-provider/model checks.

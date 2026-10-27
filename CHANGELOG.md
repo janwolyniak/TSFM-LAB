@@ -1,6 +1,12 @@
 # Changelog
 
-## Next feature release in development
+## 0.2.0 — 2026-10-27
+
+Released through GitHub with source and wheel assets. Hosted CI is skipped under
+the owner's explicit release exception; local verification and prior bounded
+model evidence are recorded in [the v0.2.0 release record](docs/v0.2.0-verification.md).
+Assistant routes are implemented and fake-provider tested; live provider and OS
+credential-vault behavior remain unqualified. No PyPI package is published.
 
 - Add release checks binding source archives to a committed revision and installed
   package bytes to the selected wheel, with retained pre-profile compatibility
@@ -81,8 +87,8 @@ candidate. Synthetic examples establish arithmetic and integration behavior,
 without a forecasting-advantage claim.
 
 See the [release verification record](docs/milestone5-verification.md) for local
-evidence and outstanding platform/publication gates. No package release has been
-published.
+evidence and the platform/publication gates recorded at that stage. The v0.1.0
+candidate was not published separately.
 The [second-family record](docs/milestone6-verification.md) adds current CPU
 integration evidence. The [finance record](docs/milestone7-verification.md)
 documents the separately agreed accounting extension; the bounded

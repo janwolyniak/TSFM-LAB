@@ -197,12 +197,14 @@ Local release-candidate preparation is implemented and verified. See the
 - [x] Installation, methodology, model/license, and adapter guidance are available.
 - [x] Clean installed-wheel verification is configured in the CI matrix.
 - [x] Original core/CLI/Bolt/terminal/release-tooling branches are integrated.
-- [ ] Publication is authorized for the final release revision.
-- [ ] Approved package release is published.
+- [x] Publication is authorized for v0.2.0 with hosted CI skipped.
+- [x] Final release metadata selects v0.2.0; PyPI publication remains separate.
 
-The Linux/macOS Python 3.11–3.13 matrix is a live merge/release gate. Its current
-status is tracked in [GitHub Actions](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
-and must pass for the candidate before integration or publication.
+The Linux/macOS Python 3.11–3.13 matrix remains configured in
+[GitHub Actions](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml).
+The owner explicitly waived new hosted CI for v0.2.0 publication; current release
+evidence and unverified platform limits are recorded in the
+[v0.2.0 verification record](v0.2.0-verification.md).
 
 Complete installation and methodology documentation, a baseline demo and pinned
 Chronos example, optional dependency instructions, model/license metadata, CI,

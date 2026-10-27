@@ -1,12 +1,14 @@
-# v0.2.0 scope: local release qualification
+# TSFM Lab v0.2.0
 
-These notes describe the next feature release's implemented scope, pending
-integration and release acceptance under the [plan](next-release-plan.md).
-The current package metadata remains `0.1.0`. No version tag, GitHub Release,
-or package publication is created by this preparation.
+Released 27 October 2026 through GitHub. This is the first published TSFM Lab
+release; the earlier v0.1.0 candidate was not published separately. Package and
+source metadata are `0.2.0`. PyPI publication has not been performed.
 
 ## Included scope
 
+- Strict CSV/optional Parquet import, rolling-origin evaluation, MAE/RMSE/MASE,
+  reproducible saved experiments, checked comparisons/exports, and the interactive
+  terminal. The separate OHLC finance workflow retains explicit timing and costs.
 - Five pretrained families: Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, and
   Granite TTM, alongside last-value and seasonal-naive baselines.
 - Curated checkpoint variants with exact identities, native context/horizon
@@ -25,17 +27,37 @@ or package publication is created by this preparation.
 
 ## Installation and verification
 
-Use a supplied source archive or wheel following the [installation guide](installation.md).
+Download the wheel or source archive from this GitHub release. The assets are
+`tsfm_lab-0.2.0-py3-none-any.whl`, `tsfm_lab-0.2.0.tar.gz`, `SHA256SUMS`, and
+`verification.json`. The verification manifest records the exact source revision,
+artifact hashes, local checks, and the hosted-CI exception.
+
+Python 3.11 or newer is required. In an activated environment, install the local
+wheel with the terminal and Parquet extras:
+
+```sh
+python -m pip install './tsfm_lab-0.2.0-py3-none-any.whl[cli,parquet]'
+python -m pip check
+tsfm --version
+tsfm ui --workspace results
+```
+
+Use `/demo` for the bundled offline example. Follow the
+[installation guide](https://github.com/janwolyniak/TSFM-LAB/blob/v0.2.0/docs/installation.md)
+for source installation and optional model runtimes.
 The numerical core requires NumPy and Pandas. Add `cli` for the terminal,
 `parquet` for Parquet support, the selected model runtime extra for inference,
 and `connections` when using an assistant route. Runtime installation and
 checkpoint downloads remain explicit. The bundled baseline demonstration works
 offline without assistant credentials.
 
-The [P8 record](p8-release-verification.md) identifies local checks and outstanding
-release gates. Model-specific representative evidence is retained in the
-[Chronos-2](p2-chronos2-verification.md), [TiRex-2](p3-tirex2-verification.md), and
-[TTM](p4-ttm-verification.md) records. Compatible larger variants without individual
+The [final verification record](https://github.com/janwolyniak/TSFM-LAB/blob/v0.2.0/docs/v0.2.0-verification.md)
+describes the release checks and their limits. Model-specific representative
+evidence is retained in the
+[Chronos-2](https://github.com/janwolyniak/TSFM-LAB/blob/v0.2.0/docs/p2-chronos2-verification.md),
+[TiRex-2](https://github.com/janwolyniak/TSFM-LAB/blob/v0.2.0/docs/p3-tirex2-verification.md), and
+[TTM](https://github.com/janwolyniak/TSFM-LAB/blob/v0.2.0/docs/p4-ttm-verification.md)
+records. Compatible larger variants without individual
 inference checks retain that qualification; model selection does not imply every
 checkpoint was executed.
 
@@ -46,12 +68,18 @@ provider compatibility and native credential-vault behavior remain separately
 unqualified. Existing model evidence is bounded CPU integration evidence, not
 a forecasting ranking or financial-performance claim.
 
-The supported baseline CI matrix is Python 3.11–3.13 on Linux and macOS; its jobs
-must pass for the final integrated candidate. Windows support, future forecasting,
+**Hosted CI is skipped for v0.2.0 under the owner's explicit release exception
+because the GitHub account allowance is exhausted.** Local source, artifact, and
+installed-workflow checks provide the retained release evidence. The configured
+Python 3.11–3.13 Linux/macOS matrix was not rerun for the final release revision;
+prior successful runs do not certify this new revision.
+
+Windows support, future forecasting,
 additional assistant routes, new model families, panels, covariates, and large
 comparative benchmarks remain outside this release's scope.
 
-Before publication, review and integrate the prerequisite implementation, select
-the release version, rebuild from that final committed revision, rerun the
-affected checks, and obtain explicit publication authorization through the
-[contribution workflow](../CONTRIBUTING.md).
+The release retains the existing single regular series and fixed-frequency/UTC
+contract. Only synthetic demonstration and fixture data are bundled; user datasets
+and model weights are excluded. Project code uses Apache
+License 2.0; model runtimes and checkpoints retain their own licenses, including
+the additional TiRex-2 runtime notices shipped with the distributions.

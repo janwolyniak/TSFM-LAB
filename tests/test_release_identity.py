@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/verify_release_identity.py"
 IDENTITY = runpy.run_path(str(SCRIPT))
 BUILDER = runpy.run_path(str(ROOT / "scripts/build_distribution.py"))
-PREFIX = "tsfm_lab-0.1.0"
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+PREFIX = f"tsfm_lab-{VERSION}"
 DIST_INFO = PREFIX + ".dist-info/"
 
 
@@ -86,7 +87,7 @@ def candidate(tmp_path):
     for name in ("LICENSE", "NOTICE", "licenses/mlstm-kernels-2.0.6.txt"):
         wheel_files[DIST_INFO + "licenses/" + name] = committed[name]
     metadata = (
-        "Metadata-Version: 2.4\nName: tsfm-lab\nVersion: 0.1.0\n"
+        f"Metadata-Version: 2.4\nName: tsfm-lab\nVersion: {VERSION}\n"
         "Requires-Python: >=3.11\nLicense-Expression: Apache-2.0\n"
         "License-File: LICENSE\nLicense-File: NOTICE\n"
         "License-File: licenses/mlstm-kernels-2.0.6.txt\n"
