@@ -4,6 +4,7 @@ Run with the clean environment's bin directory on PATH:
     python -I scripts/verify_distribution.py
 """
 
+import argparse
 import csv
 import hashlib
 import importlib
@@ -107,7 +108,7 @@ def strict_json(text):
         ) from exc
 
 
-def installed_environment():
+def installed_environment(wheel=None):
     require(
         sys.flags.isolated == 1,
         "Run the verifier as python -I scripts/verify_distribution.py",
@@ -144,6 +145,11 @@ def installed_environment():
         environment=sys.prefix,
     )
     distribution = importlib.metadata.distribution("tsfm-lab")
+    require(
+        Path(distribution.locate_file("tsfm_lab/__init__.py")).resolve() == origin
+        and getattr(module, "__version__", None) == distribution.version,
+        "Installed distribution identity differs from the imported package",
+    )
     direct = distribution.read_text("direct_url.json")
     require(
         not direct or not json.loads(direct).get("dir_info", {}).get("editable", False),
@@ -177,8 +183,12 @@ def installed_environment():
         for line in configuration.read_text(encoding="utf-8").splitlines():
             key, separator, value = line.partition("=")
             if separator and key.strip().lower() == "include-system-site-packages":
-                system_site = value.strip().lower() == "true"
-    return expected, {
+                system_site = {"true": True, "false": False}.get(value.strip().lower())
+    require(
+        system_site is False,
+        "Use a virtual environment without system site packages for release verification",
+    )
+    evidence = {
         "version": distribution.version,
         "module_origin": str(origin),
         "launcher": str(expected),
@@ -192,6 +202,19 @@ def installed_environment():
             name: importlib.util.find_spec(name) is not None for name in _OPTIONAL
         },
     }
+    if wheel is not None:
+        helper = Path(__file__).with_name("verify_release_identity.py")
+        spec = importlib.util.spec_from_file_location("tsfm_release_identity", helper)
+        identity_helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(identity_helper)
+        evidence["wheel_identity"] = identity_helper.verify_installed(
+            wheel, origin.parent
+        )
+        require(
+            evidence["wheel_identity"]["version"] == distribution.version,
+            "The supplied wheel version differs from the installed distribution",
+        )
+    return expected, evidence
 
 
 def canonical_rows(rows):
@@ -354,6 +377,7 @@ class Verifier:
         self.connections()
         self.managed_worker(dataset)
         self.optional_boundaries()
+        self.legacy_records()
         return {
             "baseline_run_ids": identifiers,
             "forecast_cases_per_run": 16,
@@ -1397,11 +1421,29 @@ print(json.dumps({'missing_runtime': 'actionable_error'}))
         )
         self.done("prompt_without_textual_and_missing_model_runtime")
 
+    def legacy_records(self):
+        self.check = "historical_schema_one_records"
+        probe = _CHECKOUT / "tests/fixtures/release_legacy_v1/verify.py"
+        result = strict_json(self.command(str(probe), python=True).stdout)
+        require(
+            result.get("runs") == 2
+            and result.get("unchanged_artifacts") == 17
+            and result.get("source_revision")
+            == "0ef0064ee80c83e90c6d9c927e0f5c5af4ede1a2",
+            "Historical schema-one compatibility proof failed",
+        )
+        self.done("historical_schema_one_records_keep_meanings_and_hashes")
+
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--wheel", type=Path, help="Verify installed bytes against this wheel"
+    )
+    args = parser.parse_args()
     started, verifier, evidence = time.monotonic(), None, {}
     try:
-        launcher, evidence = installed_environment()
+        launcher, evidence = installed_environment(args.wheel)
         with tempfile.TemporaryDirectory(prefix="tsfm-distribution-") as directory:
             verifier = Verifier(launcher, Path(directory))
             details = verifier.run(evidence)

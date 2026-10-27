@@ -1,0 +1,176 @@
+{
+  "comparison_policy": "controlled_point_v1",
+  "compatible": true,
+  "runs": [
+    {
+      "by_lead": {
+        "1": {
+          "mae": {
+            "reason": null,
+            "value": 2.3333333333333335
+          },
+          "mase": {
+            "reason": "insufficient_scale_history",
+            "value": null
+          },
+          "rmse": {
+            "reason": null,
+            "value": 2.7080128015453204
+          }
+        }
+      },
+      "metrics": {
+        "mae": {
+          "reason": null,
+          "value": 2.3333333333333335
+        },
+        "mase": {
+          "reason": "insufficient_scale_history",
+          "value": null
+        },
+        "rmse": {
+          "reason": null,
+          "value": 2.7080128015453204
+        }
+      },
+      "model": {
+        "adapter_id": "last_value",
+        "adapter_version": "0.1.0",
+        "capabilities": {
+          "covariates": false,
+          "devices": [
+            "cpu"
+          ],
+          "max_context": null,
+          "max_horizon": null,
+          "min_context": 1,
+          "output_types": [
+            "point"
+          ],
+          "target_count": 1
+        },
+        "family": "baseline",
+        "options": {},
+        "source": "builtin"
+      },
+      "name": "Historical last_value",
+      "run_id": "7ce56f70-7bad-4198-80cd-c6f3fd1c134f",
+      "runtime": {
+        "batch_size": 1,
+        "deterministic": true,
+        "device": "cpu",
+        "dtype": "float64",
+        "seed": 0,
+        "seed_used": false
+      },
+      "timing_seconds": {
+        "evaluation": 9.987503290176392e-05,
+        "inference": 0.0002239593304693699,
+        "load": 3.33995558321476e-07
+      }
+    },
+    {
+      "by_lead": {
+        "1": {
+          "mae": {
+            "reason": null,
+            "value": 1.6666666666666667
+          },
+          "mase": {
+            "reason": "insufficient_scale_history",
+            "value": null
+          },
+          "rmse": {
+            "reason": null,
+            "value": 2.0
+          }
+        }
+      },
+      "metrics": {
+        "mae": {
+          "reason": null,
+          "value": 1.6666666666666667
+        },
+        "mase": {
+          "reason": "insufficient_scale_history",
+          "value": null
+        },
+        "rmse": {
+          "reason": null,
+          "value": 2.0
+        }
+      },
+      "model": {
+        "adapter_id": "seasonal_naive",
+        "adapter_version": "0.1.0",
+        "capabilities": {
+          "covariates": false,
+          "devices": [
+            "cpu"
+          ],
+          "max_context": null,
+          "max_horizon": null,
+          "min_context": 2,
+          "output_types": [
+            "point"
+          ],
+          "target_count": 1
+        },
+        "family": "baseline",
+        "options": {
+          "seasonal_period": 2
+        },
+        "source": "builtin"
+      },
+      "name": "Historical seasonal_naive",
+      "run_id": "e722e01b-79de-4488-81ea-196b76d28cbf",
+      "runtime": {
+        "batch_size": 1,
+        "deterministic": true,
+        "device": "cpu",
+        "dtype": "float64",
+        "seed": 0,
+        "seed_used": false
+      },
+      "timing_seconds": {
+        "evaluation": 5.645793862640858e-05,
+        "inference": 0.00020133296493440866,
+        "load": 5.00003807246685e-07
+      }
+    }
+  ],
+  "task": {
+    "dataset": {
+      "frequency": 3600000000000,
+      "series_id": "synthetic_asset",
+      "target_name": "close",
+      "units": "synthetic_quote"
+    },
+    "dataset_fingerprint": "128967051c2ae09f58407a7f727fb02d4e3581e5a159349b167176a3f2ed9f42",
+    "evaluation": {
+      "aggregation": "forecast_case_micro_v1",
+      "context_length": 2,
+      "evaluation_end": "2026-01-01T08:00:00+00:00",
+      "evaluation_start": "2026-01-01T02:00:00+00:00",
+      "horizon": 1,
+      "metrics": [
+        "mae",
+        "mase",
+        "rmse"
+      ],
+      "point_statistic": "median",
+      "seasonal_period": 2,
+      "stride": 1
+    },
+    "metric_version": "point_metrics_v1",
+    "scale": null,
+    "scale_count": 0,
+    "scale_history": {
+      "end_exclusive": "2026-01-01T02:00:00+00:00",
+      "observations": 2,
+      "seasonal_period": 2,
+      "start": "2026-01-01T00:00:00+00:00"
+    },
+    "scale_reason": "insufficient_scale_history"
+  }
+}

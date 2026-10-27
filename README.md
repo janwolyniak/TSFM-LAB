@@ -310,6 +310,9 @@ See the [Milestone 1 record](docs/verification.md) and
 
 The [release guide](docs/releasing.md) describes artifact verification and the
 remaining publication gates. The repository has not published a package release.
+The [P8 qualification record](docs/p8-release-verification.md) and
+[next feature release notes](docs/release-v0.2.0.md) describe the local candidate
+and its remaining integration, CI, version, and publication gates.
 
 ## Design and implementation plan
 

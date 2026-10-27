@@ -1,0 +1,35 @@
+{
+  "by_lead": {
+    "1": {
+      "mae": {
+        "reason": null,
+        "value": 1.6666666666666667
+      },
+      "mase": {
+        "reason": "insufficient_scale_history",
+        "value": null
+      },
+      "rmse": {
+        "reason": null,
+        "value": 2.0
+      }
+    }
+  },
+  "overall": {
+    "mae": {
+      "reason": null,
+      "value": 1.6666666666666667
+    },
+    "mase": {
+      "reason": "insufficient_scale_history",
+      "value": null
+    },
+    "rmse": {
+      "reason": null,
+      "value": 2.0
+    }
+  },
+  "scale": null,
+  "scale_count": 0,
+  "scale_reason": "insufficient_scale_history"
+}

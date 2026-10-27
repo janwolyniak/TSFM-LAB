@@ -1,4 +1,4 @@
-include CONTRIBUTING.md CHANGELOG.md NOTICE
+include CONTRIBUTING.md CHANGELOG.md NOTICE CITATION.cff
 include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt requirements-tirex2.txt requirements-ttm.txt
 include docs/*.md
 include examples/baseline.py examples/custom_adapter.py
@@ -7,6 +7,7 @@ include examples/datasets/*-demo.csv examples/datasets/finance-demo-ohlc.csv
 include examples/configurations/*.yaml
 include scripts/*.py
 recursive-include tests *.py
+recursive-include tests/fixtures/release_legacy_v1 *.json *.csv *.yaml *.md
 recursive-include research/fev_compatibility *.py *.md *.json *.txt
 exclude PLAN.md
 global-exclude *.py[cod]

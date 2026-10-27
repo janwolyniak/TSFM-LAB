@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "configuration.json": {
+      "sha256": "f03d201b1b467db795591775e1f621e1f634ba956659f067a35bc375be5113bb",
+      "size": 982
+    },
+    "input.yaml": {
+      "sha256": "8baea4bf624f7482d3b87d2d99c6f796978dfec1042ac0afaf459312040e7c11",
+      "size": 454
+    },
+    "metrics.json": {
+      "sha256": "a47bbe9153eeaf2d85886c072e67b3d1f134b8980dc2d9a427b88048bd4b4612",
+      "size": 647
+    },
+    "predictions.csv": {
+      "sha256": "a72922425ad65f22797dcbf21a2e237983e62f2cf6de306aca2b0c440c1200d3",
+      "size": 821
+    },
+    "result.json": {
+      "sha256": "cae48eea2e29c9414f1966e5e12b07e4a74e1e41f384b9be932b6d50ca953e73",
+      "size": 3338
+    }
+  },
+  "created_at": "2026-10-27T12:48:56.039601+00:00",
+  "name": "Historical last_value",
+  "run_id": "7ce56f70-7bad-4198-80cd-c6f3fd1c134f",
+  "schema_version": 1,
+  "status": "completed",
+  "updated_at": "2026-10-27T12:48:56.072569+00:00"
+}
