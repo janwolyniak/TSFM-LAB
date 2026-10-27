@@ -1,7 +1,7 @@
 # Optional assistant connections
 
-P6 adds connection setup and an explicit connection check. Natural-language
-experiment drafting and explanations are the separate P7 milestone. Forecasting,
+P6 adds connection setup and an explicit connection check. P7 adds optional
+[natural-language setup and explanations](language-assistance.md). Forecasting,
 saved records, comparisons, finance reports, and exports work without a connection.
 
 | Connection | Credentials | Usage method |

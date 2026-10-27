@@ -114,7 +114,7 @@ def test_scroll_history_completion_demo_and_normal_exit(terminal, tmp_path):
     start = len(terminal.data)
     terminal.send(b"\x1b[A\r")
     terminal.expect("No saved experiments", after=start)
-    terminal.command("/new", "Usage profile")
+    terminal.command("/new guided", "Usage profile")
     start = len(terminal.data)
     terminal.send(b"\x03")
     terminal.expect("Command cancelled", after=start)

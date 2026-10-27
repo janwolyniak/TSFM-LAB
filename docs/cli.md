@@ -42,6 +42,11 @@ and output for hidden credential prompts. It is also available as `/connections`
 in the terminal and during `/new`. See [connections](connections.md) for explicit
 authentication, billing, storage, discovery, and checks.
 
+Natural-language setup (`/new describe`) and checked explanations (`/explain`)
+are available in the interactive terminal. They require an explicit outgoing preview
+and confirmation, and cannot bypass normal experiment review. See
+[language assistance](language-assistance.md); ordinary shell commands remain offline.
+
 Model entries include checkpoint variants and declared runtime requirements.
 Each variant adds `max_context` and `max_horizon`; repository information refines
 its `capabilities` to those bounds. Adapter information retains its maximum

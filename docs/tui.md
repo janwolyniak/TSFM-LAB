@@ -55,6 +55,7 @@ and scores 1.0 on all three metrics. These are arithmetic checks on
 | `/run CONFIG.yaml` | Execute a saved configuration and use its configured results directory. |
 | `/models` | Print the offline model catalog. |
 | `/connections` | Manage optional assistant connections, hidden credentials, and an explicit connection check. |
+| `/explain model ID`, `/explain run ID`, `/explain finance REPORT.json` | Preview an optional explanation of catalog or validated saved facts. |
 | `/history` | List saved records in the current workspace. |
 | `/show ID` | Show verified scores, per-lead metrics, and a short forecast preview. |
 | `/compare ID ID [ID…]` | Enforce the shared matching-task comparison policy. |
@@ -72,7 +73,9 @@ input history, so they do not pollute command recall.
 
 ## Guided setup
 
-`/new` first asks for a usage profile, then a model and any checkpoint details,
+`/new` first offers guided setup (default) or describing a goal. `/new describe`
+opens the optional [language workflow](language-assistance.md); `/new guided`
+opens manual setup directly. Guided setup asks for a usage profile, then a model and any checkpoint details,
 then a dataset, profile-specific measurements/units, mapping fields
 when using your own file, name, evaluation settings, and explicit timestamp bounds.
 Empty answers accept the displayed default. Validation errors reprompt the field
@@ -83,8 +86,8 @@ frequency, and timezone handling; no gaps or missing values are silently repaire
 
 Enter `/connections` at any setup question to manage optional connections and
 return to that question. The [connection guide](connections.md) explains the four
-account/billing routes, storage, explicit model choice, and checks. Natural-language
-setup and explanations arrive in P7.
+account/billing routes, storage, explicit model choice, and checks. Language
+proposals prefill these same questions and cannot bypass preparation or confirmation.
 
 Chronos-Bolt and TimesFM 2.5 use CPU/float32 and an already cached exact revision
 or compatible standalone local checkpoint. Select them with `/new chronos_bolt`

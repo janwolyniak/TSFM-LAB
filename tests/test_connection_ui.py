@@ -201,6 +201,7 @@ def test_connections_reachable_during_setup_and_session_credentials_survive_menu
             "API",
             "session",
             "back",
+            "guided",
             "generic",
             "status",
             "back",

@@ -4,7 +4,8 @@ Working target: **v0.2.0**, following the prepared v0.1.0 release.
 Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and verified
 locally. P3 TiRex-2, P4 TTM, and P5 usage profiles are implemented and verified locally;
 P6 connections are implemented and verified with fake credentials/providers;
-P7–P8 remain future work. The existing package version and publication
+P7 language assistance is implemented and verified with fake providers;
+P8 release qualification remains. The existing package version and publication
 status remain unchanged.
 
 P1 behavior is described in the [catalog guide](model-catalog.md), with checks
@@ -269,7 +270,7 @@ inference work. Integrate through the [contribution workflow](../CONTRIBUTING.md
 | P7 Natural-language setup and explanations | Implement the versioned draft, clarification, normal validators/review, and grounded explanations in the terminal. | End-to-end fake-provider tests cover intent preservation, missing fields, unsupported future targets, invalid responses, explanations, and manual fallback. |
 | P8 Release qualification | Update guides/examples, build source and wheel, and run the installed workflow and configured CI. | Current release checklist passes with exact source/artifact identities and documented representative/variant verification status. |
 
-**P1–P6 are complete locally.** TTM adds three exact-context R2 MSE profiles,
+**P1–P7 are complete locally.** TTM adds three exact-context R2 MSE profiles,
 history-only scaling, explicit native-point comparisons, and a representative
 CPU check under the approved shared runtime. See the [contract](ttm-contract.md)
 and [P4 evidence](p4-ttm-verification.md). P5 adds the five usage profiles across
@@ -277,7 +278,10 @@ configuration, guided setup, and saved presentation; see its [guide](usage-profi
 and [verification](p5-profiles-verification.md). P6 adds four explicit connection
 routes, hidden credentials, bounded requests, and clean numerical workers; see its
 [guide](connections.md) and [fake-only verification](p6-connections-verification.md).
-P7 language assistance is next. Live connection qualification and publication of
+P7 adds editable language proposals, retained clarification choices and checked-fact
+explanations; see its [guide](language-assistance.md) and
+[verification](p7-language-verification.md). P8 release qualification is next.
+Live connection qualification and publication of
 this milestone remains separate from implementation and package publication.
 
 ## Release acceptance
@@ -287,18 +291,18 @@ this milestone remains separate from implementation and package publication.
 - [x] Each new adapter has one recorded representative real inference check.
   Larger compatible variants are selectable without mandatory individual
   inference runs and are labelled accurately.
-- [ ] Manual and assisted setup both expose all five usage profiles and produce
+- [x] Manual and assisted setup both expose all five usage profiles and produce
   equivalent validated settings for the same selections.
 - [ ] Existing schema-1 configurations, datasets, completed forecasts, comparisons,
   and finance reports remain readable with their prior meanings and hashes.
 - [x] The four LLM connection modes have explicit authentication and billing
   selection; fake-secret tests show no credential persistence in experiment
   artifacts, worker logs, or exports.
-- [ ] Drafting preserves user intent, requests missing information, and cannot
+- [x] Drafting preserves user intent, requests missing information, and cannot
   bypass normal validation or execution confirmation.
-- [ ] Explanations use validated evidence and cannot alter forecasts, metrics,
+- [x] Explanations use validated evidence and cannot alter forecasts, metrics,
   thresholds, or saved records.
-- [ ] Offline tests cover all profiles and four fake transports, malformed and
+- [x] Offline tests cover all profiles and four fake transports, malformed and
   truncated output, quota/authentication errors, timeouts, cancellation, prompt
   injection, unsupported actions, and zero network access while disabled.
 - [ ] Source/wheel contents, clean installed workflows, documentation, formatting,
