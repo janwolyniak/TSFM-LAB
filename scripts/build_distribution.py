@@ -53,6 +53,7 @@ SOURCE_FILES = {
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
+    "CITATION.cff",
     "MANIFEST.in",
     "pyproject.toml",
     "requirements-dev.txt",
@@ -110,6 +111,13 @@ SOURCE_FILES = {
     "src/tsfm_lab/workflow_views.py",
     "scripts/build_distribution.py",
     "scripts/verify_distribution.py",
+    "scripts/verify_release_identity.py",
+    "scripts/release_contract.py",
+    "scripts/generate_legacy_fixture.py",
+    "tests/fixtures/release_legacy_v1/README.md",
+    "tests/fixtures/release_legacy_v1/verify.py",
+    "docs/p8-release-verification.md",
+    "docs/release-v0.2.0.md",
     "research/fev_compatibility/README.md",
     "research/fev_compatibility/run_study.py",
     "research/fev_compatibility/results.json",
@@ -128,6 +136,17 @@ SOURCE_FILES |= (
 SOURCE_FILES |= {f"src/{name}" for name in CONNECTION_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in ASSISTANT_MODULES}
 SOURCE_FILES |= {"docs/language-assistance.md", "docs/p7-language-verification.md"}
+SOURCE_FILES |= {
+    f"tests/fixtures/release_legacy_v1/{name}"
+    for name in (
+        "identity.json",
+        "last_value.yaml",
+        "seasonal_naive.yaml",
+        "ohlc.csv",
+        "comparison.json",
+        "finance-report.json",
+    )
+}
 
 
 def _allowed(names):

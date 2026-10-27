@@ -1,0 +1,7 @@
+request_id,series_id,adapter_id,origin,target_timestamp,lead,actual,prediction,point_statistic
+synthetic_asset:2,synthetic_asset,seasonal_naive,2026-01-01 01:00:00+00:00,2026-01-01 02:00:00+00:00,1,101,100,deterministic
+synthetic_asset:3,synthetic_asset,seasonal_naive,2026-01-01 02:00:00+00:00,2026-01-01 03:00:00+00:00,1,103,102,deterministic
+synthetic_asset:4,synthetic_asset,seasonal_naive,2026-01-01 03:00:00+00:00,2026-01-01 04:00:00+00:00,1,100,101,deterministic
+synthetic_asset:5,synthetic_asset,seasonal_naive,2026-01-01 04:00:00+00:00,2026-01-01 05:00:00+00:00,1,105,103,deterministic
+synthetic_asset:6,synthetic_asset,seasonal_naive,2026-01-01 05:00:00+00:00,2026-01-01 06:00:00+00:00,1,104,100,deterministic
+synthetic_asset:7,synthetic_asset,seasonal_naive,2026-01-01 06:00:00+00:00,2026-01-01 07:00:00+00:00,1,106,105,deterministic

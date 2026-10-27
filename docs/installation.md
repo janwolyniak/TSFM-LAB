@@ -79,14 +79,23 @@ The dependency groups let users choose a smaller installation:
 | `cli` | Scriptable commands and the persistent interactive terminal. |
 | `parquet` | Parquet input and export, using PyArrow. |
 | `hub` | Explicit curated checkpoint downloads and cache inspection. |
-| `chronos` | The pinned optional CPU Chronos-Bolt inference runtime. |
+| `chronos` | The pinned optional CPU Chronos-Bolt and Chronos-2 inference runtime. |
 | `timesfm` | The pinned optional TimesFM 2.5 CPU inference runtime. |
+| `tirex2` | The pinned optional CPU TiRex-2 runtime and its kernel dependencies. |
+| `ttm` | The pinned optional CPU Granite TTM runtime and preprocessing dependencies. |
+| `connections` | Optional assistant HTTP, identity, and OS credential-vault packages. |
 | `dev` | pytest, Black, and Ruff for contributors. |
 
 `cli` is sufficient for the active interactive terminal. The older `tui` extra
 installs the retained Textual screens for regression coverage; it is not required
 for the current prompt-based interface. Adding `chronos`, `timesfm`, or `hub`
 does not pull model weights automatically.
+
+See the individual [Chronos-2](chronos2.md), [TiRex-2](tirex2.md), and
+[TTM](ttm.md) guides before installing additional runtimes. Use their maintained
+constraints and supported variant settings; model extras have distinct native
+requirements and are not interchangeable. The [P8 qualification record](p8-release-verification.md)
+identifies the current local candidate and outstanding release gates.
 
 ## Find the installed command
 

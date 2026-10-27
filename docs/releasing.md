@@ -96,7 +96,7 @@ python3 -m venv "$TSFM_SMOKE_ROOT/environment"
 "$TSFM_SMOKE_ROOT/environment/bin/python" -m pip install -c "$TSFM_SOURCE_ROOT/requirements-dev.txt" '/absolute/path/tsfm_lab-0.1.0-py3-none-any.whl[cli,parquet]'
 "$TSFM_SMOKE_ROOT/environment/bin/python" -m pip check
 cd "$TSFM_SMOKE_ROOT"
-PATH="$TSFM_SMOKE_ROOT/environment/bin:$PATH" "$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/scripts/verify_distribution.py"
+PATH="$TSFM_SMOKE_ROOT/environment/bin:$PATH" "$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/scripts/verify_distribution.py" --wheel /absolute/path/tsfm_lab-0.1.0-py3-none-any.whl
 ```
 
 Replace the wheel path with the just-built artifact. Keep the environment and
@@ -104,6 +104,10 @@ output record until the results have been reviewed. `-I` ignores `PYTHONPATH` an
 the current-directory import path, so a source checkout cannot accidentally
 satisfy package imports. Use a regular wheel installation, not an editable
 installation, for this acceptance check.
+
+The `--wheel` option checks installed package bytes against that wheel before the workflow
+checks. A same-version older installation is not sufficient. The verifier also
+requires a virtual environment without inherited system site packages.
 
 The verification script exercises the installed command and bundled resources
 using disposable baseline data and artifacts. It checks the numerical example,
@@ -119,6 +123,39 @@ weights and does not establish a profitable trading rule.
 `pip check` verifies dependency metadata compatibility; it does not execute the
 application. The installed smoke test verifies its exercised workflows; it does
 not establish every optional model runtime or platform combination.
+
+## Bind artifacts to the committed source
+
+After committing the intended source, rebuild into a fresh directory and verify
+its source archive and wheel together:
+
+```sh
+python scripts/verify_release_identity.py --revision HEAD --source /absolute/path/tsfm_lab-0.1.0.tar.gz --wheel /absolute/path/tsfm_lab-0.1.0-py3-none-any.whl
+```
+
+The identity check compares packaged files with the selected Git revision and
+checks that the wheel's package modules and resources match the source archive.
+Its artifact hashes identify the files to retain beside the installation report.
+Unrelated untracked files can make the builder's `dirty` field true; the separate
+byte comparison establishes which committed files actually entered the artifacts.
+Do not describe an uncommitted build as an exact committed candidate.
+
+Run the retained pre-profile fixture against the installed wheel as well:
+
+```sh
+"$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/tests/fixtures/release_legacy_v1/verify.py"
+```
+
+This uses synthetic configurations, saved forecasts, comparisons, and a sealed
+finance report produced by the documented older revision. It checks current
+readers against old bytes, including dataset identity and preservation of the
+input files. See the fixture's [provenance and reproduction instructions](../tests/fixtures/release_legacy_v1/README.md).
+
+The [v0.2.0 scope notes](release-v0.2.0.md) and
+[P8 qualification record](p8-release-verification.md) describe the next feature
+candidate. Its package metadata remains `0.1.0` until an explicit release-version
+decision. Local qualification does not complete remote CI, prerequisite PR review,
+integration, version selection, or publication.
 
 ## Record the verification ceiling
 

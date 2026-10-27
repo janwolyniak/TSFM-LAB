@@ -2,6 +2,10 @@
 
 ## Next feature release in development
 
+- Add release checks binding source archives to a committed revision and installed
+  package bytes to the selected wheel, with retained pre-profile compatibility
+  fixtures. Include project citation guidance in source distributions.
+
 - Add optional natural-language experiment drafts and clarifications, preserving
   prior choices and the selected local dataset through normal guided review.
 - Add explanations of catalog models, checked experiments and saved finance reports
@@ -12,7 +16,7 @@
 - Add four explicit assistant connection routes, hidden credential prompts,
   session/native-vault storage, discovery/selection, and a confirmed fixed
   connection check. Qualification uses fake credentials and simulated providers;
-  natural-language setup and explanations remain P7.
+  natural-language setup and explanations use the reviewed P7 workflow above.
 - Isolate managed numerical workers from arbitrary parent environment variables
   before interpreter startup, preserving progress, cancellation, and saved records.
 

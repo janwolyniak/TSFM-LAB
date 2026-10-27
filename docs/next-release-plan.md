@@ -5,7 +5,8 @@ Scope agreed with the owner on 26 October 2026. P1 and P2 are implemented and ve
 locally. P3 TiRex-2, P4 TTM, and P5 usage profiles are implemented and verified locally;
 P6 connections are implemented and verified with fake credentials/providers;
 P7 language assistance is implemented and verified with fake providers;
-P8 release qualification remains. The existing package version and publication
+P8 local qualification is implemented; final integration and candidate CI remain.
+The existing package version and publication
 status remain unchanged.
 
 P1 behavior is described in the [catalog guide](model-catalog.md), with checks
@@ -280,9 +281,12 @@ routes, hidden credentials, bounded requests, and clean numerical workers; see i
 [guide](connections.md) and [fake-only verification](p6-connections-verification.md).
 P7 adds editable language proposals, retained clarification choices and checked-fact
 explanations; see its [guide](language-assistance.md) and
-[verification](p7-language-verification.md). P8 release qualification is next.
-Live connection qualification and publication of
-this milestone remains separate from implementation and package publication.
+[verification](p7-language-verification.md). P8's local qualification adds
+committed-source and installed-wheel identity checks, genuine pre-profile saved
+artifacts, and updated [release notes](release-v0.2.0.md); see the
+[P8 verification record](p8-release-verification.md) for checks and remaining
+integration, candidate CI, and version gates. Live connection qualification and
+publication remain separate from implementation.
 
 ## Release acceptance
 
@@ -293,7 +297,7 @@ this milestone remains separate from implementation and package publication.
   inference runs and are labelled accurately.
 - [x] Manual and assisted setup both expose all five usage profiles and produce
   equivalent validated settings for the same selections.
-- [ ] Existing schema-1 configurations, datasets, completed forecasts, comparisons,
+- [x] Existing schema-1 configurations, datasets, completed forecasts, comparisons,
   and finance reports remain readable with their prior meanings and hashes.
 - [x] The four LLM connection modes have explicit authentication and billing
   selection; fake-secret tests show no credential persistence in experiment

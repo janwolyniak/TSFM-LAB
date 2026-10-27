@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "configuration.json": {
+      "sha256": "ca53dc5982e43f3ed9d5dd237e73ced9f0f88c34ab0f26358c0ff4d4804a6e2e",
+      "size": 1022
+    },
+    "input.yaml": {
+      "sha256": "738273261dfb93b993fe4c4862849a2f7f6aeb787671964af5a5d68208503e1e",
+      "size": 496
+    },
+    "metrics.json": {
+      "sha256": "5f14412ebdd2e0477b9474471d020396a546e9d0062cef4352c8e0a4cb9f2e7f",
+      "size": 617
+    },
+    "predictions.csv": {
+      "sha256": "a4c18796d5fd628b55b987721403a519601ce4074c26e8485961bd70f348129c",
+      "size": 845
+    },
+    "result.json": {
+      "sha256": "e8fbdae5c149d3645197c82254c3b22779db6e33f3d720f3b33314206fb76d8f",
+      "size": 3353
+    }
+  },
+  "created_at": "2026-10-27T12:48:56.074745+00:00",
+  "name": "Historical seasonal_naive",
+  "run_id": "e722e01b-79de-4488-81ea-196b76d28cbf",
+  "schema_version": 1,
+  "status": "completed",
+  "updated_at": "2026-10-27T12:48:56.090083+00:00"
+}
