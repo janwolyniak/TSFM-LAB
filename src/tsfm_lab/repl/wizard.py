@@ -11,11 +11,13 @@ from tsfm_lab.contracts import fixed_interval, utc_timestamp
 from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.models.catalog import (
     CHECKPOINT_REPOSITORIES,
-    catalog_entries,
     catalog_info,
-    checkpoint_info,
+)
+from tsfm_lab.models.catalog import (
+    checkpoint_info as checkpoint_info,
 )
 from tsfm_lab.models.factory import build_model
+from tsfm_lab.models.settings import model_settings
 from tsfm_lab.models.verification import checkpoint_verification, verification_label
 from tsfm_lab.point_tasks import validate_model_frequency
 from tsfm_lab.tui.forms import (
@@ -30,8 +32,6 @@ from tsfm_lab.tui.forms import (
     validate_model_fields,
 )
 from tsfm_lab.workflows import PROFILE_NAMES
-
-_ADAPTERS = tuple(entry["adapter_id"] for entry in catalog_entries())
 
 
 class _Cancel(Exception):
@@ -141,7 +141,7 @@ class _Guide:
         self._checkpoint_profile = checkpoint_variant or variant
         self.dataset = self.capabilities = None
         self._model = None
-        self._evaluation_started = False
+        self._options_started = False
         self._example_declarations = {}
         self._example_path = None
 
@@ -150,15 +150,25 @@ class _Guide:
             self.fields[key] = value
 
     def profile(self):
+        previous = self.fields["usage_profile"]
         self.set(
             "usage_profile",
             "Usage profile",
             choices=PROFILE_NAMES,
             default=self.fields["usage_profile"] or "generic",
         )
+        if self.fields["usage_profile"] != previous:
+            self._invalidate_data()
         self.emit(profile_guidance(self.fields["usage_profile"]))
 
+    def _invalidate_data(self):
+        self.dataset = None
+        for key in ("evaluation_start", "evaluation_end"):
+            if key not in self._provided:
+                self.fields[key] = ""
+
     def set(self, key, label, *, choices=(), validate=None, default=None):
+        previous = self.fields[key]
         self.fields[key] = _question(
             self.ask,
             self.emit,
@@ -167,140 +177,189 @@ class _Guide:
             choices,
             validate,
         )
+        if self.fields[key] != previous:
+            self._provided.add(key)
 
     def model(self):
+        from tsfm_lab.repl.model_selection import select_model
+
+        previous = self._model_identity()
         previous_adapter = self.fields["adapter"]
-        self.set("adapter", "Model adapter", choices=_ADAPTERS)
-        information = catalog_info(self.fields["adapter"])
-        if self.fields["adapter"] != previous_adapter:
-            statistic = information["point_statistic"]
-            self._default(
-                "point_statistic",
-                statistic if statistic in information["supported_tasks"] else "median",
-            )
-        self.set(
-            "point_statistic", "Forecast task", choices=information["supported_tasks"]
+        selected = select_model(
+            self.ask,
+            self.emit,
+            self.fields,
+            checkpoint_variant=self._checkpoint_profile,
         )
+        self._checkpoint_profile = selected.pop("checkpoint_variant", None)
+        self.fields.update(selected)
+        adapter = self.fields["adapter"]
+        information = catalog_info(adapter)
+        if adapter != previous_adapter and (
+            "point_statistic" not in self._provided
+            or self.fields["point_statistic"] not in information["supported_tasks"]
+        ):
+            statistic = information["point_statistic"]
+            self.fields["point_statistic"] = (
+                statistic if statistic in information["supported_tasks"] else "median"
+            )
+            self._provided.discard("point_statistic")
+        changed = previous != self._model_identity()
+        self.settings = model_settings(
+            adapter,
+            repository=(
+                self.fields["repository"]
+                if self.fields["source"] == "huggingface"
+                else None
+            ),
+            revision=(
+                self.fields["revision"]
+                if self.fields["source"] == "huggingface"
+                else None
+            ),
+        )
+        if changed:
+            self._model = None
+            self._invalidate_data()
+        self.capabilities = (
+            self._model.metadata().capabilities
+            if self._model
+            else self.settings.capabilities
+        )
+        if changed or not self._options_started:
+            self._default("context_length", str(self.settings.default_context))
+            self._default("horizon", str(self.settings.default_horizon))
+        self.emit(f"Preprocessing (fixed): {self.settings.preprocessing}")
+        self.emit("Runtime: CPU · fixed numerical precision · batch size 1.")
         for notice in information["runtime_notices"]:
             self.emit(notice)
-        if self.fields["adapter"] == "seasonal_naive":
-            self.set("seasonal_period", "Baseline seasonal period", validate=_positive)
-        elif self.fields["adapter"] in CHECKPOINT_REPOSITORIES:
-            repositories = CHECKPOINT_REPOSITORIES[self.fields["adapter"]]
-            if self.fields["repository"] not in repositories:
-                self._default("repository", repositories[0])
-                self._default("revision", "")
-            self.emit(
-                "Use an existing cached or local checkpoint; setup does not download models."
-            )
-            source = _question(
-                self.ask,
-                self.emit,
-                "Checkpoint source",
-                "cached" if self.fields["source"] == "huggingface" else "local",
-                ("cached", "local"),
-            )
-            self.fields["source"] = "huggingface" if source == "cached" else "local"
-            if source == "cached":
-                self.emit("Curated checkpoint variants:")
-                for variant in information["variants"]:
-                    self.emit(f"  {variant['variant']} · {variant['repository']}")
-                    context = (
-                        f"exactly {variant['min_context']}"
-                        if variant["min_context"] == variant["max_context"]
-                        else f"up to {variant['max_context']}"
-                    )
-                    self.emit(
-                        f"    Context {context} · Horizon up to {variant['max_horizon']} observations"
-                    )
-                    self.emit(f"    {variant['verification_label']}")
-                previous_repository = self.fields["repository"]
-                self.set("repository", "Checkpoint repository", choices=repositories)
-                variants = [
-                    item
-                    for item in information["variants"]
-                    if item["repository"] == self.fields["repository"]
-                ]
-                selected = variants[0]
-                if len(variants) > 1 or self._checkpoint_profile is not None:
-                    previous_profile = self._checkpoint_profile
-                    default_profile = next(
-                        (
-                            item["variant"]
-                            for item in variants
-                            if item["reference_revision"] == self.fields["revision"]
-                        ),
-                        None,
-                    )
-                    if previous_profile is not None:
-                        default_profile = previous_profile
-                    self._checkpoint_profile = _question(
-                        self.ask,
-                        self.emit,
-                        "Checkpoint profile",
-                        default_profile or variants[0]["variant"],
-                        tuple(item["variant"] for item in variants),
-                    )
-                    selected = checkpoint_info(
-                        self.fields["repository"], self._checkpoint_profile
-                    )
-                    if self._checkpoint_profile != previous_profile:
-                        self.fields["revision"] = selected["reference_revision"]
-                if (
-                    self.fields["repository"] != previous_repository
-                    or not self.fields["revision"]
-                ):
-                    if self.fields["repository"] != previous_repository:
-                        self.fields["revision"] = selected["reference_revision"]
-                    else:
-                        self._default("revision", selected["reference_revision"])
-                self.set("revision", "Exact checkpoint SHA", validate=self._sha)
-                self.set("cache_dir", "Cache directory (optional; - uses the default)")
-                if self.fields["cache_dir"] == "-":
-                    self.fields["cache_dir"] = ""
-            else:
-                self.set(
-                    "checkpoint_path", "Local checkpoint directory", validate=_required
-                )
-        validate_model_fields(
-            {**self.fields, "name": "Model validation"}, **self.arguments
-        )
-        prototype = {
-            **self.fields,
-            "name": "Model validation",
-            "dataset_path": str(self.demo_path),
-            "timestamp_column": "timestamp",
-            "target_column": "demand",
-            "frequency": "1h",
-            "timezone": "UTC",
-            "units": "unspecified",
-            "context_length": (
-                self.fields["seasonal_period"]
-                if self.fields["adapter"] == "seasonal_naive"
-                else "1"
-            ),
-            "horizon": "1",
-            "evaluation_start": "2000-01-01T01:00:00Z",
-            "evaluation_end": "2000-01-01T02:00:00Z",
-            "usage_profile": "",
-        }
-        config = config_from_fields(prototype, **self.arguments)
-        model = build_model(config.model, config.runtime)
-        self._model = model
-        self.capabilities = model.metadata().capabilities
         next_demo = self._profile_demo_paths.get(self.fields["usage_profile"])
         if next_demo is None:
             next_demo = (
-                self._ttm_demo_path
-                if self.fields["adapter"] == "ttm_r2"
-                else self._ordinary_demo_path
+                self._ttm_demo_path if adapter == "ttm_r2" else self._ordinary_demo_path
             )
         if next_demo is not None:
             if self._resolved_data_path(self.fields["dataset_path"]) == self.demo_path:
                 self._default("dataset_path", str(next_demo))
             self.demo_path = next_demo
-        if self.capabilities.min_context == self.capabilities.max_context:
-            self._default("context_length", str(self.capabilities.min_context))
+
+    def _model_identity(self):
+        keys = ("adapter", "source", "repository", "revision", "checkpoint_path")
+        return tuple(self.fields[key] for key in keys)
+
+    def model_options(self):
+        self.set(
+            "point_statistic", "Forecast task", choices=self.settings.supported_tasks
+        )
+        if self.fields["adapter"] == "seasonal_naive":
+            self.set("seasonal_period", "Baseline seasonal period", validate=_positive)
+        caps = self.capabilities
+        low, high = caps.min_context, caps.max_context
+        if self.fields["adapter"] == "seasonal_naive":
+            low = max(low, int(self.fields["seasonal_period"]))
+        if self.dataset is not None:
+            high = min(high or len(self.dataset.values), len(self.dataset.values) - 1)
+            if high < low:
+                raise ConfigError(
+                    "The dataset is too short for this model's minimum context"
+                )
+        context = (
+            f"exactly {low}"
+            if low == high
+            else f"up to {high} (minimum {low})" if high else f"at least {low}"
+        )
+        horizon = (
+            f"up to {caps.max_horizon}" if caps.max_horizon else "any positive length"
+        )
+        self.emit(f"Model options · Context {context} · Horizon {horizon} observations")
+
+        def context_limit(value):
+            number = _positive(value)
+            if number < low or (high is not None and number > high):
+                raise ConfigError(
+                    f"Context length must be between {low} and {high} observations"
+                )
+
+        def horizon_limit(value):
+            maximum = caps.max_horizon
+            if self.dataset is not None:
+                remaining = len(self.dataset.values) - int(
+                    self.fields["context_length"]
+                )
+                maximum = min(maximum or remaining, remaining)
+            if maximum is not None and _positive(value) > maximum:
+                raise ConfigError(
+                    f"Forecast horizon must be between 1 and {maximum} observations"
+                )
+            _positive(value)
+
+        self.set("context_length", "Context length", validate=context_limit)
+        self.set("horizon", "Forecast horizon", validate=horizon_limit)
+        validate_model_fields(
+            {**self.fields, "name": "Model validation"}, **self.arguments
+        )
+        self._default("stride", self.fields["horizon"])
+        self._options_started = True
+
+    def _checkpoint_model(self):
+        prototype = {
+            **self.fields,
+            "name": "Model validation",
+            "stride": "1",
+            "mase_period": "1",
+            "evaluation_start": "2000-01-01T01:00:00Z",
+            "evaluation_end": "2000-01-01T02:00:00Z",
+        }
+        config = config_from_fields(prototype, **self.arguments)
+        if (
+            len(self.dataset.values)
+            < config.evaluation.context_length + config.evaluation.horizon
+        ):
+            self.emit("Adjust context and horizon to fit the inspected dataset.")
+            remaining = len(self.dataset.values) - config.evaluation.context_length
+            if remaining > 0:
+                self.emit(
+                    f"Forecast horizon must be between 1 and {remaining} observations for this dataset."
+                )
+            self.model_options()
+            prototype.update(
+                context_length=self.fields["context_length"],
+                horizon=self.fields["horizon"],
+            )
+            config = config_from_fields(prototype, **self.arguments)
+        model = build_model(config.model, config.runtime)
+        self._model = model
+        self.capabilities = model.metadata().capabilities
+        validate_model_frequency(model, self.dataset.frequency)
+        caps = self.capabilities
+        needs_correction = False
+        for key, low, high in (
+            ("context_length", caps.min_context, caps.max_context),
+            ("horizon", 1, caps.max_horizon),
+        ):
+            value = int(self.fields[key])
+            if value < low or (high is not None and value > high):
+                if key in self._provided:
+                    self.emit(
+                        f"{key} conflicts with this checkpoint's limits; correct the model options."
+                    )
+                    needs_correction = True
+                    continue
+                default = (
+                    max(low, min(value, high)) if high is not None else max(low, value)
+                )
+                self.fields[key] = str(default)
+                self.emit(
+                    f"Checkpoint metadata refines {key} to {default}; review before execution."
+                )
+        if needs_correction:
+            self.model_options()
+        if len(self.dataset.values) < int(self.fields["context_length"]) + int(
+            self.fields["horizon"]
+        ):
+            raise ConfigError(
+                "The dataset is too short for this checkpoint's context and horizon"
+            )
         record = getattr(model, "configuration", lambda: {})().get("checkpoint")
         if record:
             snapshot = checkpoint_verification(record)
@@ -309,11 +368,6 @@ class _Guide:
                 self.emit(
                     f"  Adapter reference: {check['repository']} @ {check['revision'][:12]} · {check['device']}/{check['dtype']}"
                 )
-
-    @staticmethod
-    def _sha(value):
-        if re.fullmatch(r"[0-9a-f]{40}", value) is None:
-            raise ConfigError("Enter an exact 40-character lowercase checkpoint SHA")
 
     def _data_path(self, value):
         _required(value)
@@ -426,14 +480,29 @@ class _Guide:
                     else _declared_units
                 ),
             )
+        previous = self.dataset
         self.dataset = inspect_data(self.fields, **self.arguments)
-        validate_model_frequency(self._model, self.dataset.frequency)
+        if previous is not None and previous.provenance != self.dataset.provenance:
+            for key in ("evaluation_start", "evaluation_end"):
+                if key not in self._provided:
+                    self.fields[key] = ""
         self.emit(
             profile_guidance(self.fields["usage_profile"], self.dataset.frequency)
         )
         self.emit(
             f"Validated {len(self.dataset.values)} observations of {self.dataset.target_name} ({self.dataset.units}), frequency {self.dataset.frequency}."
         )
+
+        self.emit("Dataset preview · original units · UTC timestamps")
+        positions = list(range(min(3, len(self.dataset.values))))
+        positions += list(
+            range(max(3, len(self.dataset.values) - 3), len(self.dataset.values))
+        )
+        for position in positions:
+            self.emit(
+                f"  {self.dataset.timestamps[position].isoformat()}  {self.dataset.values[position]:g} {self.dataset.units}"
+            )
+        self._checkpoint_model()
 
     def measurement(self):
         profile = self.fields["usage_profile"]
@@ -486,43 +555,9 @@ class _Guide:
         return caps.min_context, maximum
 
     def evaluation(self):
-        low, high = self._limits()
-        if not self._evaluation_started:
-            context = max(low, min(8, len(self.dataset.values) // 2, high))
-            horizon = min(
-                4,
-                len(self.dataset.values) - context,
-                self.capabilities.max_horizon or 4,
-            )
-            for key, value in {
-                "context_length": str(context),
-                "horizon": str(horizon),
-                "stride": str(horizon),
-                "mase_period": str(min(4, context)),
-            }.items():
-                self._default(key, value)
-            self._evaluation_started = True
+        self._limits()
+        self.emit("Mode: Historical evaluation against observed actuals.")
         self.set("name", "Experiment name", validate=_required)
-
-        def context_limit(value):
-            if not low <= _positive(value) <= high:
-                raise ConfigError(
-                    f"Context length must be between {low} and {high} observations"
-                )
-
-        self.set("context_length", "Context length", validate=context_limit)
-        maximum_horizon = min(
-            len(self.dataset.values) - int(self.fields["context_length"]),
-            self.capabilities.max_horizon or len(self.dataset.values),
-        )
-
-        def horizon_limit(value):
-            if _positive(value) > maximum_horizon:
-                raise ConfigError(
-                    f"Forecast horizon must be between 1 and {maximum_horizon} observations"
-                )
-
-        self.set("horizon", "Forecast horizon", validate=horizon_limit)
         self.set("stride", "Evaluation stride", validate=_positive)
         self.set("mase_period", "MASE seasonal lag", validate=_positive)
         proposals = suggested_bounds(self.dataset, self.fields)
@@ -563,8 +598,10 @@ class _Guide:
                 elif phase == 1:
                     self.model()
                 elif phase == 2:
-                    self.data()
+                    self.model_options()
                 elif phase == 3:
+                    self.data()
+                elif phase == 4:
                     self.evaluation()
                 else:
                     prepared = prepare_experiment(self.fields, **self.arguments)
@@ -580,7 +617,7 @@ class _Guide:
                         return prepared.config
                     if answer == "no":
                         return None
-                    phase = 3
+                    phase = 4
                     continue
                 phase += 1
             except _Back:
@@ -599,7 +636,11 @@ class _Guide:
                     answer = "back"
                 if answer == "cancel":
                     return None
-                phase = max(0, phase - 1) if answer == "back" else min(phase, 3)
+                phase = (
+                    max(0, phase - 1)
+                    if answer == "back"
+                    else (2 if phase >= 4 else phase)
+                )
 
 
 def build_experiment(

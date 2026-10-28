@@ -335,7 +335,8 @@ describes final release checks, the CI exception, and remaining verification lim
 - [Development roadmap](docs/roadmap.md): review decisions, implementation tasks,
   and milestone acceptance criteria.
 - [v0.3.0 plan](docs/release-v0.3.0-plan.md): staged release scope; development
-  starts with [first-launch onboarding](docs/onboarding.md), `/setup`, and `/settings`.
+  includes [first-launch onboarding](docs/onboarding.md), `/setup`, `/settings`,
+  and [model-specific guided setup](docs/model-setup.md).
 - [Adapter extension guide](docs/adapters.md): the current protocol and a runnable
   direct-Python example, including limits on shell/catalog integration.
 

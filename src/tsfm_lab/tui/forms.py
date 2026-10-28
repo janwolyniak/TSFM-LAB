@@ -16,6 +16,7 @@ from tsfm_lab.models.catalog import (
     catalog_info,
 )
 from tsfm_lab.models.factory import build_model
+from tsfm_lab.models.settings import model_settings
 from tsfm_lab.point_tasks import validate_model_frequency
 from tsfm_lab.workflows import (
     normalize_workflow,
@@ -68,6 +69,9 @@ def default_fields(initial_adapter: str = "last_value") -> dict[str, str]:
     if initial_adapter not in {entry["adapter_id"] for entry in catalog_entries()}:
         raise ConfigError("Choose a supported model adapter")
     fields = {**_DEFAULTS, "adapter": initial_adapter}
+    settings = model_settings(initial_adapter)
+    fields["context_length"] = str(settings.default_context)
+    fields["horizon"] = str(settings.default_horizon)
     info = catalog_info(initial_adapter)
     if info["point_statistic"] in info["supported_tasks"]:
         fields["point_statistic"] = info["point_statistic"]
@@ -268,6 +272,22 @@ def validate_model_fields(
     mapping = _minimal_mapping(workspace)
     mapping["name"], mapping["model"] = fields["name"], _model(fields)
     mapping["evaluation"]["point_statistic"] = fields["point_statistic"]
+    settings = (
+        model_settings(
+            fields["adapter"],
+            repository=(
+                fields["repository"] if fields["source"] == "huggingface" else None
+            ),
+            revision=(
+                fields["revision"] or None
+                if fields["source"] == "huggingface"
+                else None
+            ),
+        )
+        if fields["adapter"] in CHECKPOINT_REPOSITORIES
+        else model_settings(fields["adapter"])
+    )
+    mapping["evaluation"]["context_length"] = settings.default_context
     if fields["adapter"] == "seasonal_naive":
         mapping["evaluation"]["context_length"] = _integer(fields, "seasonal_period")
     config_from_mapping(mapping, base_directory=base_directory)

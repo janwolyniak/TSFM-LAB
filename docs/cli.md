@@ -71,6 +71,11 @@ The v0.3.0 development terminal adds [onboarding preferences](onboarding.md).
 Shell commands ignore those preferences and never enter onboarding. An explicit
 `tsfm ui --workspace` overrides the saved interactive results directory.
 
+S2 adds [shared model-specific validation](model-setup.md). Known curated
+revisions receive exact variant bounds during YAML/Python configuration validation;
+unsupported tasks, context/horizons, or cadence fail before preparation. Valid
+schema-version-1 configuration fields and resolved numerical identities are unchanged.
+
 The runnable examples are [last-value.yaml](../examples/configurations/last-value.yaml)
 and [seasonal-naive.yaml](../examples/configurations/seasonal-naive.yaml). Their
 dataset/output paths are relative to the configuration file, so moving to another

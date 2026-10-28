@@ -30,6 +30,7 @@ class Questions:
 
     def __call__(self, label, default="", choices=()):
         self.calls.append((label, default, choices))
+        assert len(self.calls) < 100, f"Unexpected repeated question: {label}"
         answer = self.answers[label].popleft() if self.answers[label] else ""
         if isinstance(answer, BaseException):
             raise answer
@@ -248,7 +249,7 @@ def test_missing_data_path_reprompts_and_can_cancel(setup):
 @pytest.mark.parametrize("exception", [KeyboardInterrupt(), EOFError()])
 def test_input_interruptions_propagate_to_the_terminal_owner(setup, exception):
     with pytest.raises(type(exception)):
-        build(setup, Questions({"Model adapter": exception}))
+        build(setup, Questions({"Model family": exception}))
     assert not setup["workspace"].exists()
 
 
@@ -258,8 +259,8 @@ def test_seasonal_adapter_argument_sets_the_default_and_keeps_lags_distinct(setu
     )
     config = build(setup, questions, adapter="seasonal_naive")
     assert (
-        next(call[1] for call in questions.calls if call[0] == "Model adapter")
-        == "seasonal_naive"
+        next(call[1] for call in questions.calls if call[0] == "Baseline")
+        == "Seasonal naive"
     )
     assert questions.count("Baseline seasonal period") == 2
     assert config.model["options"]["seasonal_period"] == 4
@@ -349,7 +350,8 @@ def test_cached_model_requires_exact_sha_and_respects_native_limits(
     monkeypatch.setattr("tsfm_lab.tui.forms.build_model", model)
     questions = Questions(
         {
-            "Checkpoint repository": repository,
+            "Model size": wizard.checkpoint_info(repository)["display_name"],
+            "Advanced checkpoint options?": "yes",
             "Exact checkpoint SHA": ["main", "a" * 40],
             _RUN: "yes",
         }
@@ -380,7 +382,8 @@ def test_base_choice_shows_compatibility_and_project_reference_evidence(
     questions, emitted = (
         Questions(
             {
-                "Checkpoint repository": "amazon/chronos-bolt-base",
+                "Model size": "Base",
+                "Advanced checkpoint options?": "yes",
                 _RUN: "yes",
             }
         ),
@@ -398,10 +401,8 @@ def test_base_choice_shows_compatibility_and_project_reference_evidence(
     assert "amazon/chronos-bolt-base" in text
     assert "individual inference not run" in text
     assert "Reference checkpoint inference check recorded" in text
-    repository_call = next(
-        call for call in questions.calls if call[0] == "Checkpoint repository"
-    )
-    assert "amazon/chronos-bolt-base" in repository_call[2]
+    size_call = next(call for call in questions.calls if call[0] == "Model size")
+    assert size_call[2] == ("Tiny", "Small", "Base")
     assert not setup["workspace"].exists()
 
 
@@ -452,14 +453,22 @@ def test_tirex_training_profiles_select_canonical_repository_and_pinned_sha(
 
     monkeypatch.setattr(wizard, "build_model", selected_model)
     monkeypatch.setattr("tsfm_lab.tui.forms.build_model", selected_model)
-    questions = Questions({"Checkpoint repository": repository.lower(), _RUN: "yes"})
+    questions = Questions(
+        {
+            "Training profile": wizard.checkpoint_info(repository)[
+                "display_name"
+            ].lower(),
+            "Advanced checkpoint options?": "yes",
+            _RUN: "yes",
+        }
+    )
     emitted = []
     config = build(setup, questions, emitted, adapter="tirex_2")
     assert config.model["adapter_id"] == "tirex_2"
     assert config.model["repository"] == repository
     assert config.model["revision"] == revision
-    assert questions.count("Checkpoint repository") == 1
-    assert questions.count("Checkpoint variant") == 0
+    assert questions.count("Training profile") == 1
+    assert questions.count("Model size") == 0
     assert all(item["repository"] == repository for item in selections)
     sha = next(call for call in questions.calls if call[0] == "Exact checkpoint SHA")
     assert sha[1] == revision
@@ -491,9 +500,14 @@ def test_tirex_back_navigation_preserves_sha_override_until_profile_changes(
     override = "b" * 40
     questions = Questions(
         {
-            "Checkpoint repository": [first, second.lower()],
+            "Training profile": [
+                wizard.checkpoint_info(first)["display_name"],
+                wizard.checkpoint_info(second)["display_name"].lower(),
+            ],
+            "Advanced checkpoint options?": ["yes", "yes"],
             "Exact checkpoint SHA": [override, ""],
             "Dataset path": ["/back", ""],
+            "Context length": ["", "/back", ""],
             _RUN: "yes",
         }
     )
@@ -502,7 +516,7 @@ def test_tirex_back_navigation_preserves_sha_override_until_profile_changes(
     assert config.model["revision"] == (
         "c94872d1c8caacbe7755cbfa01bc5c4c5c5ddb7f" if change_repository else override
     )
-    assert questions.count("Model adapter") == 2
+    assert questions.count("Model family") == 2
 
 
 @pytest.mark.parametrize("variant", ["tiny", "base"])
@@ -522,9 +536,11 @@ def test_back_to_model_preserves_same_repo_override_or_defaults_new_variant(
     override = "b" * 40
     questions = Questions(
         {
-            "Checkpoint repository": ["amazon/chronos-bolt-tiny", repository],
+            "Model size": ["Tiny", wizard.checkpoint_info(repository)["display_name"]],
+            "Advanced checkpoint options?": ["yes", "yes"],
             "Exact checkpoint SHA": [override, ""],
             "Dataset path": ["/back", ""],
+            "Context length": ["", "/back", ""],
             _RUN: "yes",
         }
     )
@@ -561,7 +577,8 @@ def test_selecting_timesfm_from_default_setup_uses_only_its_repository(
     monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: Model())
     questions = Questions(
         {
-            "Model adapter": "timesfm_2p5",
+            "Model family": "TimesFM",
+            "Advanced checkpoint options?": "yes",
             "Exact checkpoint SHA": "1d952420fba87f3c6dee4f240de0f1a0fbc790e3",
             _RUN: "yes",
         }
@@ -569,11 +586,83 @@ def test_selecting_timesfm_from_default_setup_uses_only_its_repository(
     config = build(setup, questions)
     assert config.model["adapter_id"] == "timesfm_2p5"
     assert config.model["repository"] == "google/timesfm-2.5-200m-pytorch"
-    repository_call = next(
-        call for call in questions.calls if call[0] == "Checkpoint repository"
-    )
-    assert repository_call[2] == ("google/timesfm-2.5-200m-pytorch",)
+    size_call = next(call for call in questions.calls if call[0] == "Model size")
+    assert size_call[2] == ("2.5 200M",)
     assert config.runtime["dtype"] == "float32"
+    assert not setup["workspace"].exists()
+
+
+def test_family_change_preserves_compatible_explicit_model_options(setup, monkeypatch):
+    class MetadataOnly:
+        def metadata(self):
+            return SimpleNamespace(
+                capabilities=ModelCapabilities(max_context=2048, max_horizon=128)
+            )
+
+        def validate(self, spec):
+            assert spec.point_statistic == "native_point"
+
+        def load(self):
+            pytest.fail("Changing setup choices must not load model weights")
+
+    monkeypatch.setattr(wizard, "build_model", lambda *_: MetadataOnly())
+    monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: MetadataOnly())
+    questions = Questions(
+        {
+            "Model family": ["Chronos", "TimesFM"],
+            "Model generation": "Bolt",
+            "Forecast task": ["native_point", ""],
+            "Context length": ["9", "/back", ""],
+            "Forecast horizon": ["2", ""],
+            "Dataset path": ["/back", ""],
+            "Evaluation stride": "1",
+            "MASE seasonal lag": "2",
+            _RUN: "yes",
+        }
+    )
+    config = build(setup, questions)
+    assert config.model["adapter_id"] == "timesfm_2p5"
+    assert config.evaluation.point_statistic == "native_point"
+    assert config.evaluation.context_length == 9
+    assert config.evaluation.horizon == 2
+    assert config.evaluation.stride == 1
+    assert config.evaluation.seasonal_period == 2
+    assert not setup["workspace"].exists()
+
+
+def test_new_dataset_refreshes_generated_bounds_and_preserves_numeric_edits(
+    setup, tmp_path
+):
+    new_path = tmp_path / "different-dates.csv"
+    pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2026-02-01", periods=32, freq="h", tz="UTC"),
+            "demand": range(32),
+        }
+    ).to_csv(new_path, index=False)
+    questions = Questions(
+        {
+            "Dataset path": ["", str(new_path)],
+            "Target units": "declared_units",
+            "Context length": "6",
+            "Forecast horizon": "2",
+            "Evaluation stride": "1",
+            "MASE seasonal lag": "3",
+            "Experiment name": ["first", "/back", "second"],
+            _RUN: ["back", "yes"],
+        }
+    )
+    config = build(setup, questions)
+    assert config.dataset["path"] == str(new_path)
+    assert config.dataset["units"] == "declared_units"
+    assert config.evaluation.context_length == 6
+    assert config.evaluation.horizon == 2
+    assert config.evaluation.stride == 1
+    assert config.evaluation.seasonal_period == 3
+    assert config.evaluation.evaluation_start == pd.Timestamp("2026-02-01T16:00Z")
+    assert config.evaluation.evaluation_end == pd.Timestamp("2026-02-02T08:00Z")
+    assert questions.count("First target timestamp (inclusive)") == 2
+    assert questions.count("Target end timestamp (exclusive)") == 2
     assert not setup["workspace"].exists()
 
 

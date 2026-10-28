@@ -9,7 +9,8 @@ from typing import Any
 import yaml
 
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
-from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES, catalog_info
+from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES
+from tsfm_lab.models.settings import validate_settings
 from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
 
 MAX_CONFIG_BYTES = 1024 * 1024
@@ -270,22 +271,12 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
         raise ConfigError("Only schema_version 1 is supported")
     model = _model(fields["model"], source_path.parent)
     evaluation = _evaluation(fields["evaluation"])
-    if model["adapter_id"] in CHECKPOINT_REPOSITORIES:
-        entry = catalog_info(model["adapter_id"])
-        caps = entry["capabilities"]
-        if (
-            evaluation.context_length > caps["max_context"]
-            or evaluation.horizon > caps["max_horizon"]
-        ):
-            raise ConfigError(
-                f"{entry['display_name']} requires context_length <= "
-                f"{caps['max_context']} and horizon <= {caps['max_horizon']}"
-            )
-    if model["adapter_id"] == "seasonal_naive":
-        if evaluation.context_length < model["options"]["seasonal_period"]:
-            raise ConfigError("context_length must contain a complete baseline season")
     output = _mapping(fields.get("output", {}), "output", {"directory"})
     dataset = _dataset(fields["dataset"], source_path.parent)
+    try:
+        validate_settings(model, evaluation, dataset["frequency"])
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
     workflow = normalize_workflow(fields.get("workflow"))
     validate_workflow_units(workflow, dataset["units"])
     return ExperimentConfig(

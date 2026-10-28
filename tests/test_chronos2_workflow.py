@@ -341,10 +341,16 @@ def test_terminal_selection_preserves_override_or_defaults_changed_variant(
     override = "b" * 40
     questions = Questions(
         {
-            "Model adapter": "chronos_2",
-            "Checkpoint repository": [SMALL, second_repository],
+            "Model family": "Chronos",
+            "Model generation": "2",
+            "Model size": [
+                checkpoint_info(SMALL)["display_name"],
+                checkpoint_info(second_repository)["display_name"],
+            ],
+            "Advanced checkpoint options?": ["yes", "yes"],
             "Exact checkpoint SHA": [override, ""],
             "Dataset path": ["/back", ""],
+            "Context length": ["", "/back", ""],
             "Run experiment?": "yes",
         }
     )
@@ -363,13 +369,9 @@ def test_terminal_selection_preserves_override_or_defaults_changed_variant(
     assert [
         call[1] for call in questions.calls if call[0] == "Exact checkpoint SHA"
     ] == [REFERENCES[SMALL], expected]
-    choices = next(
-        call[2] for call in questions.calls if call[0] == "Checkpoint repository"
-    )
-    assert choices == (SMALL, STANDARD)
-    assert any(SMALL in line for line in messages) and any(
-        STANDARD in line for line in messages
-    )
+    choices = next(call[2] for call in questions.calls if call[0] == "Model size")
+    assert choices == ("Small", "Standard")
+    assert any(second_repository in line for line in messages)
     assert not workspace.exists()
 
 

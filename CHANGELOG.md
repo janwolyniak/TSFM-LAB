@@ -2,6 +2,13 @@
 
 ## 0.3.0 — Unreleased
 
+- Add S2 model-specific setup with friendly family/generation/variant choices,
+  applicable options before dataset selection, original-unit previews, and
+  advanced checkpoint details. Share settings validation across guided/assisted,
+  YAML, and Python entry points; preserve compatible edits and refresh dependent
+  choices on back navigation. Historical semantics and valid record identities
+  remain unchanged. See [model-specific setup](docs/model-setup.md).
+
 - Begin S1 with optional first-launch onboarding, `/setup`, `/settings`, and
   atomic nonsecret directory/category/export preferences. Reuse optional assistant
   connection management and the offline baseline demo; retain explicit option and

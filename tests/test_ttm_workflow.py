@@ -163,7 +163,14 @@ def test_guided_profile_uses_native_task_exact_context_and_long_default_fixture(
     tmp_path, config_factory, long_demo, guided_model, name, revision
 ):
     config_factory()
-    questions = Questions({"Checkpoint profile": name, "Run experiment?": "yes"})
+    questions = Questions(
+        {
+            "Context/horizon profile": checkpoint_info(REPOSITORY, name)[
+                "display_name"
+            ],
+            "Run experiment?": "yes",
+        }
+    )
     emitted = []
     config = wizard.build_experiment(
         questions,
@@ -181,7 +188,7 @@ def test_guided_profile_uses_native_task_exact_context_and_long_default_fixture(
     assert config.dataset["path"] == str(long_demo)
     assert config.dataset["target_column"] == "demand"
     assert "variant" not in config.model and "variant" not in config.model["options"]
-    assert questions.count("Checkpoint profile") == 1
+    assert questions.count("Context/horizon profile") == 1
     assert questions.count("Timestamp column") == 0
     assert "Forecast task: native_point" in "\n".join(emitted)
     assert f"Context exactly {int(name.split('-')[0])}" in "\n".join(emitted)
@@ -196,9 +203,14 @@ def test_guide_back_preserves_override_until_same_repository_profile_changes(
     second = "1024-96-r2" if change_profile else "512-96-r2"
     questions = Questions(
         {
-            "Checkpoint profile": ["512-96-r2", second],
+            "Context/horizon profile": [
+                checkpoint_info(REPOSITORY, "512-96-r2")["display_name"],
+                checkpoint_info(REPOSITORY, second)["display_name"],
+            ],
+            "Advanced checkpoint options?": ["yes", "yes"],
             "Exact checkpoint SHA": [override, ""],
             "Dataset path": ["/back", ""],
+            "Context length": ["", "/back", ""],
             "Run experiment?": "yes",
         }
     )
@@ -222,7 +234,14 @@ def test_family_switch_changes_only_a_default_dataset_path(
     config_factory()
     ordinary = tmp_path / "seasonal.csv"
     questions = Questions(
-        {"Model adapter": ["ttm_r2", "last_value", "ttm_r2", "last_value"]}
+        {
+            "Model family": [
+                "IBM Granite TTM",
+                "Baselines",
+                "IBM Granite TTM",
+                "Baselines",
+            ]
+        }
     )
     guide = wizard._Guide(
         questions, lambda text: None, tmp_path / "runs", ordinary, None, long_demo

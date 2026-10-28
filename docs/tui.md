@@ -83,9 +83,12 @@ input history, so they do not pollute command recall.
 
 `/new` first offers guided setup (default) or describing a goal. `/new describe`
 opens the optional [language workflow](language-assistance.md); `/new guided`
-opens manual setup directly. Guided setup asks for a usage profile, then a model and any checkpoint details,
-then a dataset, profile-specific measurements/units, mapping fields
-when using your own file, name, evaluation settings, and explicit timestamp bounds.
+opens manual setup directly. In the v0.3.0 S2 checkout, guided setup asks for
+usage, friendly family/generation/variant, applicable model options, then dataset
+mapping/measurement/units and historical evaluation settings. Context and horizon
+precede dataset selection; an original-unit preview follows data validation.
+Repository/revision/cache controls are available through advanced checkpoint
+options. See [model-specific setup](model-setup.md) for exact controls and limits.
 Empty answers accept the displayed default. Validation errors reprompt the field
 or step. `/back` returns to the previous setup step; `/cancel`, Escape, or Ctrl+C
 aborts setup. Nothing runs or creates a workspace until the final confirmation.

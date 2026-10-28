@@ -21,7 +21,9 @@ inference is performed. Declared units are preserved; profiles do not check phys
 ## Guided setup and examples
 
 The persistent terminal asks for usage before model selection, then the dataset
-and relevant measurement details. The screen-based terminal keeps its four
+and relevant measurement details. The v0.3.0 S2 checkout adds friendly model
+choices and model-specific options before that dataset step; see
+[model-specific setup](model-setup.md). The screen-based terminal keeps its four
 setup stages and includes equivalent profile controls. Both use the same strict
 configuration boundary, review, execution confirmation, and cancellation rules.
 

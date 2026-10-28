@@ -134,9 +134,11 @@ def test_unknown_adapter_is_correctable_in_normal_guide(config_factory, tmp_path
     value["fields"]["adapter"] = "invented_adapter"
     provider = FakeManager(value)
     app, editor, text = start(
-        tmp_path, provider, answers={"Model adapter": "last_value"}
+        tmp_path,
+        provider,
+        answers={"Model family": "Baselines", "Baseline": "Last value"},
     )
-    model = next(call for call in editor.calls if call[0] == "Model adapter")
+    model = next(call for call in editor.calls if call[0] == "Model family")
     assert model[1] == "invented_adapter"
     assert "Unsupported model" in text
     assert not app.workspace.exists()
@@ -151,7 +153,7 @@ def test_returned_future_intent_never_offers_seeded_historical_review(
     review = next(call for call in editor.calls if call[0] == _REVIEW)
     assert "review" not in review[2]
     assert "Future forecasts without observed actuals are unsupported" in text
-    assert all(call[0] != "Model adapter" for call in editor.calls)
+    assert all(call[0] != "Model family" for call in editor.calls)
     assert not app.workspace.exists()
 
 

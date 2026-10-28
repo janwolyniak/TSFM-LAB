@@ -4,6 +4,11 @@ Language assistance is optional. Guided setup, saved YAML runs, results, finance
 reports, comparisons, and exports continue to work offline without a connection.
 The forecasting model and the assistant model are separate choices.
 
+In the v0.3.0 S2 checkout, proposals share the
+[model-specific settings contract](model-setup.md) with manual setup, YAML, and
+Python configuration. Known variant limits are checked locally; unsupported or
+conflicting suggestions remain visible for correction in the ordinary guide.
+
 ## Describe an experiment
 
 Start `tsfm`, enter `/new`, and choose `describe` rather than the default `guided`.

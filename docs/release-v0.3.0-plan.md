@@ -1,8 +1,10 @@
 # v0.3.0 release plan
 
-Status: **implementation started on 27 October 2026 with S1 onboarding**.
+Status: **S1 onboarding and S2 historical model setup locally verified on
+28 October 2026; S2 mode-switching acceptance remains tied to S4**.
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
-until verified; see the [S1 verification record](s1-onboarding-verification.md).
+until verified; see the [S1 verification record](s1-onboarding-verification.md)
+and [S2 verification record](s2-model-setup-verification.md).
 
 Release goal: a new user can go from first launch to a usable forecast file,
 appropriate results report, and reproducible saved experiment without leaving
@@ -142,17 +144,20 @@ assistant drafting, YAML, and Python entry points.
 
 Acceptance:
 
-- [ ] All five categories, both baselines, and supported pretrained choices remain
+- [x] All five categories, both baselines, and supported pretrained choices remain
   selectable. No training profile is presented as a model size.
-- [ ] Editable options show valid bounds/defaults; fixed preprocessing and native
+- [x] Editable options show valid bounds/defaults; fixed preprocessing and native
   requirements are explained; unsupported settings cannot become executable.
-- [ ] Dataset preview and measurement questions preserve declared units. Invalid
+- [x] Dataset preview and measurement questions preserve declared units. Invalid
   timestamps, insufficient history, unsupported cadence, or impossible horizons
   block execution before downloads or model allocation.
 - [ ] Changing category, family, variant, dataset, or mode revalidates dependent
   choices. Back/cancel paths preserve compatible edits without stale settings.
-- [ ] Equivalent manual and assisted choices resolve to the same validated
+- [x] Equivalent manual and assisted choices resolve to the same validated
   configuration and numerical identity. Existing YAML remains readable.
+
+Historical choice changes are verified in the S2 record. The fourth item remains
+open for future-mode switching, assigned to S4.
 
 ### S3: Automatic preparation, progress, and outputs
 
