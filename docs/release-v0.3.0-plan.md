@@ -7,6 +7,8 @@ Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
 until verified; see the [S1 verification record](s1-onboarding-verification.md)
 and [S2 verification record](s2-model-setup-verification.md), followed by the
 [S3 verification record](s3-preparation-verification.md).
+The [S4 contract proposal](future-forecast-contract.md) has completed source and
+independent review; owner approval is pending before future-mode implementation.
 
 Release goal: a new user can go from first launch to a usable forecast file,
 appropriate results report, and reproducible saved experiment without leaving
