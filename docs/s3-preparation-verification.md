@@ -66,6 +66,19 @@ failed/cancelled run IDs remain visible after IPC loss; `/show` handles unfinish
 records without requesting completed-only paths. Cache/data TOCTOU, progress
 throttling, output atomicity, and these recovery cases have retained tests.
 
+### Follow-up: guided finance compatibility
+
+S4 contract review exposed an S3 integration regression: finance report schema 1
+rejects a copied seven-artifact guided parent map. Report creation now validates
+the complete guided experiment, then embeds only the original five canonical
+artifact identities. The report schema and accounting validator are unchanged.
+Targeted backtest/report/legacy/output and finance-command checks pass:
+**114 passed**. Black/Ruff checks and `git diff --check` pass for the repair.
+Retained tests establish numerical equivalence with historical schema-1 parents,
+report save/reload, and rejection of damaged chart/provenance before accounting,
+including when their manifest checksums are recomputed. This targeted follow-up
+does not replace the original full-suite evidence above.
+
 ## Qualification limits
 
 The first S3 acceptance criterion remains open for representative real pretrained

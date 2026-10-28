@@ -96,6 +96,11 @@ def backtest_run(
     evaluation = evaluate_cases(
         cases, rules, frequency=dataset.frequency, series_id=dataset.series_id
     )
+    from tsfm_lab.finance.reports import _ARTIFACTS, seal_report
+
+    # The checked parent may include guided outputs; report schema 1 embeds only
+    # its canonical core artifacts. load_result above verified every parent file.
+    artifacts = store.get_manifest(run_id)["artifacts"]
     payload = {
         "schema_version": 1,
         "policy": POLICY,
@@ -109,7 +114,7 @@ def backtest_run(
         "parent": {
             "run_id": run_id,
             "result": copy.deepcopy(result),
-            "artifacts": copy.deepcopy(store.get_manifest(run_id)["artifacts"]),
+            "artifacts": {name: copy.deepcopy(artifacts[name]) for name in _ARTIFACTS},
         },
         "original_dataset": {
             "canonical_sha256": fingerprint,
@@ -127,6 +132,4 @@ def backtest_run(
         "cases": cases,
         "evaluation": evaluation,
     }
-    from tsfm_lab.finance.reports import seal_report
-
     return seal_report(payload)

@@ -2,6 +2,11 @@
 
 ## 0.3.0 — Unreleased
 
+- Accept checked historical guided runs in finance reports, retaining the report's
+  original five parent-artifact identities after validating all seven guided
+  artifacts. Preserve report schema and accounting results; reject damaged
+  chart/provenance outputs before accounting.
+
 - Add S3 guided checkpoint review/preparation with exact-revision/file consent,
   offline cache reuse, runtime and integrity checks, managed stage/byte/window
   progress, and durable cancellation/failure records. Save checked SVG/provenance
