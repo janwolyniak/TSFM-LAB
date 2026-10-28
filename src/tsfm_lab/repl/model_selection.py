@@ -54,11 +54,20 @@ def _identity(variants, fields, profile):
 
 
 class _Selection:
-    def __init__(self, ask, emit, fields, checkpoint_variant):
+    def __init__(
+        self,
+        ask,
+        emit,
+        fields,
+        checkpoint_variant,
+        allow_preparation=False,
+        offline=False,
+    ):
         self.ask, self.emit = ask, emit
         self.fields = dict(fields)
         self.fields.pop("checkpoint_variant", None)
         self.profile = checkpoint_variant
+        self.allow_preparation, self.offline = allow_preparation, offline
         self.entries = {item["adapter_id"]: item for item in catalog_entries()}
         self.labels = {key: model_settings(key) for key in self.entries}
         self.adapter = self.fields.get("adapter", "last_value")
@@ -140,17 +149,37 @@ class _Selection:
         self.switch(names[generation])
 
     def choose_source(self):
-        self.emit(
-            "Use an existing cached or local checkpoint; setup does not download models."
+        if self.allow_preparation:
+            self.emit(
+                "Automatic preparation checks metadata now; missing weights download only after confirmation. Cached mode stays offline."
+            )
+        else:
+            self.emit(
+                "Use an existing cached or local checkpoint; setup does not download models."
+            )
+        default = (
+            "local"
+            if self.fields.get("source") == "local"
+            else (
+                "automatic" if self.allow_preparation and not self.offline else "cached"
+            )
         )
         source = self.question(
             "Checkpoint source",
-            "local" if self.fields.get("source") == "local" else "cached",
-            ("cached", "local"),
+            default,
+            (
+                ("automatic", "cached", "local")
+                if self.allow_preparation
+                else ("cached", "local")
+            ),
         )
-        if self.fields.get("source") != "huggingface" and source == "cached":
+        if self.fields.get("source") != "huggingface" and source in {
+            "automatic",
+            "cached",
+        }:
             self.fields["revision"] = ""
-        self.fields["source"] = "huggingface" if source == "cached" else "local"
+        self.fields["source"] = "local" if source == "local" else "huggingface"
+        self.offline = source != "automatic"
 
     def choose_checkpoint(self):
         if self.fields["source"] == "local":
@@ -224,6 +253,8 @@ class _Selection:
         )
 
     def finish(self):
+        if self.allow_preparation:
+            self.fields["preparation_offline"] = "true" if self.offline else "false"
         if self.selected is not None:
             if self.fields["revision"] == self.selected["reference_revision"]:
                 self.emit(self.selected["verification_label"])
@@ -295,7 +326,15 @@ class _Selection:
 
 
 def select_model(
-    ask, emit, fields: dict[str, str], *, checkpoint_variant: str | None = None
+    ask,
+    emit,
+    fields: dict[str, str],
+    *,
+    checkpoint_variant: str | None = None,
+    allow_preparation: bool = False,
+    offline: bool = False,
 ) -> dict[str, str]:
     """Return reviewed selection fields, preserving caller input on cancellation."""
-    return _Selection(ask, emit, fields, checkpoint_variant).run()
+    return _Selection(
+        ask, emit, fields, checkpoint_variant, allow_preparation, offline
+    ).run()

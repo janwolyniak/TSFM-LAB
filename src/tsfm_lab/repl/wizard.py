@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tsfm_lab.config import ConfigError, ExperimentConfig
 from tsfm_lab.contracts import fixed_interval, utc_timestamp
@@ -32,6 +33,9 @@ from tsfm_lab.tui.forms import (
     validate_model_fields,
 )
 from tsfm_lab.workflows import PROFILE_NAMES
+
+if TYPE_CHECKING:
+    from tsfm_lab.guided import GuidedRunPlan
 
 
 class _Cancel(Exception):
@@ -108,8 +112,11 @@ class _Guide:
         explicit_fields=(),
         checkpoint_variant=None,
         preferences=None,
+        guided_preparation=False,
     ):
         self.ask, self.emit = ask, emit
+        self.guided_preparation = guided_preparation
+        self._preparation_offline = False
         self.workspace, self.demo_path = Path(workspace), Path(demo_path).resolve()
         self.arguments = {"workspace": self.workspace, "base_directory": Path.cwd()}
         self.fields = default_fields(adapter or "last_value")
@@ -190,6 +197,11 @@ class _Guide:
             self.emit,
             self.fields,
             checkpoint_variant=self._checkpoint_profile,
+            allow_preparation=self.guided_preparation,
+            offline=self._preparation_offline,
+        )
+        self._preparation_offline = (
+            selected.pop("preparation_offline", "false") == "true"
         )
         self._checkpoint_profile = selected.pop("checkpoint_variant", None)
         self.fields.update(selected)
@@ -327,6 +339,8 @@ class _Guide:
                 horizon=self.fields["horizon"],
             )
             config = config_from_fields(prototype, **self.arguments)
+        if self.guided_preparation and config.model["source"] == "huggingface":
+            return
         model = build_model(config.model, config.runtime)
         self._model = model
         self.capabilities = model.metadata().capabilities
@@ -604,17 +618,39 @@ class _Guide:
                 elif phase == 4:
                     self.evaluation()
                 else:
-                    prepared = prepare_experiment(self.fields, **self.arguments)
+                    options = (
+                        {"resolve_model": False} if self.guided_preparation else {}
+                    )
+                    prepared = prepare_experiment(
+                        self.fields, **self.arguments, **options
+                    )
                     self.emit(prepared.summary())
+                    plan = None
+                    if self.guided_preparation:
+                        from tsfm_lab.guided import review_guided
+
+                        plan = review_guided(
+                            prepared.config, offline=self._preparation_offline
+                        )
+                        self._preparation_summary(plan)
+                    needs_download = (
+                        plan is not None
+                        and plan.checkpoint is not None
+                        and not plan.checkpoint.cached
+                    )
                     answer = _question(
                         self.ask,
                         self.emit,
-                        "Run experiment?",
+                        (
+                            "Download missing checkpoint files and run experiment?"
+                            if needs_download
+                            else "Run experiment?"
+                        ),
                         "no",
                         ("yes", "no", "back"),
                     )
                     if answer == "yes":
-                        return prepared.config
+                        return plan if plan is not None else prepared.config
                     if answer == "no":
                         return None
                     phase = 4
@@ -642,6 +678,24 @@ class _Guide:
                     else (2 if phase >= 4 else phase)
                 )
 
+    def _preparation_summary(self, plan):
+        checkpoint = plan.checkpoint
+        if checkpoint is None:
+            self.emit("Ready for a local run. No checkpoint download is required.")
+            return
+        self.emit(
+            f"Checkpoint: {checkpoint.repository} @ {checkpoint.resolved_revision}"
+        )
+        self.emit(
+            f"Cache: {'checked cached files; reuse without a download' if checkpoint.cached else 'missing files; confirmation required'}"
+        )
+        size = checkpoint.download_bytes
+        self.emit(
+            f"Required transfer: {size:,} bytes"
+            if size is not None
+            else "Required transfer: size unknown"
+        )
+
 
 def build_experiment(
     ask: Callable,
@@ -657,8 +711,13 @@ def build_experiment(
     explicit_fields=(),
     checkpoint_variant: str | None = None,
     preferences=None,
-) -> ExperimentConfig | None:
-    """Ask inline questions and return a reviewed config without execution or writes."""
+    guided_preparation: bool = False,
+) -> ExperimentConfig | GuidedRunPlan | None:
+    """Return a reviewed config, or an explicitly confirmed preparation plan.
+
+    Default callers retain local-only review. Guided preparation can cache public
+    configuration metadata; it never transfers weights or runs inference here.
+    """
     try:
         if not demo:
             return _Guide(
@@ -673,6 +732,7 @@ def build_experiment(
                 explicit_fields,
                 checkpoint_variant,
                 preferences,
+                guided_preparation,
             ).run()
         if seed_fields is not None or explicit_fields or checkpoint_variant is not None:
             raise ConfigError("Assisted suggestions require guided setup")
@@ -685,8 +745,15 @@ def build_experiment(
         fields.update(suggested_bounds(dataset, fields))
         prepared = prepare_experiment(fields, **arguments)
         emit(prepared.summary())
+        plan = None
+        if guided_preparation:
+            from tsfm_lab.guided import review_guided
+
+            plan = review_guided(prepared.config, offline=True)
         answer = _question(ask, emit, "Run experiment?", "no", ("yes", "no"))
-        return prepared.config if answer == "yes" else None
+        return (
+            (plan if plan is not None else prepared.config) if answer == "yes" else None
+        )
     except (_Cancel, _Back):
         emit("Experiment setup cancelled.")
         return None

@@ -84,7 +84,9 @@ additional assistant connections and bounded model expansion, public documentati
 and GEO, and native Windows 11 x64 support. S1 onboarding is locally verified;
 S2 adds [model-specific setup](model-setup.md). See the
 [S1 record](s1-onboarding-verification.md) and [S2 record](s2-model-setup-verification.md).
-S3-S9 remain pending. The v0.2.0 plan and release remain unchanged.
+S3 adds [guided preparation and outputs](guided-preparation.md); its
+[verification record](s3-preparation-verification.md) retains the pending real
+pretrained check. S4-S9 remain pending. The v0.2.0 plan and release remain unchanged.
 
 ## Milestone 0 Architecture review
 

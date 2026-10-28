@@ -2,6 +2,13 @@
 
 ## 0.3.0 — Unreleased
 
+- Add S3 guided checkpoint review/preparation with exact-revision/file consent,
+  offline cache reuse, runtime and integrity checks, managed stage/byte/window
+  progress, and durable cancellation/failure records. Save checked SVG/provenance
+  outputs atomically with guided schema-2 manifests while preserving old records
+  and script defaults. Real pretrained qualification remains pending. See
+  [guided preparation](docs/guided-preparation.md).
+
 - Add S2 model-specific setup with friendly family/generation/variant choices,
   applicable options before dataset selection, original-unit previews, and
   advanced checkpoint details. Share settings validation across guided/assisted,

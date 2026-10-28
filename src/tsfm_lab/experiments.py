@@ -23,6 +23,7 @@ _ACTIVE = ("pending", "preparing", "loading", "running", "evaluating", "saving")
 _TERMINAL = {"completed", "failed", "cancelled"}
 _INITIAL = {"configuration.json", "input.yaml"}
 _ARTIFACTS = _INITIAL | {"metrics.json", "result.json", "predictions.csv"}
+_GUIDED_ARTIFACTS = _ARTIFACTS | {"forecast.svg", "provenance.json"}
 
 
 def _json(value) -> bytes:
@@ -133,10 +134,9 @@ class ExperimentStore:
     def get_manifest(self, run_id: str) -> dict:
         manifest = _decode(_read(self._directory(run_id) / "manifest.json"))
         try:
-            if (
-                type(manifest["schema_version"]) is not int
-                or manifest["schema_version"] != 1
-            ):
+            if type(manifest["schema_version"]) is not int or manifest[
+                "schema_version"
+            ] not in {1, 2}:
                 raise ValueError("Unsupported manifest schema")
             if manifest["run_id"] != run_id or manifest["status"] not in {
                 *_ACTIVE,
@@ -150,10 +150,17 @@ class ExperimentStore:
                 if timestamp.tzinfo is None:
                     raise ValueError("Manifest timestamps need a timezone")
             names = set(manifest["artifacts"])
-            if not _INITIAL <= names <= _ARTIFACTS or (
-                manifest["status"] == "completed" and names != _ARTIFACTS
+            allowed = (
+                _ARTIFACTS if manifest["schema_version"] == 1 else _GUIDED_ARTIFACTS
+            )
+            if not _INITIAL <= names <= allowed or (
+                manifest["status"] == "completed" and names != allowed
             ):
                 raise ValueError("Invalid artifact allowlist")
+            if manifest["schema_version"] == 2 and manifest["status"] != "completed":
+                raise ValueError(
+                    "Guided output manifests require completed publication"
+                )
             for identity in manifest["artifacts"].values():
                 if (
                     set(identity) != {"sha256", "size"}
@@ -224,7 +231,19 @@ class ExperimentStore:
                 dtype={name: str for name in PREDICTION_IDENTITIES},
                 float_precision="round_trip",
             )
-            return result, validate_predictions(frame, result)
+            frame = validate_predictions(frame, result)
+            if manifest["schema_version"] == 2:
+                from tsfm_lab.output_artifacts import validate_output_artifacts
+
+                validate_output_artifacts(
+                    {
+                        name: contents[name]
+                        for name in ("forecast.svg", "provenance.json")
+                    },
+                    result,
+                    frame,
+                )
+            return result, frame
         except (KeyError, UnicodeError, ValueError, TypeError) as exc:
             raise StoreError(f"Cannot reload result: {exc}") from exc
 
@@ -235,7 +254,10 @@ class ExperimentStore:
         predictions: pd.DataFrame,
         *,
         cancel_check: Callable[[], bool] | None = None,
+        include_outputs: bool = False,
     ) -> dict:
+        if type(include_outputs) is not bool:
+            raise ValueError("include_outputs must be a boolean")
         manifest = self.get_manifest(run_id)
         if manifest["status"] in _TERMINAL:
             raise ValueError("Terminal experiments cannot be overwritten")
@@ -262,6 +284,16 @@ class ExperimentStore:
             "metrics.json": _json(result["metrics"]),
             "predictions.csv": frame.to_csv(index=False, float_format="%.17g").encode(),
         }
+        if include_outputs:
+            from tsfm_lab.output_artifacts import (
+                build_output_artifacts,
+                validate_output_artifacts,
+            )
+
+            outputs = build_output_artifacts(result, frame)
+            validate_output_artifacts(outputs, result, frame)
+            artifacts.update(outputs)
+            manifest["schema_version"] = 2
         for name, raw in artifacts.items():
             if cancel_check and cancel_check():
                 raise KeyboardInterrupt(
@@ -313,6 +345,15 @@ class ExperimentStore:
         if manifest["status"] != "completed":
             raise StoreError("Only completed experiments have reloadable results")
         return self._result(run_id, manifest)
+
+    def output_paths(self, run_id: str) -> dict[str, str]:
+        """Return only checked completed artifact paths; older runs omit extras."""
+        manifest = self.get_manifest(run_id)
+        if manifest["status"] != "completed":
+            raise StoreError("Only completed experiments have output paths")
+        self._result(run_id, manifest)
+        directory = self._directory(run_id)
+        return {name: str(directory / name) for name in sorted(manifest["artifacts"])}
 
     def load_configuration(self, run_id: str) -> dict:
         """Read a detached, checked setup snapshot without source files or runtimes."""

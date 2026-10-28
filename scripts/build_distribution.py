@@ -54,6 +54,12 @@ MODEL_SETUP_MODULES = {
     "tsfm_lab/models/settings.py",
     "tsfm_lab/repl/model_selection.py",
 }
+GUIDED_MODULES = {
+    "tsfm_lab/guided.py",
+    "tsfm_lab/guided_execution.py",
+    "tsfm_lab/output_artifacts.py",
+    "tsfm_lab/models/preparation.py",
+}
 
 SOURCE_FILES = {
     "LICENSE",
@@ -147,6 +153,16 @@ SOURCE_FILES |= {f"src/{name}" for name in CONNECTION_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in ASSISTANT_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in ONBOARDING_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in MODEL_SETUP_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in GUIDED_MODULES}
+SOURCE_FILES |= {
+    "docs/guided-preparation.md",
+    "docs/s3-preparation-verification.md",
+    "tests/test_checkpoint_preparation.py",
+    "tests/test_guided.py",
+    "tests/test_guided_execution.py",
+    "tests/test_guided_ui.py",
+    "tests/test_output_artifacts.py",
+}
 SOURCE_FILES |= {
     "docs/model-setup.md",
     "docs/s2-model-setup-verification.md",
@@ -249,6 +265,7 @@ def inspect_wheel(path, *, name, version):
         required |= ASSISTANT_MODULES
         required |= ONBOARDING_MODULES
         required |= MODEL_SETUP_MODULES
+        required |= GUIDED_MODULES
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")
         if not required <= names:

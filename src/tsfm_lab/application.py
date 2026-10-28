@@ -53,6 +53,9 @@ def run_config(
     window_progress: Callable[[int, int], None] | None = None,
     should_cancel: Callable[[], bool] | None = None,
     on_created: Callable[[str], None] | None = None,
+    include_outputs: bool = False,
+    expected_dataset_sha256: str | None = None,
+    expected_checkpoint_fingerprint: str | None = None,
 ) -> dict:
     """Validate before creating a run, then persist success, failure, or cancellation."""
 
@@ -63,8 +66,21 @@ def run_config(
     check_cancel()
     try:
         dataset = load_dataset(config.dataset)
+        if (
+            expected_dataset_sha256 is not None
+            and canonical_fingerprint(dataset) != expected_dataset_sha256
+        ):
+            raise ConfigError(
+                "The dataset changed after review; review the experiment again"
+            )
         validate_workflow_dataset(config.workflow, dataset)
         model = build_model(config.model, config.runtime)
+        if expected_checkpoint_fingerprint is not None:
+            checkpoint = model.configuration().get("checkpoint", {})
+            if checkpoint.get("fingerprint") != expected_checkpoint_fingerprint:
+                raise ConfigError(
+                    "Checkpoint changed after preparation; review the experiment again"
+                )
         evaluation_bounds(dataset, config.evaluation)
         model.validate(config.evaluation)
         validate_model_frequency(model, dataset.frequency)
@@ -109,13 +125,22 @@ def run_config(
         if progress:
             progress(stage)
         check_cancel()
-        store.complete(run_id, payload, result.predictions, cancel_check=should_cancel)
+        store.complete(
+            run_id,
+            payload,
+            result.predictions,
+            cancel_check=should_cancel,
+            include_outputs=include_outputs,
+        )
     except (Exception, KeyboardInterrupt) as exc:
         status = "cancelled" if isinstance(exc, KeyboardInterrupt) else "failed"
         try:
             current = store.get_manifest(run_id)["status"]
             if current == "completed":
-                return store.result_summary(run_id)
+                summary = store.result_summary(run_id)
+                if include_outputs:
+                    summary["outputs"] = store.output_paths(run_id)
+                return summary
             if current not in {"failed", "cancelled"}:
                 store.set_status(
                     run_id,
@@ -133,7 +158,7 @@ def run_config(
         raise RunExecutionError(
             f"Experiment {run_id} failed during {stage}: {exc}"
         ) from exc
-    return {
+    summary = {
         "run_id": run_id,
         "name": config.name,
         "status": "completed",
@@ -142,3 +167,6 @@ def run_config(
         "metrics": payload["metrics"]["overall"],
         "counts": payload["counts"],
     }
+    if include_outputs:
+        summary["outputs"] = store.output_paths(run_id)
+    return summary

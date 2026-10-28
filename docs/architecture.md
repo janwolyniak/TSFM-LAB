@@ -148,6 +148,19 @@ sharing a loaded model with the presentation process.
 
 ## Local persistence
 
+The v0.3.0 S3 [guided workflow](guided-preparation.md) adds a preparation plan and
+durable `preparations/<uuid>.json` record around the existing managed worker.
+Review creates no run or preparation record. After explicit confirmation, the
+worker validates runtime imports before transfer and retains the reviewed exact
+revision, file set, and data/checkpoint identities through execution. Separate
+preparation stages do not widen historical numerical stage semantics.
+
+Guided completion publishes manifest schema 2 only after all seven required
+artifacts, including SVG/provenance, validate. Existing manifest schema 1 keeps
+its strict five-artifact contract. Numerical result schema, configuration,
+comparison, and finance contracts remain unchanged. Rendering uses checked saved
+predictions without model/runtime dependencies; renderer contracts are versioned.
+
 Use a user-selected workspace with `experiments/<uuid>/`. JSON run manifests are
 the source of truth. A small installation can list history by scanning these
 manifests; add a rebuildable SQLite index only after directory scanning becomes

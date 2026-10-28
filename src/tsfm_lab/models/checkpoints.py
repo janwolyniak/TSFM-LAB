@@ -134,14 +134,22 @@ def _config_file(path: Path, root: Path, *, hub: bool) -> tuple[dict, dict]:
         ) from exc
 
 
-def _file(path: Path, root: Path, *, hub: bool) -> tuple[Path, dict]:
+def _file(
+    path: Path, root: Path, *, hub: bool, should_cancel=None
+) -> tuple[Path, dict]:
     try:
+        if should_cancel and should_cancel():
+            raise KeyboardInterrupt
         resolved = _safe_file(path, root, hub=hub)
         digest, size = hashlib.sha256(), 0
         with resolved.open("rb") as stream:
             while chunk := stream.read(1024 * 1024):
+                if should_cancel and should_cancel():
+                    raise KeyboardInterrupt
                 digest.update(chunk)
                 size += len(chunk)
+        if should_cancel and should_cancel():
+            raise KeyboardInterrupt
         if not size:
             raise CheckpointError(f"Checkpoint file is empty: {path.name}")
         return resolved, {"sha256": digest.hexdigest(), "size": size}
@@ -311,8 +319,16 @@ def _reject_adapters(names):
 
 
 def _inspect(
-    path: Path, source: str, repository=None, requested=None, resolved=None
+    path: Path,
+    source: str,
+    repository=None,
+    requested=None,
+    resolved=None,
+    *,
+    should_cancel=None,
 ) -> ResolvedCheckpoint:
+    if should_cancel and should_cancel():
+        raise KeyboardInterrupt
     if source == "huggingface":
         _snapshot_path(Path(path), repository, resolved)
     path = Path(path).expanduser().resolve()
@@ -333,7 +349,10 @@ def _inspect(
         candidate = path / name
         if name in _REQUIRED or candidate.exists() or candidate.is_symlink():
             consumed[name], files[name] = _file(
-                candidate, path, hub=source == "huggingface"
+                candidate,
+                path,
+                hub=source == "huggingface",
+                **({"should_cancel": should_cancel} if should_cancel else {}),
             )
     license = None
     if "README.md" in consumed:

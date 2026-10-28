@@ -368,7 +368,11 @@ class PreparedExperiment:
 
 
 def prepare_experiment(
-    fields: dict[str, str], *, workspace: Path, base_directory: Path
+    fields: dict[str, str],
+    *,
+    workspace: Path,
+    base_directory: Path,
+    resolve_model: bool = True,
 ) -> PreparedExperiment:
     """Validate the complete task without model initialization or downloads."""
     config = config_from_fields(
@@ -378,9 +382,10 @@ def prepare_experiment(
         dataset = load_dataset(config.dataset)
         validate_workflow_dataset(config.workflow, dataset)
         start, end = evaluation_bounds(dataset, config.evaluation)
-        model = build_model(config.model, config.runtime)
-        validate_model_frequency(model, dataset.frequency)
-        model.validate(config.evaluation)
+        if resolve_model:
+            model = build_model(config.model, config.runtime)
+            validate_model_frequency(model, dataset.frequency)
+            model.validate(config.evaluation)
     except (ValueError, OSError, ImportError) as exc:
         raise ConfigError(str(exc)) from exc
     spec = config.evaluation

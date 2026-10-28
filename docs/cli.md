@@ -76,6 +76,11 @@ revisions receive exact variant bounds during YAML/Python configuration validati
 unsupported tasks, context/horizons, or cadence fail before preparation. Valid
 schema-version-1 configuration fields and resolved numerical identities are unchanged.
 
+S3 [guided preparation](guided-preparation.md) adds a separately confirmed
+download/run path in the interactive guide. `/run` and `tsfm run` do not opt into
+it. Guided runs use manifest schema 2 for atomically checked chart/provenance
+outputs; existing schema-1 records retain their strict original contract.
+
 The runnable examples are [last-value.yaml](../examples/configurations/last-value.yaml)
 and [seasonal-naive.yaml](../examples/configurations/seasonal-naive.yaml). Their
 dataset/output paths are relative to the configuration file, so moving to another

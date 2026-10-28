@@ -2,8 +2,9 @@
 
 Status: implemented in the **unreleased v0.3.0 S2 development checkout**. The
 published v0.2.0 package retains its previous setup questions. This stage builds
-on [first-launch preferences](onboarding.md); automatic checkpoint preparation
-and future forecasting remain S3 and S4 work in the
+on [first-launch preferences](onboarding.md). The later S3 checkout adds
+[guided automatic preparation](guided-preparation.md); future forecasting remains
+S4 work in the
 [release plan](release-v0.3.0-plan.md).
 
 ## Guided journey
@@ -35,8 +36,10 @@ Generation is shown directly when only one is available. A training profile is
 not a model size. Checkpoint verification labels describe the selected reference;
 representative checks for other variants remain separate evidence.
 
-Pretrained choices use an already cached checkpoint or a compatible local
-directory. Setup never downloads weights or installs runtimes. Choose **Advanced
+The S2 boundary uses an already cached checkpoint or a compatible local
+directory. S3 adds an `automatic` source that downloads reviewed missing files only
+after final confirmation; `cached` stays offline. No setup path installs runtimes.
+Choose **Advanced
 checkpoint options? → yes** to inspect repository/revision details, enter a custom
 exact SHA, or change the cache directory. A changed repository or profile resets
 its revision; revisiting the same identity preserves a custom SHA. A known TTM

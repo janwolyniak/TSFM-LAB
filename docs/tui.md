@@ -89,6 +89,13 @@ mapping/measurement/units and historical evaluation settings. Context and horizo
 precede dataset selection; an original-unit preview follows data validation.
 Repository/revision/cache controls are available through advanced checkpoint
 options. See [model-specific setup](model-setup.md) for exact controls and limits.
+
+The S3 checkout adds [guided checkpoint preparation](guided-preparation.md).
+Choose automatic preparation, offline cached use, or a local directory. Missing
+weights require a specific final download/run confirmation, default no. Completion
+and `/show` list the checked forecast CSV, results/provenance JSON, and saved SVG
+chart. `/demo` also saves the chart; `/run CONFIG.yaml` keeps its prior no-download
+behavior.
 Empty answers accept the displayed default. Validation errors reprompt the field
 or step. `/back` returns to the previous setup step; `/cancel`, Escape, or Ctrl+C
 aborts setup. Nothing runs or creates a workspace until the final confirmation.
@@ -100,8 +107,9 @@ return to that question. The [connection guide](connections.md) explains the fou
 account/billing routes, storage, explicit model choice, and checks. Language
 proposals prefill these same questions and cannot bypass preparation or confirmation.
 
-Chronos-Bolt and TimesFM 2.5 use CPU/float32 and an already cached exact revision
-or compatible standalone local checkpoint. Select them with `/new chronos_bolt`
+Chronos-Bolt and TimesFM 2.5 use CPU/float32 and a checked exact revision
+or compatible standalone local checkpoint. S3 can prepare missing weights after
+explicit confirmation; cached mode stays offline. Select them with `/new chronos_bolt`
 or `/new timesfm_2p5`, or choose the model during `/new`. Setup validates the
 adapter/repository pairing, local architecture metadata, and supported
 context/horizon limits without loading model runtimes or downloading weights.

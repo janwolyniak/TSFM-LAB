@@ -81,6 +81,7 @@ def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
             *BUILDER["ASSISTANT_MODULES"],
             *BUILDER["ONBOARDING_MODULES"],
             *BUILDER["MODEL_SETUP_MODULES"],
+            *BUILDER["GUIDED_MODULES"],
         ):
             if omit_license and name.endswith("/" + omit_license):
                 continue

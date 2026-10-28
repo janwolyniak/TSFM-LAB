@@ -11,7 +11,7 @@ from rich.text import Text
 
 from tsfm_lab import __version__
 from tsfm_lab.config import ConfigError, load_config
-from tsfm_lab.repl.progress import execute
+from tsfm_lab.repl.progress import execute, execute_guided
 from tsfm_lab.repl.prompt import COMMANDS, TerminalInput
 from tsfm_lab.repl.records import RecordCommands
 from tsfm_lab.repl.text import literal
@@ -29,6 +29,7 @@ class TerminalSession:
         runner=execute,
         connection_manager=None,
         preference_store=None,
+        guided_runner=None,
     ):
         self.preference_store = preference_store
         self.preferences = preference_store.load() if preference_store else None
@@ -48,6 +49,11 @@ class TerminalSession:
         self.console = console or Console(markup=False, highlight=False)
         self.editor = editor
         self.runner = runner
+        self.guided_runner = guided_runner or (
+            execute_guided
+            if runner is execute
+            else lambda plan, console: runner(plan.config, console)
+        )
         self.records = RecordCommands(self.console, self.workspace)
         self.demo_path = None
         self.ttm_demo_path = None
@@ -208,6 +214,7 @@ class TerminalSession:
             adapter=arguments[0] if arguments else None,
             demo=demo,
             preferences=self.preferences,
+            guided_preparation=True,
         )
         if config is not None:
             self._execute(config)
@@ -219,8 +226,12 @@ class TerminalSession:
         self._execute(load_config(arguments[0]))
 
     def _execute(self, config):
+        from tsfm_lab.guided import GuidedRunPlan
         from tsfm_lab.preferences import validate_directory
 
+        plan = config if isinstance(config, GuidedRunPlan) else None
+        if plan is not None:
+            config = plan.config
         validate_directory(config.output_directory)
         if self.workspace != config.output_directory:
             self.known_ids = []
@@ -234,7 +245,13 @@ class TerminalSession:
         self.emit(
             f"Target {config.dataset['target_column']} · {config.dataset['units']} · {config.dataset['frequency']} · horizon {spec.horizon}"
         )
-        event = self.runner(config, self.console)
+        event = (
+            self.guided_runner(plan, self.console)
+            if plan is not None
+            else self.runner(config, self.console)
+        )
+        if event.get("preparation_path"):
+            self.emit(f"Preparation record: {event['preparation_path']}", "dim")
         run_id = event.get("run_id") or event.get("result", {}).get("run_id")
         if run_id:
             self.last_run = run_id
@@ -242,6 +259,7 @@ class TerminalSession:
         if event["type"] == "completed":
             self.emit(f"Completed · {run_id}", "green")
             self.records.show(run_id)
+            self._saved_paths(run_id)
             self.emit(
                 "Next: /compare latest OTHER_ID · /export latest forecasts.csv", "dim"
             )
@@ -305,6 +323,7 @@ class TerminalSession:
                 ttm_demo_path=self.ttm_demo_path,
                 profile_demo_paths=self.profile_demo_paths,
                 preferences=self.preferences,
+                guided_preparation=True,
                 **options,
             )
 
@@ -370,7 +389,23 @@ class TerminalSession:
 
     def _show(self, arguments):
         self._count(arguments, 1, 1, "/show ID")
-        self.records.show(arguments[0])
+        saved = self.records.show(arguments[0])
+        if saved["manifest"]["status"] == "completed":
+            self._saved_paths(saved["manifest"]["run_id"])
+
+    def _saved_paths(self, run_id):
+        from tsfm_lab.experiments import ExperimentStore
+
+        paths = ExperimentStore(self.workspace).output_paths(run_id)
+        for filename, label in (
+            ("predictions.csv", "Forecast CSV"),
+            ("result.json", "Results JSON"),
+            ("metrics.json", "Evaluation JSON"),
+            ("provenance.json", "Provenance JSON"),
+            ("forecast.svg", "Forecast chart"),
+        ):
+            if filename in paths:
+                self.emit(f"{label}: {paths[filename]}", "dim")
 
     def _compare(self, arguments):
         self._count(arguments, 2, 100, "/compare ID ID [ID…]")

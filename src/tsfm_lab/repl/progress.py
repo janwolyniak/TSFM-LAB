@@ -12,6 +12,9 @@ from tsfm_lab.execution import ManagedRun
 from tsfm_lab.repl.text import literal
 
 STAGES = {
+    "cache": "Checking checkpoint cache",
+    "downloading": "Downloading reviewed checkpoint files",
+    "verifying": "Verifying checkpoint files",
     "pending": "Waiting to start",
     "preparing": "Preparing data",
     "loading": "Loading model",
@@ -19,6 +22,22 @@ STAGES = {
     "evaluating": "Calculating metrics",
     "saving": "Verifying and saving results",
 }
+
+
+def _status(stage, started, windows=None, transfer=None, *, stopping=False):
+    elapsed = max(0.0, time.monotonic() - started)
+    if stopping:
+        return Text(f"  Stopping worker… · elapsed {elapsed:.1f}s", style="dim")
+    label = STAGES.get(stage, stage)
+    if windows is not None:
+        label = f"Forecasting · {windows[0]}/{windows[1]} windows"
+    if transfer is not None:
+        done, total = transfer
+        measured = f"{done:,}" if total is None else f"{done:,}/{total:,}"
+        label += f" · {measured} bytes measured"
+    return Text(
+        literal(f"  {label} · ctrl+c to cancel · elapsed {elapsed:.1f}s"), style="dim"
+    )
 
 
 @contextmanager
@@ -45,15 +64,23 @@ def execute(config, console, *, worker_factory=ManagedRun, pause=time.sleep):
         return _monitor(config, console, worker_factory, pause, stop)
 
 
+def execute_guided(plan, console):
+    from tsfm_lab.guided_execution import ManagedGuidedRun
+
+    return execute(plan, console, worker_factory=ManagedGuidedRun)
+
+
 def _monitor(config, console, worker_factory, pause, stop):
     """Return the final event only after the worker stops; Ctrl+C requests a stop."""
     worker = worker_factory(config)
     requested = False
     terminal = None
+    started = time.monotonic()
+    stage, windows, transfer = "pending", None, None
     try:
         worker.start()
         with Live(console=console, transient=True, refresh_per_second=8) as live:
-            live.update(Text("  Starting experiment · ctrl+c to cancel", style="dim"))
+            live.update(_status(stage, started))
             while terminal is None:
                 try:
                     if stop[0] and not requested:
@@ -74,21 +101,31 @@ def _monitor(config, console, worker_factory, pause, stop):
                         if requested:
                             continue
                         if kind == "stage":
-                            live.update(
-                                Text(
-                                    literal(
-                                        f"  {STAGES.get(event['stage'], event['stage'])} · ctrl+c to cancel"
-                                    ),
-                                    style="dim",
+                            if windows is not None or transfer is not None:
+                                console.print(
+                                    _status(stage, started, windows, transfer)
                                 )
-                            )
+                            stage, windows, transfer = event["stage"], None, None
+                            console.print(_status(stage, started))
                         elif kind == "progress":
-                            live.update(
-                                Text(
-                                    f"  Forecasting · {event['completed']}/{event['total']} windows · ctrl+c to cancel",
-                                    style="dim",
-                                )
+                            windows = (event["completed"], event["total"])
+                        elif kind == "transfer":
+                            done, total = event["completed_bytes"], event.get(
+                                "total_bytes"
                             )
+                            if (
+                                type(done) is not int
+                                or done < 0
+                                or (
+                                    total is not None
+                                    and (type(total) is not int or total < done)
+                                )
+                            ):
+                                raise ValueError("Invalid measured byte progress")
+                            transfer = (done, total)
+                    live.update(
+                        _status(stage, started, windows, transfer, stopping=requested)
+                    )
                     if terminal is None:
                         pause(0.05)
                 except KeyboardInterrupt:
@@ -112,4 +149,7 @@ def _monitor(config, console, worker_factory, pause, stop):
             )
     if terminal is None:
         raise RuntimeError("Worker stopped without a final status")
+    console.print(
+        Text(f"  Elapsed {max(0.0, time.monotonic() - started):.1f}s", style="dim")
+    )
     return terminal

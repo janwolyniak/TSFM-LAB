@@ -1,10 +1,12 @@
 # v0.3.0 release plan
 
-Status: **S1 onboarding and S2 historical model setup locally verified on
-28 October 2026; S2 mode-switching acceptance remains tied to S4**.
+Status: **S1/S2 historical setup locally verified; S3 preparation and outputs
+implemented on 28 October 2026 with real pretrained qualification pending**.
+S2 mode-switching acceptance remains tied to S4.
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
 until verified; see the [S1 verification record](s1-onboarding-verification.md)
-and [S2 verification record](s2-model-setup-verification.md).
+and [S2 verification record](s2-model-setup-verification.md), followed by the
+[S3 verification record](s3-preparation-verification.md).
 
 Release goal: a new user can go from first launch to a usable forecast file,
 appropriate results report, and reproducible saved experiment without leaving
@@ -175,22 +177,26 @@ Acceptance:
 - [ ] A supported model with an installed runtime and empty cache completes the
   guided path after download/run confirmation. Declining makes no weight download
   or inference request; missing runtimes are reported before weight transfer.
-- [ ] A second run reuses verified cached files. Offline cached execution works
+- [x] A second run reuses verified cached files. Offline cached execution works
   without metadata resolution; absent files fail clearly without network access.
-- [ ] The terminal shows cache/download/verification/preparation/loading/forecast/
+- [x] The terminal shows cache/download/verification/preparation/loading/forecast/
   evaluation/saving stages, elapsed time, bytes when measurable, and completed
   forecast windows. Unknown durations are not shown as invented percentages.
-- [ ] Cancellation and injected failures leave truthful stage/status records,
+- [x] Cancellation and injected failures leave truthful stage/status records,
   terminate managed work, and never publish an incomplete run as completed.
   Retry is explicit; cache reuse rechecks file integrity.
-- [ ] Preprocessing uses historical input only, reverses to original units, and
+- [x] Preprocessing uses historical input only, reverses to original units, and
   records its policy. Future-value perturbation checks prove isolation.
-- [ ] Completion surfaces exact paths to the forecast CSV, machine-readable
+- [x] Completion surfaces exact paths to the forecast CSV, machine-readable
   results/provenance, concise evaluation summary, and saved chart. Existing
   JSON/Parquet export remains available where its optional support is installed.
-- [ ] Charts show observed/predicted values with timestamps, units, and clear
+- [x] Charts show observed/predicted values with timestamps, units, and clear
   evaluation boundaries; missing metrics include reasons. Saved outputs reload
   without model weights, assistant packages, or rerunning inference.
+
+Checked S3 items are verified with local fixtures, fake transports, and real
+offline baseline workers. The first item remains open for an authorized real
+pretrained download/runtime/inference check; see the S3 verification record.
 
 ### S4: Future forecasting
 
