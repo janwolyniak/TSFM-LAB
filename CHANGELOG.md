@@ -2,6 +2,14 @@
 
 ## 0.3.0 — Unreleased
 
+- Add S4 future point forecasting from the final observation in guided/assisted,
+  YAML/CLI and separate Python APIs. Enforce native/operational limits, causal
+  context, UTC grids and actual output labels; save eight validated artifacts
+  with unavailable accuracy. Reuse reviewed preparation and managed cancellation,
+  preserve historical schemas, and refuse future comparison/finance reports.
+  Explanations retain metadata-only disclosure. See
+  [future forecasting](docs/future-forecasting.md).
+
 - Accept checked historical guided runs in finance reports, retaining the report's
   original five parent-artifact identities after validating all seven guided
   artifacts. Preserve report schema and accounting results; reject damaged

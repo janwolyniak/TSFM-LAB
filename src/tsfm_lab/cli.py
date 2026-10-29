@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 
 from tsfm_lab import __version__
-from tsfm_lab.application import load_dataset, run_from_config
+from tsfm_lab.application import load_dataset
 from tsfm_lab.cli_support import emit as _emit
 from tsfm_lab.cli_support import guard as _guard
 from tsfm_lab.cli_support import table as _table
@@ -19,6 +19,8 @@ from tsfm_lab.exports import export_predictions
 from tsfm_lab.finance_commands import finance
 from tsfm_lab.model_commands import models
 from tsfm_lab.repl.text import literal
+from tsfm_lab.run_modes import read_completed
+from tsfm_lab.run_modes import run_from_file as run_from_config
 from tsfm_lab.terminal import interactive_terminal, launch_tui
 from tsfm_lab.workflow_views import history_profile, ohlc_handoff, profile_context
 
@@ -83,11 +85,18 @@ def run(config: Path, json_output: bool = typer.Option(False, "--json")):
         _emit(result)
     else:
         console.print(f"Completed experiment {result['run_id']}")
-        saved, predictions = ExperimentStore(result["workspace"]).load_result(
-            result["run_id"]
+        saved, predictions = read_completed(
+            ExperimentStore(result["workspace"]), result["run_id"]
         )
         for line in profile_context(saved["configuration"]):
             typer.echo(line)
+        if saved.get("mode") == "future_forecast":
+            from tsfm_lab.future_views import summary_lines
+
+            for line in summary_lines(saved):
+                typer.echo(line)
+            typer.echo(f"Saved to {result['directory']}")
+            return
         _table(
             result["name"],
             ["Metric", "Value"],
@@ -190,7 +199,7 @@ def show_experiment(
     manifest = store.get_manifest(run_id)
     value = {"manifest": manifest}
     if manifest["status"] == "completed":
-        value["result"], predictions = store.load_result(run_id)
+        value["result"], predictions = read_completed(store, run_id)
     if json_output:
         _emit(value)
     else:
@@ -205,6 +214,12 @@ def show_experiment(
         if "result" in value:
             for line in profile_context(value["result"]["configuration"]):
                 typer.echo(line)
+            if value["result"].get("mode") == "future_forecast":
+                from tsfm_lab.future_views import summary_lines
+
+                for line in summary_lines(value["result"]):
+                    typer.echo(line)
+                return
             _table(
                 "Metrics",
                 ["Metric", "Value"],

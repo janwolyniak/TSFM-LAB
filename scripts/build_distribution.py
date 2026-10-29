@@ -60,6 +60,19 @@ GUIDED_MODULES = {
     "tsfm_lab/output_artifacts.py",
     "tsfm_lab/models/preparation.py",
 }
+FUTURE_MODULES = {
+    f"tsfm_lab/{name}.py"
+    for name in (
+        "future",
+        "future_config",
+        "future_application",
+        "future_store",
+        "future_validation",
+        "future_outputs",
+        "future_views",
+        "run_modes",
+    )
+}
 
 SOURCE_FILES = {
     "LICENSE",
@@ -154,6 +167,20 @@ SOURCE_FILES |= {f"src/{name}" for name in ASSISTANT_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in ONBOARDING_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in MODEL_SETUP_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in GUIDED_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in FUTURE_MODULES}
+SOURCE_FILES |= {
+    "docs/future-forecast-contract.md",
+    "docs/future-forecasting.md",
+    "docs/s4-future-verification.md",
+    "examples/configurations/future-baseline.yaml",
+    "tests/test_future_application.py",
+    "tests/test_future_config.py",
+    "tests/test_future_core.py",
+    "tests/test_future_store.py",
+    "tests/test_future_setup.py",
+    "tests/test_future_assistant.py",
+    "tests/test_future_recovery.py",
+}
 SOURCE_FILES |= {
     "docs/guided-preparation.md",
     "docs/s3-preparation-verification.md",
@@ -266,6 +293,7 @@ def inspect_wheel(path, *, name, version):
         required |= ONBOARDING_MODULES
         required |= MODEL_SETUP_MODULES
         required |= GUIDED_MODULES
+        required |= FUTURE_MODULES
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")
         if not required <= names:

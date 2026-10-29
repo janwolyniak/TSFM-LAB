@@ -45,6 +45,14 @@ def proposal(**updates):
     return value
 
 
+def future_proposal():
+    value = proposal(schema_version=2, intent="future_forecast")
+    for key in ("stride", "mase_period", "evaluation_start", "evaluation_end"):
+        value["fields"].pop(key, None)
+    value["fields"]["origin"] = "latest"
+    return value
+
+
 class FakeManager:
     """Inert protocol double: no credentials, HTTP, account or vault access."""
 
@@ -150,18 +158,15 @@ def test_returned_future_intent_never_offers_seeded_historical_review(
     config_factory()
     provider = FakeManager(proposal(intent="future_forecast"))
     app, editor, text = start(tmp_path, provider, answers={_REVIEW: "cancel"})
-    review = next(call for call in editor.calls if call[0] == _REVIEW)
-    assert "review" not in review[2]
-    assert "Future forecasts without observed actuals are unsupported" in text
+    assert not any(call[0] == _REVIEW for call in editor.calls)
+    assert "conflicts with the human-selected forecast mode" in text
     assert all(call[0] != "Model family" for call in editor.calls)
     assert not app.workspace.exists()
 
 
 def test_explicit_future_goal_is_rejected_before_any_provider_request():
     provider = FakeManager()
-    with pytest.raises(
-        AssistanceError, match="Future forecasts need a separate feature"
-    ):
+    with pytest.raises(AssistanceError, match="Select future forecasting explicitly"):
         AssistantService(provider).preview_draft("Forecast next week")
     assert provider.previews == provider.submissions == []
 
@@ -187,10 +192,11 @@ def test_clarification_cannot_silently_replace_previous_explicit_numbers_or_unit
 
 
 def test_clarification_cannot_silently_turn_future_intent_into_history():
-    provider = FakeManager(proposal(intent="future_forecast"), proposal())
+    provider = FakeManager(future_proposal(), proposal())
     service = AssistantService(provider)
     first = service.submit_draft(
-        service.preview_draft("Evaluate my demand goal"), confirmed=True
+        service.preview_draft("Forecast next week", mode="future_forecast"),
+        confirmed=True,
     )
     preview = service.preview_draft("Use the same goal and units", draft=first)
     try:
@@ -220,10 +226,11 @@ def test_omitted_previous_fields_are_restored_after_clarification():
 
 
 def test_switch_from_future_to_history_requires_explicit_local_authorization():
-    provider = FakeManager(proposal(intent="future_forecast"), proposal())
+    provider = FakeManager(future_proposal(), proposal())
     service = AssistantService(provider)
     first = service.submit_draft(
-        service.preview_draft("Evaluate my demand goal"), confirmed=True
+        service.preview_draft("Forecast next week", mode="future_forecast"),
+        confirmed=True,
     )
     second = service.submit_draft(
         service.preview_draft(

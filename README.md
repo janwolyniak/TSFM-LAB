@@ -337,7 +337,8 @@ describes final release checks, the CI exception, and remaining verification lim
 - [v0.3.0 plan](docs/release-v0.3.0-plan.md): staged release scope; development
   includes [first-launch onboarding](docs/onboarding.md), `/setup`, `/settings`,
   [model-specific guided setup](docs/model-setup.md), and
-  [guided preparation and outputs](docs/guided-preparation.md).
+  [guided preparation and outputs](docs/guided-preparation.md), and
+  [future forecasting](docs/future-forecasting.md).
 - [Adapter extension guide](docs/adapters.md): the current protocol and a runnable
   direct-Python example, including limits on shell/catalog integration.
 

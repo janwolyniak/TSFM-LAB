@@ -3,9 +3,9 @@
 from typing import Protocol
 
 from tsfm_lab.contracts import (
-    EvaluationSpec,
     ForecastOutput,
     ForecastRequest,
+    ForecastSettings,
     ModelMetadata,
 )
 
@@ -15,7 +15,7 @@ class ForecastModel(Protocol):
 
     def configuration(self) -> dict: ...
 
-    def validate(self, spec: EvaluationSpec) -> None: ...
+    def validate(self, spec: ForecastSettings) -> None: ...
 
     def load(self) -> None: ...
 

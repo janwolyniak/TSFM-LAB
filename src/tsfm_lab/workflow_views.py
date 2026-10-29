@@ -3,6 +3,7 @@
 import shlex
 
 from tsfm_lab.repl.text import literal
+from tsfm_lab.run_modes import read_completed
 from tsfm_lab.workflows import (
     display_workflow,
     ohlc_workflow_eligible,
@@ -16,7 +17,7 @@ def history_profile(store, record):
         return "Unavailable"
     try:
         if record["status"] == "completed":
-            configuration = store.load_result(record["run_id"])[0]["configuration"]
+            configuration = read_completed(store, record["run_id"])[0]["configuration"]
         else:
             configuration = store.load_configuration(record["run_id"])
         return display_workflow(configuration.get("workflow"))
@@ -28,6 +29,8 @@ def profile_context(configuration):
     """Use declared measurements and units, without changing the saved result."""
     lines = [f"Usage profile: {workflow_summary(configuration.get('workflow'))}"]
     units = configuration["dataset"]["units"]
+    if configuration.get("mode") == "future_forecast":
+        return [literal(lines[0]), "Accuracy unavailable: future actuals are absent."]
     metrics = set(configuration["evaluation"]["metrics"])
     errors = "/".join(name.upper() for name in ("mae", "rmse") if name in metrics)
     if errors:
@@ -40,6 +43,8 @@ def profile_context(configuration):
 def ohlc_handoff(result, predictions, workspace, run_id):
     """Offer the existing explicit report route, without inventing any inputs."""
     configuration = result["configuration"]
+    if configuration.get("mode") == "future_forecast":
+        return []
     workflow = configuration.get("workflow")
     evaluation = configuration["evaluation"]
     selected = predictions.loc[predictions.lead == 1]

@@ -10,9 +10,9 @@ import numpy as np
 
 from tsfm_lab import __version__
 from tsfm_lab.contracts import (
-    EvaluationSpec,
     ForecastOutput,
     ForecastRequest,
+    ForecastSettings,
     ModelCapabilities,
     ModelMetadata,
 )
@@ -176,7 +176,7 @@ class TTM:
     def environment_metadata(self):
         return {name: version(name) for name in _REQUIREMENTS}
 
-    def validate(self, spec: EvaluationSpec):
+    def validate(self, spec: ForecastSettings):
         if spec.context_length != self._context:
             raise ValueError(
                 f"TTM requires exactly {self._context} history observations"

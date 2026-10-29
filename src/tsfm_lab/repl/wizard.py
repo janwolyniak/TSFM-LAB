@@ -259,7 +259,7 @@ class _Guide:
         keys = ("adapter", "source", "repository", "revision", "checkpoint_path")
         return tuple(self.fields[key] for key in keys)
 
-    def model_options(self):
+    def model_options(self, *, apply_dataset_bounds=False):
         self.set(
             "point_statistic", "Forecast task", choices=self.settings.supported_tasks
         )
@@ -269,8 +269,12 @@ class _Guide:
         low, high = caps.min_context, caps.max_context
         if self.fields["adapter"] == "seasonal_naive":
             low = max(low, int(self.fields["seasonal_period"]))
-        if self.dataset is not None:
-            high = min(high or len(self.dataset.values), len(self.dataset.values) - 1)
+        future = self.fields["mode"] == "future_forecast"
+        if future:
+            high = min(high or 100000, 100000)
+        if apply_dataset_bounds and self.dataset is not None:
+            available = len(self.dataset.values) - (0 if future else 1)
+            high = min(high or available, available)
             if high < low:
                 raise ConfigError(
                     "The dataset is too short for this model's minimum context"
@@ -294,7 +298,9 @@ class _Guide:
 
         def horizon_limit(value):
             maximum = caps.max_horizon
-            if self.dataset is not None:
+            if future:
+                maximum = min(maximum or 10000, 10000)
+            elif apply_dataset_bounds and self.dataset is not None:
                 remaining = len(self.dataset.values) - int(
                     self.fields["context_length"]
                 )
@@ -323,17 +329,22 @@ class _Guide:
             "evaluation_end": "2000-01-01T02:00:00Z",
         }
         config = config_from_fields(prototype, **self.arguments)
-        if (
-            len(self.dataset.values)
-            < config.evaluation.context_length + config.evaluation.horizon
+        future = self.fields["mode"] == "future_forecast"
+        spec = config.forecast if future else config.evaluation
+        if len(self.dataset.values) < spec.context_length + (
+            0 if future else spec.horizon
         ):
-            self.emit("Adjust context and horizon to fit the inspected dataset.")
-            remaining = len(self.dataset.values) - config.evaluation.context_length
-            if remaining > 0:
+            self.emit(
+                "Adjust context to fit the observed history."
+                if future
+                else "Adjust context and horizon to fit the inspected dataset."
+            )
+            remaining = len(self.dataset.values) - spec.context_length
+            if remaining > 0 and not future:
                 self.emit(
                     f"Forecast horizon must be between 1 and {remaining} observations for this dataset."
                 )
-            self.model_options()
+            self.model_options(apply_dataset_bounds=True)
             prototype.update(
                 context_length=self.fields["context_length"],
                 horizon=self.fields["horizon"],
@@ -367,10 +378,11 @@ class _Guide:
                     f"Checkpoint metadata refines {key} to {default}; review before execution."
                 )
         if needs_correction:
-            self.model_options()
-        if len(self.dataset.values) < int(self.fields["context_length"]) + int(
-            self.fields["horizon"]
-        ):
+            self.model_options(apply_dataset_bounds=True)
+        needed = int(self.fields["context_length"]) + (
+            0 if future else int(self.fields["horizon"])
+        )
+        if len(self.dataset.values) < needed:
             raise ConfigError(
                 "The dataset is too short for this checkpoint's context and horizon"
             )
@@ -516,7 +528,6 @@ class _Guide:
             self.emit(
                 f"  {self.dataset.timestamps[position].isoformat()}  {self.dataset.values[position]:g} {self.dataset.units}"
             )
-        self._checkpoint_model()
 
     def measurement(self):
         profile = self.fields["usage_profile"]
@@ -561,7 +572,8 @@ class _Guide:
 
     def _limits(self):
         size, caps = len(self.dataset.values), self.capabilities
-        maximum = min(size - 1, caps.max_context or size - 1)
+        available = size - (0 if self.fields["mode"] == "future_forecast" else 1)
+        maximum = min(available, caps.max_context or available)
         if maximum < caps.min_context:
             raise ConfigError(
                 "The dataset is too short for this model's minimum context"
@@ -569,11 +581,61 @@ class _Guide:
         return caps.min_context, maximum
 
     def evaluation(self):
+        labels = {
+            "historical_evaluation": "Historical evaluation",
+            "future_forecast": "Future forecasting",
+        }
+        previous = self.fields["mode"]
+        selected = _question(
+            self.ask,
+            self.emit,
+            "Forecast mode",
+            labels.get(previous, previous),
+            tuple(labels.values()),
+        )
+        self.fields["mode"] = next(
+            mode for mode, label in labels.items() if label == selected
+        )
+        if previous != self.fields["mode"]:
+            for key in (
+                "evaluation_start",
+                "evaluation_end",
+                "stride",
+                "mase_period",
+                "forecast_origin",
+            ):
+                self.fields[key] = ""
+                self._provided.discard(key)
+            self.fields["forecast_origin"] = (
+                "latest" if self.fields["mode"] == "future_forecast" else ""
+            )
+        self._checkpoint_model()
         self._limits()
-        self.emit("Mode: Historical evaluation against observed actuals.")
+        self.emit(f"Mode: {selected}.")
         self.set("name", "Experiment name", validate=_required)
-        self.set("stride", "Evaluation stride", validate=_positive)
-        self.set("mase_period", "MASE seasonal lag", validate=_positive)
+        if self.fields["mode"] == "future_forecast":
+            self.set(
+                "forecast_origin",
+                "Forecast origin (latest or final observed timestamp)",
+                default=self.fields["forecast_origin"] or "latest",
+                validate=self._future_origin,
+            )
+            self.emit(
+                "Accuracy unavailable: future_actuals_absent. No historical scores or returns are substituted."
+            )
+            return
+        self.set(
+            "stride",
+            "Evaluation stride",
+            default=self.fields["stride"] or self.fields["horizon"],
+            validate=_positive,
+        )
+        self.set(
+            "mase_period",
+            "MASE seasonal lag",
+            default=self.fields["mase_period"] or "4",
+            validate=_positive,
+        )
         proposals = suggested_bounds(self.dataset, self.fields)
         for key, value in proposals.items():
             if not self.fields[key]:
@@ -586,6 +648,13 @@ class _Guide:
         self.set(
             "evaluation_end", "Target end timestamp (exclusive)", validate=self._end
         )
+
+    def _future_origin(self, value):
+        if (
+            value != "latest"
+            and utc_timestamp(value, "Forecast origin") != self.dataset.timestamps[-1]
+        ):
+            raise ConfigError("Forecast origin must equal the final observed timestamp")
 
     def _start(self, value):
         timestamp = utc_timestamp(value, "First target timestamp")

@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 from tsfm_lab.execution import ManagedRun
 from tsfm_lab.experiments import ExperimentStore, _atomic
+from tsfm_lab.run_modes import is_future
 
 _TERMINAL = {"completed", "failed", "cancelled"}
 _STAGES = {
@@ -44,6 +45,16 @@ class PreparationRecord:
                 current.data["status"] != "pending"
                 or current.data["configuration_sha256"] != plan.configuration_sha256
                 or current.data["dataset_sha256"] != plan.dataset_sha256
+                or (
+                    is_future(config)
+                    and (
+                        current.data.get("schema_version") != 2
+                        or current.data.get("mode") != "future_forecast"
+                        or current.data.get("origin")
+                        != config.forecast.origin.isoformat()
+                        or current.data.get("plan_identity") != plan.plan_identity
+                    )
+                )
             ):
                 raise ValueError(
                     "Preparation was already started or belongs to another review"
@@ -53,7 +64,7 @@ class PreparationRecord:
         else:
             now = _now()
             self.data = {
-                "schema_version": 1,
+                "schema_version": 2 if is_future(config) else 1,
                 "operation_id": self.operation_id,
                 "configuration_sha256": plan.configuration_sha256,
                 "dataset_sha256": plan.dataset_sha256,
@@ -64,6 +75,15 @@ class PreparationRecord:
                 "updated_at": now,
                 "elapsed_seconds": 0.0,
                 "history": [],
+                **(
+                    {
+                        "mode": "future_forecast",
+                        "origin": config.forecast.origin.isoformat(),
+                        "plan_identity": plan.plan_identity,
+                    }
+                    if is_future(config)
+                    else {}
+                ),
             }
             self._save()
 
@@ -73,8 +93,46 @@ class PreparationRecord:
         if path.is_symlink() or path.stat().st_size > 1024 * 1024:
             raise ValueError("Invalid preparation record")
         data = json.loads(path.read_text(encoding="utf-8"))
-        if data["schema_version"] != 1 or data["stage"] not in _STAGES:
+        if data["schema_version"] not in {1, 2} or data["stage"] not in _STAGES:
             raise ValueError("Invalid preparation record")
+        if data["schema_version"] == 2:
+            required = {
+                "schema_version",
+                "operation_id",
+                "configuration_sha256",
+                "dataset_sha256",
+                "run_id",
+                "status",
+                "stage",
+                "created_at",
+                "updated_at",
+                "elapsed_seconds",
+                "history",
+                "mode",
+                "origin",
+                "plan_identity",
+            }
+            if (
+                not required
+                <= set(data)
+                <= required
+                | {"error", "completed_bytes", "total_bytes", "checkpoint_fingerprint"}
+            ):
+                raise ValueError("Invalid future preparation fields")
+            origin = datetime.fromisoformat(data["origin"])
+            if (
+                data["mode"] != "future_forecast"
+                or origin.tzinfo is None
+                or data["stage"] == "evaluating"
+            ):
+                raise ValueError("Invalid future preparation mode or origin")
+            fingerprint = data.get("checkpoint_fingerprint")
+            if fingerprint is not None and (
+                not isinstance(fingerprint, str)
+                or len(fingerprint) != 64
+                or any(c not in "0123456789abcdef" for c in fingerprint)
+            ):
+                raise ValueError("Invalid prepared checkpoint fingerprint")
         result = object.__new__(cls)
         result.path, result.data = path, data
         result.operation_id = data["operation_id"]
@@ -100,7 +158,9 @@ class PreparationRecord:
 
     def update(self, event):
         stage = event.get("stage", self.data["stage"])
-        if stage not in _STAGES - _TERMINAL:
+        if stage not in _STAGES - _TERMINAL or (
+            self.data.get("mode") == "future_forecast" and stage == "evaluating"
+        ):
             raise ValueError("Invalid preparation stage")
         changed = stage != self.data["stage"]
         if changed:
@@ -137,6 +197,12 @@ class PreparationRecord:
             }
         self.data["history"].append({"stage": status, "elapsed_seconds": self.elapsed})
         self.data.update(stage=status, status=status)
+        self._save()
+
+    def record_checkpoint(self, fingerprint):
+        if self.data["schema_version"] != 2:
+            raise ValueError("Prepared future fingerprint requires schema 2")
+        self.data["checkpoint_fingerprint"] = fingerprint
         self._save()
 
 
@@ -275,13 +341,45 @@ class ManagedGuidedRun:
         event = event | {"run_id": run_id}
         store = ExperimentStore(self.plan.config.output_directory)
         try:
+            if is_future(self.plan.config) and (
+                record.data.get("schema_version") != 2
+                or record.data.get("plan_identity") != self.plan.plan_identity
+                or record.data.get("configuration_sha256")
+                != self.plan.configuration_sha256
+                or record.data.get("dataset_sha256") != self.plan.dataset_sha256
+                or record.data.get("origin")
+                != self.plan.config.forecast.origin.isoformat()
+            ):
+                raise ValueError(
+                    "Future preparation record disagrees with its reviewed plan"
+                )
             if run_id is not None:
                 manifest = store.get_manifest(run_id)
                 if manifest["status"] == "completed":
-                    if manifest["schema_version"] != 2:
+                    expected_schema = 3 if is_future(self.plan.config) else 2
+                    if manifest["schema_version"] != expected_schema:
                         raise ValueError(
                             "Guided run did not publish its complete output contract"
                         )
+                    if is_future(self.plan.config):
+                        from tsfm_lab.guided import validate_reviewed_checkpoint
+
+                        saved, _, _ = store.load_future_result(run_id)
+                        validate_reviewed_checkpoint(
+                            self.plan,
+                            saved["provenance"]["model"]["options"].get("checkpoint"),
+                            record.data.get("checkpoint_fingerprint"),
+                        )
+                        if (
+                            saved["configuration"] != self.plan.config.resolved_dict()
+                            or saved["provenance"]["dataset"]["canonical_sha256"]
+                            != self.plan.dataset_sha256
+                            or saved["provenance"]["dataset"]["source_sha256"]
+                            != self.plan.source_sha256
+                        ):
+                            raise ValueError(
+                                "Future output disagrees with its reviewed plan"
+                            )
                     result = store.result_summary(run_id) | {
                         "outputs": store.output_paths(run_id)
                     }
@@ -306,7 +404,11 @@ class ManagedGuidedRun:
                             "message": event.get(
                                 "message", "Managed guided worker stopped"
                             ),
-                            "stage": record.data["stage"],
+                            "stage": (
+                                manifest["status"]
+                                if is_future(self.plan.config)
+                                else record.data["stage"]
+                            ),
                         },
                     )
                     event = event | {"type": status, "run_id": run_id}

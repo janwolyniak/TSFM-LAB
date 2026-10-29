@@ -40,7 +40,8 @@ class AssistanceError(ValueError):
     def __init__(self, code="response"):
         messages = {
             "input": "Use a short plain-language goal without files, paths, credentials, code, or data tables. Choose files locally.",
-            "future": "This release evaluates historical forecasts with observed targets. Future forecasts need a separate feature; no historical experiment was substituted.",
+            "future": "This goal asks for future forecasting. Select future forecasting explicitly and review a new preview; no historical experiment was substituted.",
+            "mode": "The assistant proposal conflicts with the human-selected forecast mode. Choose the mode explicitly and review a fresh preview.",
             "response": "The assistant response could not be accepted. Nothing was executed or saved. Edit the goal or use guided setup.",
             "state": "The request changed or expired. Review a new preview before sending.",
             "conflict": "The clarification changed an earlier choice. Earlier choices were kept; use guided review to edit them explicitly.",
@@ -97,7 +98,13 @@ def validate_context(context):
             or type(snapshot["schema_version"]) is not int
             or snapshot["schema_version"] != 1
             or snapshot["kind"]
-            not in {"model", "model_comparison", "experiment", "finance"}
+            not in {
+                "model",
+                "model_comparison",
+                "experiment",
+                "finance",
+                "future_forecast",
+            }
             or type(snapshot["data"]) is not dict
             or not snapshot["data"]
             or type(snapshot["omitted"]) is not dict

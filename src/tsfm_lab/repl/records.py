@@ -15,6 +15,7 @@ from tsfm_lab.exports import ExportError, export_predictions
 from tsfm_lab.models.catalog import catalog_entries
 from tsfm_lab.models.verification import verification_label
 from tsfm_lab.repl.text import literal
+from tsfm_lab.run_modes import read_completed
 from tsfm_lab.workflow_views import history_profile, ohlc_handoff, profile_context
 
 
@@ -137,7 +138,8 @@ class RecordCommands:
                     record["run_id"][:8],
                     record.get("name", ""),
                     history_profile(store, record),
-                    record["status"],
+                    record["status"]
+                    + (" · future" if record.get("kind") == "future_forecast" else ""),
                     (
                         _utc(record["created_at"])
                         if record.get("created_at")
@@ -216,7 +218,26 @@ class RecordCommands:
             elif error:
                 self._print(str(error))
             return {"manifest": manifest}
-        result, predictions = store.load_result(resolved)
+        result, predictions = read_completed(store, resolved)
+        if result.get("mode") == "future_forecast":
+            from tsfm_lab.future_views import summary_lines
+
+            self._print(f"{manifest['name']} · {resolved}")
+            for line in profile_context(result["configuration"])[:1] + summary_lines(
+                result
+            ):
+                self._print(line)
+            self._table(
+                ("Target UTC", "Lead", "Forecast"),
+                (
+                    (_utc(row.target_timestamp), row.lead, f"{row.prediction:.6g}")
+                    for row in predictions.head(12).itertuples()
+                ),
+            )
+            self._print(
+                f"Export all {len(predictions)} future predictions with /export {resolved[:8]} <path.csv>."
+            )
+            return {"manifest": manifest, "result": result, "predictions": predictions}
         configuration = result["configuration"]
         self._print(f"{manifest['name']} · {resolved}")
         context = profile_context(configuration)

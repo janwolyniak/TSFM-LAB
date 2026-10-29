@@ -44,7 +44,11 @@ ALLOWED_FIELDS = frozenset(
         "weather_description",
     }
 )
-MISSING_FIELDS = ALLOWED_FIELDS | {"dataset_ref", "intent"}
+HISTORICAL_ONLY_FIELDS = frozenset(
+    {"stride", "mase_period", "evaluation_start", "evaluation_end"}
+)
+FUTURE_FIELDS = (ALLOWED_FIELDS - HISTORICAL_ONLY_FIELDS) | {"origin"}
+MISSING_FIELDS = ALLOWED_FIELDS | FUTURE_FIELDS | {"dataset_ref", "intent"}
 _TOP_FIELDS = {
     "schema_version",
     "state",
@@ -119,34 +123,47 @@ def decode_draft(text: str) -> ExperimentDraft:
         raise DraftError("The experiment draft must be one valid JSON object") from exc
     if type(raw) is not dict or set(raw) != _TOP_FIELDS:
         raise DraftError("The experiment draft has missing or unknown top-level fields")
-    if type(raw["schema_version"]) is not int or raw["schema_version"] != 1:
-        raise DraftError("Only ExperimentDraft schema_version 1 is supported")
+    if type(raw["schema_version"]) is not int or raw["schema_version"] not in {1, 2}:
+        raise DraftError("Only ExperimentDraft schema_version 1 or 2 is supported")
     if raw["state"] not in ("needs_input", "ready", "unsupported"):
         raise DraftError("Unsupported experiment draft state")
     if raw["intent"] not in ("historical_evaluation", "future_forecast", "unclear"):
         raise DraftError("Unsupported experiment draft intent")
+    if raw["schema_version"] == 2 and raw["intent"] not in {
+        "future_forecast",
+        "unclear",
+    }:
+        raise DraftError("Future draft schema 2 requires future intent")
     reference = raw["dataset_ref"]
     if reference is not None:
         _text(reference, "dataset_ref", maximum=100)
     fields = raw["fields"]
-    if type(fields) is not dict or set(fields) - ALLOWED_FIELDS:
+    allowed = FUTURE_FIELDS if raw["schema_version"] == 2 else ALLOWED_FIELDS
+    if type(fields) is not dict or set(fields) - allowed:
         raise DraftError("Experiment draft fields contain unknown or forbidden fields")
     fields = {key: _text(value, key) for key, value in fields.items()}
     return ExperimentDraft(
-        1,
+        raw["schema_version"],
         raw["state"],
         raw["intent"],
         reference,
         fields,
         _list(raw["explicit_fields"], "explicit_fields", allowed=fields),
         _list(raw["assumptions"], "assumptions"),
-        _list(raw["missing_fields"], "missing_fields", allowed=MISSING_FIELDS),
+        _list(
+            raw["missing_fields"],
+            "missing_fields",
+            allowed=allowed | {"dataset_ref", "intent"},
+        ),
     )
 
 
-def draft_contract() -> dict:
+def draft_contract(mode="historical_evaluation") -> dict:
     """Return a fresh JSON schema for the exact path-free provider response."""
-    names = sorted(ALLOWED_FIELDS)
+    if mode not in {"historical_evaluation", "future_forecast"}:
+        raise DraftError("Choose a supported forecast mode")
+    future = mode == "future_forecast"
+    names = sorted(FUTURE_FIELDS if future else ALLOWED_FIELDS)
     field_list = {
         "type": "array",
         "items": {"type": "string", "enum": names},
@@ -158,14 +175,18 @@ def draft_contract() -> dict:
         "additionalProperties": False,
         "required": sorted(_TOP_FIELDS),
         "properties": {
-            "schema_version": {"type": "integer", "const": 1},
+            "schema_version": {"type": "integer", "const": 2 if future else 1},
             "state": {
                 "type": "string",
                 "enum": ["needs_input", "ready", "unsupported"],
             },
             "intent": {
                 "type": "string",
-                "enum": ["historical_evaluation", "future_forecast", "unclear"],
+                "enum": (
+                    ["future_forecast", "unclear"]
+                    if future
+                    else ["historical_evaluation", "future_forecast", "unclear"]
+                ),
             },
             "dataset_ref": {"type": ["string", "null"], "maxLength": 100},
             "fields": {
@@ -184,7 +205,10 @@ def draft_contract() -> dict:
             },
             "missing_fields": {
                 **field_list,
-                "items": {"type": "string", "enum": sorted(MISSING_FIELDS)},
+                "items": {
+                    "type": "string",
+                    "enum": sorted(set(names) | {"dataset_ref", "intent"}),
+                },
             },
         },
     }

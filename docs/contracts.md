@@ -136,6 +136,21 @@ Current optional checkpoint runtimes share Hub 0.35.3. Historical artifact
 environment versions and verification snapshots are retained as recorded; reload
 does not impose current runtime version gates or import model/kernel libraries.
 
+## FutureForecastSpec and configuration
+
+Future mode uses a separate `FutureForecastSpec` with context length, horizon,
+point task and origin, rather than historical evaluation dates or metrics. Its
+schema-2 `FutureForecastConfig` resolves the origin to the final observation and
+uses the same adapter `ForecastSettings` protocol. Historical schema 1 remains
+unchanged. Final consumed context, generated grid and verified model/runtime
+identity determine a versioned numerical request SHA-256.
+
+Future result schema 2 and manifest schema 3 have dedicated strict validators.
+They save observed context separately from future predictions and record accuracy
+as unavailable. Historical comparison/finance readers refuse future kinds.
+See the [future contract](future-forecast-contract.md) and
+[usage guide](future-forecasting.md) for precise bounds and artifact schemas.
+
 ## ForecastRequest
 
 Each request contains `request_id`, `series_id`, `origin`, historical timestamps

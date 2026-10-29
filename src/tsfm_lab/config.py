@@ -264,6 +264,12 @@ def _runtime(value: Any, model: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig:
+    if isinstance(raw, dict) and (
+        raw.get("schema_version") == 2 or raw.get("mode") == "future_forecast"
+    ):
+        raise ConfigError(
+            "Future forecasts require load_future_config or future_config_from_mapping; this API is historical-only"
+        )
     required = {"schema_version", "model", "dataset", "evaluation"}
     allowed = required | {"name", "runtime", "output", "workflow"}
     fields = _mapping(raw, "configuration", allowed, required)
@@ -346,3 +352,24 @@ def config_from_mapping(mapping: dict, *, base_directory: Path) -> ExperimentCon
         OverflowError,
     ) as exc:
         raise ConfigError(f"Invalid interactive configuration: {exc}") from exc
+
+
+def load_run_config(path: str | Path):
+    """Dispatch a saved configuration to its explicit historical or future type."""
+    try:
+        source_path = Path(path).expanduser().resolve()
+        with source_path.open("rb") as source:
+            payload = source.read(MAX_CONFIG_BYTES + 1)
+        if len(payload) > MAX_CONFIG_BYTES:
+            raise ConfigError("Configuration exceeds the 1 MiB limit")
+        text = payload.decode("utf-8")
+        raw = yaml.load(text, Loader=_ConfigLoader)
+        if isinstance(raw, dict) and raw.get("schema_version") == 2:
+            from tsfm_lab.future_config import _validate_future
+
+            return _validate_future(raw, source_path, text)
+        return _validate(raw, source_path, text)
+    except ConfigError:
+        raise
+    except (OSError, ValueError, TypeError, RuntimeError, yaml.YAMLError) as exc:
+        raise ConfigError(f"Invalid run configuration: {exc}") from exc

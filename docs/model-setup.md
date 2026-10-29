@@ -3,9 +3,8 @@
 Status: implemented in the **unreleased v0.3.0 S2 development checkout**. The
 published v0.2.0 package retains its previous setup questions. This stage builds
 on [first-launch preferences](onboarding.md). The later S3 checkout adds
-[guided automatic preparation](guided-preparation.md); future forecasting remains
-S4 work in the
-[release plan](release-v0.3.0-plan.md).
+[guided automatic preparation](guided-preparation.md). S4 adds
+[future forecasting](future-forecasting.md) alongside historical evaluation.
 
 ## Guided journey
 
@@ -71,9 +70,12 @@ dataset refreshes generated date bounds; deliberate bounds remain visible and
 must pass validation. Category/model changes discard stale parsed data so new
 dataset choices can be reviewed. Invalid data can be retried at the dataset step.
 
-Only historical evaluation is executable in this stage. Future intents retain
-their explicit unsupported status until the separately reviewed S4 contract is
-implemented; no future values or scores are invented.
+After dataset preview, select historical evaluation or future forecasting.
+Historical mode requires holdout observations; future mode requires only its
+consumed context and resolves origin to the last observation. Switching mode
+preserves compatible data/model choices and recollects mode-specific settings.
+Any switch invalidates a prepared plan. Future accuracy remains unavailable
+because future actuals are absent; see the [future guide](future-forecasting.md).
 
 ## Shared Python and configuration contract
 

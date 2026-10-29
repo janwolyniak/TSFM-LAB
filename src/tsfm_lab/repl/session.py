@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.text import Text
 
 from tsfm_lab import __version__
-from tsfm_lab.config import ConfigError, load_config
+from tsfm_lab.config import ConfigError, load_run_config
 from tsfm_lab.repl.progress import execute, execute_guided
 from tsfm_lab.repl.prompt import COMMANDS, TerminalInput
 from tsfm_lab.repl.records import RecordCommands
@@ -223,7 +223,7 @@ class TerminalSession:
 
     def _run(self, arguments):
         self._count(arguments, 1, 1, "/run CONFIG.yaml")
-        self._execute(load_config(arguments[0]))
+        self._execute(load_run_config(arguments[0]))
 
     def _execute(self, config):
         from tsfm_lab.guided import GuidedRunPlan
@@ -239,7 +239,9 @@ class TerminalSession:
             self.emit(f"Workspace  {config.output_directory}", "dim")
         self.workspace = config.output_directory
         self.records.workspace = self.workspace
-        spec = config.evaluation
+        from tsfm_lab.run_modes import forecast_spec, is_future
+
+        spec = forecast_spec(config)
         self.emit(f"\n{config.name} · {config.model['adapter_id']}", "bold")
         self.emit(f"Usage  {workflow_summary(config.workflow)}")
         self.emit(
@@ -261,7 +263,12 @@ class TerminalSession:
             self.records.show(run_id)
             self._saved_paths(run_id)
             self.emit(
-                "Next: /compare latest OTHER_ID · /export latest forecasts.csv", "dim"
+                (
+                    "Next: /export latest forecasts.csv"
+                    if is_future(config)
+                    else "Next: /compare latest OTHER_ID · /export latest forecasts.csv"
+                ),
+                "dim",
             )
             self.emit("Optional: /explain run latest", "dim")
         else:
@@ -363,7 +370,11 @@ class TerminalSession:
             identifier = self.records.resolve_id(selected[0])
             context = experiment_evidence(ExperimentStore(self.workspace), identifier)
             question = (
-                "Explain the historical evaluation, its scores, units, and limitations."
+                "Explain this future forecast's origin, point semantics, units, and unavailable accuracy."
+                if context.get("kind") == "future_forecast"
+                else (
+                    "Explain the historical evaluation, its scores, units, and limitations."
+                )
             )
         elif kind == "finance" and len(selected) == 1:
             context = finance_evidence(Path(selected[0]))
@@ -401,6 +412,8 @@ class TerminalSession:
             ("predictions.csv", "Forecast CSV"),
             ("result.json", "Results JSON"),
             ("metrics.json", "Evaluation JSON"),
+            ("evaluation.json", "Evaluation availability JSON"),
+            ("observations.csv", "Consumed observations CSV"),
             ("provenance.json", "Provenance JSON"),
             ("forecast.svg", "Forecast chart"),
         ):

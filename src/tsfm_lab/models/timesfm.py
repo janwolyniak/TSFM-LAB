@@ -9,9 +9,9 @@ import numpy as np
 
 from tsfm_lab import __version__
 from tsfm_lab.contracts import (
-    EvaluationSpec,
     ForecastOutput,
     ForecastRequest,
+    ForecastSettings,
     ModelCapabilities,
     ModelMetadata,
 )
@@ -127,7 +127,7 @@ class TimesFM:
     def environment_metadata(self) -> dict[str, str]:
         return {name: version(name) for name in _DISTRIBUTIONS}
 
-    def validate(self, spec: EvaluationSpec) -> None:
+    def validate(self, spec: ForecastSettings) -> None:
         if not 0 < spec.context_length <= self._max_context:
             raise ValueError("TimesFM context_length exceeds its supported limit")
         if not 0 < spec.horizon <= self._max_horizon:

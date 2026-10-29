@@ -1,0 +1,19 @@
+schema_version: 2
+mode: future_forecast
+name: future-baseline
+model:
+  source: builtin
+  adapter_id: last_value
+dataset:
+  path: ../datasets/seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+forecast:
+  context_length: 8
+  horizon: 4
+  point_statistic: median
+  origin: latest
+output:
+  directory: ../../results

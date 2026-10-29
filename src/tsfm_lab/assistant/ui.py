@@ -78,40 +78,80 @@ class AssistantFlow:
                 return path.resolve()
             self.emit("Choose an existing local CSV or Parquet file, or /cancel.")
 
+    def _forecast_mode(self, default="historical_evaluation"):
+        selected = self._choice(
+            "Forecast mode",
+            ("historical evaluation", "future forecasting"),
+            (
+                "future forecasting"
+                if default == "future_forecast"
+                else "historical evaluation"
+            ),
+        )
+        if selected == "cancel":
+            return None
+        return (
+            "future_forecast"
+            if selected == "future forecasting"
+            else "historical_evaluation"
+        )
+
     def describe(self, review, *, default_dataset=None):
         self.emit(
-            "Describe a historical evaluation. Choose files locally; leave paths, credentials and data tables out of the message."
+            "Choose files and forecast mode locally; leave paths, credentials and data tables out of the message."
         )
-        dataset = self._dataset(default_dataset)
-        if dataset is None:
+        try:
+            dataset = self._dataset(default_dataset)
+            if dataset is None:
+                return None
+            mode = self._forecast_mode()
+            if mode is None:
+                return None
+            goal = self.editor.ask(
+                "What would you like to forecast?"
+                if mode == "future_forecast"
+                else "What would you like to evaluate?"
+            )
+        except (EOFError, KeyboardInterrupt):
+            self.emit("Assisted setup cancelled. Nothing was executed or saved.")
             return None
-        goal = self.editor.ask("What would you like to evaluate?")
-        draft = None
-        confirm_historical = False
+        draft, confirm_mode = None, None
 
         def guided():
             return review(
                 DraftResolution(
                     "needs_input",
-                    {"dataset_path": str(dataset)},
-                    ("dataset_path",),
+                    {"dataset_path": str(dataset), "mode": mode},
+                    ("dataset_path", "mode"),
                     (),
                     (),
                     (),
                 )
             )
 
+        def change_mode():
+            nonlocal mode, confirm_mode
+            selected = self._forecast_mode(mode)
+            if selected is None:
+                return False
+            mode, confirm_mode = selected, selected
+            return True
+
         while True:
             if goal in {"/cancel", "/back"}:
                 return None
             try:
-                options = {"confirm_historical": True} if confirm_historical else {}
-                preview = self.service.preview_draft(goal, draft=draft, **options)
+                preview = self.service.preview_draft(
+                    goal,
+                    draft=draft,
+                    mode=mode,
+                    **({"confirm_mode": confirm_mode} if confirm_mode else {}),
+                )
                 if not self._consent(preview):
                     return None
                 draft = self.service.submit_draft(preview, confirmed=True)
                 resolved = resolve_draft(
-                    draft, dataset_refs={"selected_dataset": dataset}
+                    draft, dataset_refs={"selected_dataset": dataset}, mode=mode
                 )
                 self.emit(
                     f"Local draft status: {resolved.state.replace('_',' ')}. Nothing has run or been saved."
@@ -129,11 +169,11 @@ class AssistantFlow:
                     self.emit(f"Local validation: {error}")
                 for assumption in resolved.assumptions:
                     self.emit(f"Assistant assumption to review: {assumption}")
+                eligible = draft.intent == mode and resolved.state != "unsupported"
                 choices = (
-                    ("review", "clarify", "guided", "cancel")
-                    if draft.intent == "historical_evaluation"
-                    and resolved.state != "unsupported"
-                    else ("clarify", "guided", "cancel")
+                    ("review", "clarify", "guided", "mode", "cancel")
+                    if eligible
+                    else ("clarify", "guided", "mode", "cancel")
                 )
                 choice = self._choice(
                     "Review every setting, clarify with another message, use fresh guided setup, or cancel?",
@@ -146,45 +186,41 @@ class AssistantFlow:
                     return guided()
                 if choice == "cancel":
                     return None
-                if draft.intent != "historical_evaluation":
-                    confirm_historical = (
-                        self._choice(
-                            "Explicitly switch to historical evaluation with observed targets?",
-                            ("no", "yes"),
-                            "no",
-                        )
-                        == "yes"
-                    )
-                    if not confirm_historical:
-                        return None
+                if choice == "mode" and not change_mode():
+                    return None
                 self.emit(
-                    "Clarification can fill missing choices. Use guided review to edit an existing choice."
+                    "Clarification can fill missing choices. Mode changes require a fresh preview; use guided review to edit an existing choice."
                 )
                 goal = self.editor.ask(
                     "Clarify your goal (a new preview and confirmation follow)"
                 )
             except (ConnectionError, AssistanceError) as exc:
                 self.emit(f"Assistant: {exc}")
+                choices = (
+                    ("connections", "retry", "review", "guided", "mode", "cancel")
+                    if draft is not None and draft.intent == mode
+                    else ("connections", "retry", "guided", "mode", "cancel")
+                )
                 choice = self._choice(
                     "Use connections, retry, review the current draft, use guided setup, or cancel?",
-                    (
-                        ("connections", "retry", "review", "guided", "cancel")
-                        if draft is not None and draft.intent == "historical_evaluation"
-                        else ("connections", "retry", "guided", "cancel")
-                    ),
+                    choices,
                     "cancel",
                 )
                 if choice == "guided":
                     return guided()
                 if choice == "review":
                     return review(
-                        resolve_draft(draft, dataset_refs={"selected_dataset": dataset})
+                        resolve_draft(
+                            draft, dataset_refs={"selected_dataset": dataset}, mode=mode
+                        )
                     )
                 if choice == "cancel":
                     return None
                 if choice == "connections":
                     self.connections()
-                goal = self.editor.ask("Describe or clarify the historical evaluation")
+                if choice == "mode" and not change_mode():
+                    return None
+                goal = self.editor.ask("Describe or clarify the selected forecast mode")
             except (EOFError, KeyboardInterrupt):
                 self.emit("Assisted setup cancelled. Nothing was executed or saved.")
                 return None

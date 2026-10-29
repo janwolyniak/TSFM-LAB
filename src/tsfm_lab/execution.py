@@ -9,6 +9,7 @@ from time import monotonic
 
 from tsfm_lab.config import ExperimentConfig
 from tsfm_lab.experiments import ExperimentStore
+from tsfm_lab.future_config import FutureForecastConfig
 from tsfm_lab.worker_entry import launch_worker
 
 _KILL_DELAY = 0.25
@@ -16,7 +17,7 @@ _TERMINAL = {"completed", "failed", "cancelled"}
 
 
 def _worker_main(config, events, cancellation) -> None:
-    from tsfm_lab.application import run_config
+    from tsfm_lab.run_modes import run_validated
 
     run_id, last_progress = None, 0.0
 
@@ -43,7 +44,7 @@ def _worker_main(config, events, cancellation) -> None:
             last_progress = now
 
     try:
-        result = run_config(
+        result = run_validated(
             config,
             progress=stage,
             window_progress=progress,
@@ -86,8 +87,21 @@ def _reconcile(
         else:
             store = ExperimentStore(config.output_directory)
             manifest = store.get_manifest(run_id)
+            future = isinstance(config, FutureForecastConfig)
+            if future != (manifest.get("kind") == "future_forecast"):
+                raise ValueError("Worker record mode disagrees with its configuration")
             status = manifest["status"]
             if status == "completed":
+                if future:
+                    from tsfm_lab.future_validation import resolved_configuration
+
+                    saved, _, _ = store.load_future_result(run_id)
+                    if saved["configuration"] != resolved_configuration(
+                        config, saved["request"]["origin"]
+                    ):
+                        raise ValueError(
+                            "Completed future record disagrees with its worker configuration"
+                        )
                 return {
                     "type": "completed",
                     "run_id": run_id,
@@ -129,7 +143,7 @@ class ManagedRun:
     """Poll regularly; final events follow process reaping and metadata settlement."""
 
     def __init__(self, config: ExperimentConfig, grace_seconds=3.0, *, _target=None):
-        if not isinstance(config, ExperimentConfig):
+        if not isinstance(config, (ExperimentConfig, FutureForecastConfig)):
             raise ValueError("ManagedRun requires a validated ExperimentConfig")
         if (
             isinstance(grace_seconds, bool)

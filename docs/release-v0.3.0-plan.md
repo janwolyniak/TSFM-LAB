@@ -1,14 +1,15 @@
 # v0.3.0 release plan
 
-Status: **S1/S2 historical setup locally verified; S3 preparation and outputs
-implemented on 28 October 2026 with real pretrained qualification pending**.
-S2 mode-switching acceptance remains tied to S4.
+Status: **S1-S4 implemented and locally verified through 29 October 2026;
+S3 real pretrained qualification remains pending**. S4 closes S2 mode-switching
+acceptance; S5-S9 remain open.
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
 until verified; see the [S1 verification record](s1-onboarding-verification.md)
 and [S2 verification record](s2-model-setup-verification.md), followed by the
 [S3 verification record](s3-preparation-verification.md).
-The [S4 contract proposal](future-forecast-contract.md) has completed source and
-independent review; owner approval is pending before future-mode implementation.
+The [S4 contract](future-forecast-contract.md) completed source and independent
+review and was approved for implementation on 29 October 2026. See the
+[S4 verification record](s4-future-verification.md) for executed evidence and limits.
 
 Release goal: a new user can go from first launch to a usable forecast file,
 appropriate results report, and reproducible saved experiment without leaving
@@ -155,13 +156,13 @@ Acceptance:
 - [x] Dataset preview and measurement questions preserve declared units. Invalid
   timestamps, insufficient history, unsupported cadence, or impossible horizons
   block execution before downloads or model allocation.
-- [ ] Changing category, family, variant, dataset, or mode revalidates dependent
+- [x] Changing category, family, variant, dataset, or mode revalidates dependent
   choices. Back/cancel paths preserve compatible edits without stale settings.
 - [x] Equivalent manual and assisted choices resolve to the same validated
   configuration and numerical identity. Existing YAML remains readable.
 
-Historical choice changes are verified in the S2 record. The fourth item remains
-open for future-mode switching, assigned to S4.
+Historical choice changes are verified in the S2 record. S4 verifies future-mode
+switching, fresh review/consent and preservation of compatible choices.
 
 ### S3: Automatic preparation, progress, and outputs
 
@@ -209,21 +210,24 @@ declared point semantics, artifact validation, and metric-availability status.
 
 Acceptance:
 
-- [ ] Both modes are available in guided and assisted setup and have equivalent
+- [x] Both modes are available in guided and assisted setup and have equivalent
   scriptable configuration. Historical runs retain their prior score semantics.
-- [ ] Future mode produces exactly the requested supported horizon on the declared
+- [x] Future mode produces exactly the requested supported horizon on the declared
   timestamp grid, using only observations available at the origin. Unsupported
   horizons or required unavailable inputs fail before inference.
-- [ ] Future records/CSV/chart distinguish observations from predictions and retain
+- [x] Future records/CSV/chart distinguish observations from predictions and retain
   original units, checkpoint/runtime provenance, and preprocessing policy.
-- [ ] Accuracy is explicitly unavailable because future actuals are absent;
+- [x] Accuracy is explicitly unavailable because future actuals are absent;
   no zeros, invented actuals, historical scores, or financial returns substitute
   for unavailable future evaluation.
-- [ ] Historical comparison and finance validators refuse ineligible future
+- [x] Historical comparison and finance validators refuse ineligible future
   records. Old artifacts remain readable without migration or rewriting.
 
 Importing actual observations and scoring saved future forecasts later is
 deferred; it requires a separately agreed matching and revision policy.
+Checked items use offline fixtures, fake pretrained/provider transports and real
+baseline workers/terminal execution. Optional Textual screen execution, real
+pretrained/provider and platform qualification limits remain recorded in S4/S9.
 
 ### S5: Additional assistant connections
 

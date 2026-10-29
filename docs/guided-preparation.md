@@ -105,9 +105,14 @@ explicitly invoke `execute_guided` to authorize its displayed preparation/run.
 Ordinary `run_config` defaults to no guided preparation and schema-1 outputs;
 `include_outputs=True` requests the saved chart/provenance without adding downloads.
 
-Future forecasting, scoring saved future predictions later, new model families,
-new assistant endpoints, and native Windows qualification retain their separate
-release stages. Real pretrained download/inference qualification remains pending
+S4 [future forecasting](future-forecasting.md) reuses review, exact consent, and
+managed cancellation with its own schema-2 preparation records and schema-3
+experiment manifests. Future mode omits metric evaluation and saves eight checked
+artifacts. Historical preparation/records keep their previous schemas.
+
+Scoring saved future predictions later, new model families, new assistant
+endpoints, and native Windows qualification retain their separate release
+stages. Real pretrained download/inference qualification remains pending
 authorization; routine tests use fake Hub/runtime transports.
 
 The pinned API behavior was checked against official

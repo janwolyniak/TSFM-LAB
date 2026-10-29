@@ -161,6 +161,16 @@ its strict five-artifact contract. Numerical result schema, configuration,
 comparison, and finance contracts remain unchanged. Rendering uses checked saved
 predictions without model/runtime dependencies; renderer contracts are versioned.
 
+S4 [future forecasting](future-forecasting.md) adds separate configuration and
+numerical services without an evaluation window or actual future values. A small
+typed dispatch seam connects the existing managed worker, guided preparation,
+commands and saved-record views. Future manifest schema 3 carries an explicit
+kind from creation and requires eight artifacts at completion, including consumed
+observations and an unavailable-evaluation object. Dedicated validators/readers
+preserve historical configuration, score, comparison and finance contracts.
+The [approved contract](future-forecast-contract.md) defines the exact origin,
+request identity, bounded grid, output semantics and versioned renderer.
+
 Use a user-selected workspace with `experiments/<uuid>/`. JSON run manifests are
 the source of truth. A small installation can list history by scanning these
 manifests; add a rebuildable SQLite index only after directory scanning becomes

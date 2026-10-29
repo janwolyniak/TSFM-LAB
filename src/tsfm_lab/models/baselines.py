@@ -4,9 +4,9 @@ import numpy as np
 
 from tsfm_lab import __version__
 from tsfm_lab.contracts import (
-    EvaluationSpec,
     ForecastOutput,
     ForecastRequest,
+    ForecastSettings,
     ModelCapabilities,
     ModelMetadata,
     positive_int,
@@ -23,7 +23,7 @@ class LastValue:
             self.adapter_id, __version__, "baseline", ModelCapabilities()
         )
 
-    def validate(self, spec: EvaluationSpec) -> None:
+    def validate(self, spec: ForecastSettings) -> None:
         if spec.context_length < self.metadata().capabilities.min_context:
             raise ValueError("context_length is shorter than the baseline requires")
 

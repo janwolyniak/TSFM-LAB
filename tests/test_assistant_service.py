@@ -156,6 +156,8 @@ class Editor:
 
     def ask(self, label, default="", choices=()):
         self.asked.append(label)
+        if label == "Forecast mode":
+            return default
         answer = next(self.answers, default)
         if isinstance(answer, BaseException):
             raise answer

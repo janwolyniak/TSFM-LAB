@@ -58,6 +58,10 @@ def run_config(
     expected_checkpoint_fingerprint: str | None = None,
 ) -> dict:
     """Validate before creating a run, then persist success, failure, or cancellation."""
+    if not isinstance(config, ExperimentConfig):
+        raise ConfigError(
+            "Historical execution requires ExperimentConfig; use run_future_config for future forecasts"
+        )
 
     def check_cancel() -> None:
         if should_cancel and should_cancel():

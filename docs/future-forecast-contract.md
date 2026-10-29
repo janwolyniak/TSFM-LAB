@@ -1,14 +1,15 @@
-# S4 future-forecast contract proposal
+# S4 future-forecast contract
 
-Status: **proposed, pending owner approval; no S4 implementation yet**.
-Date: 28 October 2026. This is the contract review required by the
+Status: **approved for implementation on 29 October 2026**. The owner's
+continuation instruction accepts the reviewed proposal from commit `b574c4d`.
+Contract review date: 28 October 2026. This is the review required by the
 [v0.3.0 release plan](release-v0.3.0-plan.md#s4-future-forecasting).
 Historical behavior remains governed by [evaluation](evaluation.md),
 [architecture](architecture.md), and [finance](finance-extension.md).
 
-## Decisions for approval
+## Approved decisions
 
-| Decision | Proposed behavior |
+| Decision | Agreed behavior |
 | --- | --- |
 | Origin | The final observation only; `latest` or an explicit timezone-aware timestamp equal to it. No implicit truncation or replay. |
 | Resource bounds | Future context at most 100,000 rows and horizon at most 10,000 rows, further restricted by the selected adapter. Reject excess, never clamp. |
@@ -65,8 +66,8 @@ default; origin defaults to `latest`. Reject `evaluation`, historical dates,
 stride, metrics, MASE settings, supplied actuals, and caller-supplied target grids.
 The adapter's seasonal period remains a model option where applicable.
 
-Illustrative proposed YAML, using paths relative to `examples/configurations/`.
-**This is not runnable until S4 is implemented.**
+Example YAML, using paths relative to `examples/configurations/`; see the
+[future guide](future-forecasting.md) for implementation usage and limits.
 
 ```yaml
 schema_version: 2
@@ -337,7 +338,7 @@ configuration/terminal/assistant/managed-worker integration; and persistence,
 comparison, finance, and backwards compatibility. They identified the holdout
 coupling, mutable timestamp buffers, unbounded baseline allocations, managed-worker
 type/finalizer coupling, historical assistant gates, and guided-finance regression.
-This proposal incorporates those findings; it is not owner acceptance.
+The proposal incorporated those findings and subsequently received owner approval.
 Final review also made public configuration/run dispatch explicit, retained
 metadata-only assistant evidence, and separated pre-confirmation plan identity
 from the verified-byte numerical request ID. No material review findings remain.
@@ -355,7 +356,7 @@ than the entire source provides a reloadable chart with less copied data, while
 recording the limit of full-source verification. Dummy historical configurations
 are rejected because they would mix evaluation semantics into future inference.
 
-After approval: (1) strict configuration/request/numerical tests; (2) future
+Implementation order: (1) strict configuration/request/numerical tests; (2) future
 storage/validation/export and historical refusal; (3) managed preparation/lifecycle;
 (4) both terminal flows and assistant evidence; (5) integrated verification and
 acceptance updates. Branch `codex/v0.3.0-future-contract` depends on S3 commit

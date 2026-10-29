@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from tsfm_lab.contracts import (
-    EvaluationSpec,
+    ForecastSettings,
     ModelCapabilities,
     fixed_interval,
     positive_int,
@@ -114,7 +114,7 @@ def model_settings(
 
 
 def validate_settings(
-    model: dict, evaluation: EvaluationSpec, frequency: str | None = None
+    model: dict, evaluation: ForecastSettings, frequency: str | None = None
 ) -> None:
     """Validate settings metadata; checkpoint/runtime/data checks remain mandatory."""
     settings = model_settings(

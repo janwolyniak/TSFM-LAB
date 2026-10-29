@@ -33,7 +33,9 @@ def test_directory_members_are_checked_before_extracting_a_source_archive(tmp_pa
         BUILDER["inspect_source"](path, name="tsfm-lab", version="0.1.0")
 
 
-def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
+def wheel(
+    tmp_path, dependency, *, omit_license=None, declare_licenses=True, omit_module=None
+):
     path = tmp_path / "test.whl"
     prefix = "tsfm_lab-0.1.0.dist-info"
     metadata = (
@@ -82,7 +84,10 @@ def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
             *BUILDER["ONBOARDING_MODULES"],
             *BUILDER["MODEL_SETUP_MODULES"],
             *BUILDER["GUIDED_MODULES"],
+            *BUILDER["FUTURE_MODULES"],
         ):
+            if name == omit_module:
+                continue
             if omit_license and name.endswith("/" + omit_license):
                 continue
             archive.writestr(name, "fixture")
@@ -92,6 +97,13 @@ def wheel(tmp_path, dependency, *, omit_license=None, declare_licenses=True):
             "[console_scripts]\ntsfm = tsfm_lab.__main__:main\n",
         )
     return path
+
+
+@pytest.mark.parametrize("module", sorted(BUILDER["FUTURE_MODULES"]))
+def test_future_dispatch_and_record_modules_are_required_in_the_wheel(tmp_path, module):
+    path = wheel(tmp_path, 'torch; extra == "chronos"', omit_module=module)
+    with pytest.raises(ValueError, match="missing runtime modules"):
+        BUILDER["inspect_wheel"](path, name="tsfm-lab", version="0.1.0")
 
 
 @pytest.mark.parametrize(
