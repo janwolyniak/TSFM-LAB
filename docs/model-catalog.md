@@ -50,6 +50,11 @@ adapter's limits.
 | `ttm_r2` | `ibm-granite/granite-timeseries-ttm-r2`, `512-96-r2` | exactly 512 / 96 | 3,240,592 | Representative CPU check recorded. |
 | `ttm_r2` | Same repository, `1024-96-r2` | exactly 1,024 / 96 | 11,879,480 | Compatibility checked; individual inference not run. |
 | `ttm_r2` | Same repository, `1536-96-r2` | exactly 1,536 / 96 | 12,344,144 | Compatibility checked; individual inference not run. |
+| `ttm_r2` | Same repository, `512-192-r2` | exactly 512 / 192 | 3,634,200 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `512-336-r2` | exactly 512 / 336 | 4,224,600 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `512-720-r2` | exactly 512 / 720 | 5,799,000 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `52-16-ft-r2.1` | exactly 52 / 16; fixed weekly | 319,440 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `90-30-ft-r2.1` | exactly 90 / 30; fixed daily | 3,496,760 | Compatibility checked; real inference pending. |
 
 Weight-file size describes stored bytes, not required runtime memory. Catalog
 status applies to its listed reference revision. A different requested revision
@@ -63,7 +68,11 @@ reserves room for its output patch and accepts at most 16,256 historical values.
 Its native quantile head does not expand the adapter's 128-step horizon.
 See the [Bolt guide](chronos.md), [Chronos-2 guide](chronos2.md),
 [TimesFM guide](timesfm.md), [TiRex-2 guide](tirex2.md), and [TTM guide](ttm.md).
-TTM uses a native-point task, exact context, and minute-to-hour declared cadence.
+TTM uses a native-point task and exact context. R2 requires minute-to-hour cadence;
+the selected R2.1 daily/weekly profile requires exactly `1D`/`7D`. Variant metadata
+and setup expose that profile's cadence; unresolved local/custom revisions are
+rechecked against their actual complete configuration before inference. See the
+[S6 TTM verification limits](s6-ttm-verification.md).
 Use `models info ibm-granite/granite-timeseries-ttm-r2 --variant 1024-96-r2`
 to inspect a nondefault branch. YAML records its repository and pinned SHA.
 

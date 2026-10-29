@@ -254,6 +254,12 @@ Acceptance:
 
 ### S6: Forecasting model expansion
 
+Existing-family implementation is retained in the
+[TTM expansion verification record](s6-ttm-verification.md). The owner approved
+TOTO 2 on Python 3.12-3.13 on 29 October 2026; the application keeps Python 3.11
+support. Real inference is deferred at the owner's request: use offline tests
+without installing optional runtimes or downloading weights.
+
 Prioritize additional useful variants of existing families, particularly TTM
 R2.1 daily/weekly profiles and additional supported native horizons. Add **one**
 new family, choosing between Moirai and TOTO after a bounded compatibility study.

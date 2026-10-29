@@ -63,7 +63,7 @@ def test_same_repository_profiles_have_exact_limits_and_pinned_information(
     entry = catalog_info(REPOSITORY, name)
     assert CHECKPOINT_REPOSITORIES["ttm_r2"] == (REPOSITORY,)
     assert CURATED_REPOSITORIES.count(REPOSITORY) == 1
-    assert len(catalog_info("ttm_r2")["variants"]) == 3
+    assert len(catalog_info("ttm_r2")["variants"]) == 8
     assert entry["capabilities"]["min_context"] == context
     assert entry["capabilities"]["max_context"] == context
     assert entry["capabilities"]["max_horizon"] == 96

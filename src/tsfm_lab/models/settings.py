@@ -15,7 +15,7 @@ _LABELS = {
     "chronos_2": ("Chronos", "2", "size"),
     "timesfm_2p5": ("TimesFM", "2.5", "size"),
     "tirex_2": ("TiRex", "2", "training_profile"),
-    "ttm_r2": ("IBM Granite TTM", "R2", "context_horizon"),
+    "ttm_r2": ("IBM Granite TTM", "R2 / R2.1", "context_horizon"),
 }
 _PREPROCESSING = {
     "chronos_bolt": "Required native context normalization and inverse; no external transform option.",
@@ -98,6 +98,23 @@ def model_settings(
     high = (selected.max_context if selected else None) or profile.max_context
     horizon = (selected.max_horizon if selected else None) or profile.max_horizon
     family, generation, kind = _LABELS[adapter_id]
+    frequency_policy = profile.frequency_policy
+    preprocessing = _PREPROCESSING[adapter_id]
+    default_context = max(low, min(8, high))
+    if adapter_id == "ttm_r2":
+        from tsfm_lab.models.ttm_profile import profile_frequency
+
+        if selected:
+            frequency_policy = profile_frequency(selected.variant)
+            generation = "R2.1" if selected.variant.endswith("r2.1") else "R2"
+            cadence = {
+                "daily_fixed_v1": "exactly one fixed UTC day",
+                "weekly_fixed_v1": "exactly seven fixed UTC days",
+                "minute_hour_fixed_v1": "one minute to one hour",
+            }[frequency_policy]
+            preprocessing += f" Required cadence: {cadence}; no automatic resampling."
+        else:
+            default_context = 512
     return ModelSettings(
         adapter_id,
         family,
@@ -105,11 +122,11 @@ def model_settings(
         selected.display_name if selected else "Unresolved checkpoint",
         kind,
         ModelCapabilities(min_context=low, max_context=high, max_horizon=horizon),
-        max(low, min(8, high)),
+        default_context,
         min(4, horizon),
         profile.supported_tasks,
-        _PREPROCESSING[adapter_id],
-        profile.frequency_policy,
+        preprocessing,
+        frequency_policy,
     )
 
 
@@ -148,7 +165,10 @@ def validate_settings(
             raise ValueError("context_length must contain a complete baseline season")
     if frequency is not None:
         fixed_interval(frequency)
-        if settings.frequency_policy == "minutely_hourly":
+        if (
+            model["adapter_id"] == "ttm_r2"
+            and settings.frequency_policy != "profile_specific"
+        ):
             from tsfm_lab.models.ttm_profile import validate_frequency
 
-            validate_frequency(frequency)
+            validate_frequency(frequency, settings.frequency_policy)

@@ -1,4 +1,4 @@
-"""Causal, native point forecasts from reviewed Granite TTM R2 checkpoints."""
+"""Causal, native point forecasts from reviewed Granite TTM checkpoints."""
 
 import copy
 import importlib
@@ -136,6 +136,7 @@ class TTM:
         self.checkpoint, self.seed = checkpoint, int(seed)
         self._record = copy.deepcopy(record)
         self._context = record["native_context_length"]
+        self._horizon = record["native_prediction_length"]
         self._forecast_options = forecast_options_for_record(record)
         self._model = self._torch = None
 
@@ -149,7 +150,9 @@ class TTM:
             __version__,
             "ttm",
             ModelCapabilities(
-                min_context=self._context, max_context=self._context, max_horizon=96
+                min_context=self._context,
+                max_context=self._context,
+                max_horizon=self._horizon,
             ),
         )
 
@@ -181,13 +184,15 @@ class TTM:
             raise ValueError(
                 f"TTM requires exactly {self._context} history observations"
             )
-        if not 0 < spec.horizon <= 96:
-            raise ValueError("TTM horizon must be between 1 and 96")
+        if not 0 < spec.horizon <= self._horizon:
+            raise ValueError(f"TTM horizon must be between 1 and {self._horizon}")
         if spec.point_statistic != "native_point":
             raise ValueError("TTM requires a native_point evaluation task")
 
     def validate_frequency(self, frequency):
-        validate_frequency(frequency)
+        validate_frequency(
+            frequency, self._record["point_forecast"]["frequency_policy"]
+        )
 
     def load(self):
         if self._model is not None:
@@ -214,8 +219,10 @@ class TTM:
         if len({item.request_id for item in requests}) != len(requests):
             raise ValueError("TTM batch request IDs must be unique")
         horizons = {len(item.target_timestamps) for item in requests}
-        if len(horizons) != 1 or not 0 < next(iter(horizons)) <= 96:
-            raise ValueError("TTM requests need the same horizon between 1 and 96")
+        if len(horizons) != 1 or not 0 < next(iter(horizons)) <= self._horizon:
+            raise ValueError(
+                f"TTM requests need the same horizon between 1 and {self._horizon}"
+            )
         inputs = []
         for request in requests:
             if (
@@ -225,6 +232,8 @@ class TTM:
                 raise ValueError(
                     f"TTM requires exactly {self._context} history observations"
                 )
+            interval = request.target_timestamps[0] - request.origin
+            self.validate_frequency(f"{interval.value}ns")
             normalized, location, scale = _standardize(request.context_values)
             history = self._torch.as_tensor(
                 normalized[None, :, None], dtype=self._torch.float32, device="cpu"
@@ -245,18 +254,25 @@ class TTM:
             for request, (history, location, scale) in zip(
                 requests, inputs, strict=True
             ):
-                result = self._model(past_values=history, return_dict=True)
+                arguments = {"past_values": history, "return_dict": True}
+                if "frequency_token" in self._forecast_options:
+                    arguments["freq_token"] = self._torch.as_tensor(
+                        [self._forecast_options["frequency_token"]],
+                        dtype=self._torch.long,
+                        device="cpu",
+                    )
+                result = self._model(**arguments)
                 try:
                     native = result.prediction_outputs.detach().cpu().numpy()
                 except (AttributeError, TypeError) as exc:
                     raise ValueError("TTM prediction_outputs must be a tensor") from exc
                 if (
-                    native.shape != (1, 96, 1)
+                    native.shape != (1, self._horizon, 1)
                     or native.dtype.kind not in "iuf"
                     or not np.isfinite(native).all()
                 ):
                     raise ValueError(
-                        "TTM native predictions must be finite with shape [1,96,1]"
+                        f"TTM native predictions must be finite with shape [1,{self._horizon},1]"
                     )
                 with np.errstate(over="ignore", invalid="ignore"):
                     point = native[0, :horizon, 0].astype(np.float64) * scale + location

@@ -305,6 +305,10 @@ def validate_model_fields(
         else model_settings(fields["adapter"])
     )
     context = settings.default_context
+    # This prototype validates model fields before the user inspects a dataset.
+    frequency = {"daily_fixed_v1": "1D", "weekly_fixed_v1": "7D"}.get(
+        settings.frequency_policy, "1h"
+    )
     if fields["adapter"] == "seasonal_naive":
         context = _integer(fields, "seasonal_period")
     if fields["mode"] == "future_forecast":
@@ -315,7 +319,7 @@ def validate_model_fields(
             "context_length": str(context),
             "horizon": "1",
             "dataset_path": "validation.csv",
-            "frequency": "1h",
+            "frequency": frequency,
             "forecast_origin": "latest",
         }
         future_config_from_mapping(
@@ -324,6 +328,7 @@ def validate_model_fields(
     else:
         mapping = _minimal_mapping(workspace)
         mapping["name"], mapping["model"] = fields["name"], selection
+        mapping["dataset"]["frequency"] = frequency
         mapping["evaluation"].update(
             point_statistic=fields["point_statistic"], context_length=context
         )

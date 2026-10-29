@@ -149,7 +149,7 @@ def _checkpoint_identity(model, runtime, spec, environment, frequency):
             or runtime.get("torch_compile") is not False
         ):
             raise StoreError("TTM requires its fixed context and native_point task")
-        validate_frequency(frequency)
+        validate_frequency(frequency, record["point_forecast"]["frequency_policy"])
         validate_runtime_options(runtime.get("forecast_options"), record)
     if adapter == "tirex_2":
         from tsfm_lab.models.tirex2_profile import forecast_options_for_record

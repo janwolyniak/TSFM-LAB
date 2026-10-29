@@ -40,6 +40,10 @@ def checkpoint_model(adapter, variant):
     }
 
 
+def profile_cadence(variant):
+    return {"52-16-ft-r2.1": "7D", "90-30-ft-r2.1": "1D"}.get(variant.variant, "1h")
+
+
 @pytest.mark.parametrize(
     "adapter,label",
     [("last_value", "Last value"), ("seasonal_naive", "Seasonal naive")],
@@ -78,7 +82,7 @@ def test_every_reference_sha_and_explicit_variant_resolve_to_same_description(
             explicit.default_horizon,
             explicit.supported_tasks[0],
         ),
-        "1h",
+        profile_cadence(variant),
     )
 
 
@@ -92,7 +96,7 @@ def test_variant_limits_reject_unsupported_horizon_and_context_before_loading(
     caps = settings.capabilities
     selection = checkpoint_model(adapter, variant)
     boundary = spec(caps.max_context, caps.max_horizon, settings.supported_tasks[0])
-    validate_settings(selection, boundary, "1h")
+    validate_settings(selection, boundary, profile_cadence(variant))
     with pytest.raises(ValueError, match="horizon is outside"):
         validate_settings(
             selection, replace(boundary, horizon=caps.max_horizon + 1), "1h"
@@ -146,8 +150,10 @@ def test_unknown_revision_and_local_checkpoint_do_not_claim_known_native_profile
     )
     assert local == unknown
     assert local.variant_label == "Unresolved checkpoint"
-    assert local.capabilities.min_context == 512
+    assert local.capabilities.min_context == 52
     assert local.capabilities.max_context == 1536
+    assert local.capabilities.max_horizon == 720
+    assert local.frequency_policy == "profile_specific"
     validate_settings(
         {"adapter_id": "ttm_r2", "source": "local", "path": "/not/read"},
         spec(1024, task="native_point"),

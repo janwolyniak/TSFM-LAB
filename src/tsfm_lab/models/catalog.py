@@ -32,7 +32,7 @@ def checkpoint_info(repository: str, variant: str | None = None) -> dict:
         and item["revision"] == variant.reference_revision
         for item in checks
     )
-    return {
+    information = {
         **asdict(variant),
         "max_context": variant.max_context or profile.max_context,
         "max_horizon": variant.max_horizon or profile.max_horizon,
@@ -45,6 +45,11 @@ def checkpoint_info(repository: str, variant: str | None = None) -> dict:
         ),
         "representative_checks": copy.deepcopy(checks),
     }
+    if profile.adapter_id == "ttm_r2":
+        from tsfm_lab.models.ttm_profile import profile_frequency
+
+        information["frequency_policy"] = profile_frequency(variant.variant)
+    return information
 
 
 def catalog_entries() -> list[dict]:

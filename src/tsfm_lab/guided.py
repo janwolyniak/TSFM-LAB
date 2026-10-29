@@ -118,6 +118,12 @@ def _native_bounds(config, metadata):
         raise ConfigError("Context length is unsupported by the reviewed checkpoint")
     if horizon > metadata["native_prediction_length"]:
         raise ConfigError("Forecast horizon is unsupported by the reviewed checkpoint")
+    if adapter == "ttm_r2":
+        from tsfm_lab.models.ttm_profile import validate_frequency
+
+        validate_frequency(
+            config.dataset["frequency"], metadata["point_forecast"]["frequency_policy"]
+        )
 
 
 def _review_data(config):
