@@ -32,6 +32,7 @@ def invoke(interpreter, *, isolated=True, cwd=None):
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=15,
         check=False,
     )
@@ -49,6 +50,7 @@ def test_verifier_definition_import_needs_only_standard_library():
         [sys.executable, "-I", "-S", "-c", code, str(SCRIPT)],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=10,
         check=False,
     )
@@ -81,6 +83,7 @@ def test_site_pth_cannot_make_source_checkout_pass_as_an_installed_wheel(
         [str(interpreter), "-I", "-c", "import site; print(site.getsitepackages()[0])"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     site_packages = Path(result.stdout.strip())
@@ -272,3 +275,185 @@ def test_legacy_stage_invokes_isolated_probe_and_checks_identity(tmp_path):
     verifier.command = command
     verifier.legacy_records()
     assert verifier.passed == ["historical_schema_one_records_keep_meanings_and_hashes"]
+
+
+@pytest.fixture
+def source_verifier(tmp_path):
+    """Exercise verifier stages against source without relaxing production identity."""
+    definitions = runpy.run_path(str(SCRIPT), run_name="stage_verifier_test")
+    source = SCRIPT.parents[1] / "src"
+    launcher = tmp_path / "fixture_launcher.py"
+    launcher.write_text(
+        definitions["_BLOCK_OPTIONAL"]
+        + f"\nsys.path.insert(0, {str(source)!r})\n"
+        + "import runpy\nrunpy.run_module('tsfm_lab', run_name='__main__')\n",
+        encoding="utf-8",
+    )
+    verifier = definitions["Verifier"](launcher, tmp_path)
+    command = verifier.command
+
+    def fixture_command(*arguments, expected=0, python=False):
+        if python:
+            assert arguments[0] == "-c"
+            probe = f"import sys; sys.path.insert(0, {str(source)!r})\n" + arguments[1]
+            return command("-c", probe, expected=expected, python=True)
+        return command(str(launcher), *arguments, expected=expected, python=True)
+
+    verifier.command = fixture_command
+    return verifier
+
+
+def test_installed_probe_requires_exact_wheel_even_with_matching_version(
+    installed_probe,
+):
+    function, _, _, _ = installed_probe
+    with pytest.raises(RuntimeError, match="Supply --wheel.*exact built wheel"):
+        function()
+
+
+def test_subprocess_text_is_explicitly_utf8(tmp_path, monkeypatch):
+    definitions = runpy.run_path(str(SCRIPT), run_name="encoding_verifier_test")
+    verifier = definitions["Verifier"](Path("tsfm"), tmp_path)
+    received = []
+
+    def run(arguments, **kwargs):
+        received.append(kwargs)
+        return subprocess.CompletedProcess(arguments, 0, "Łódź", "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert verifier.command("--version").stdout == "Łódź"
+    assert received[0]["text"] is True and received[0]["encoding"] == "utf-8"
+
+
+def test_optional_blocker_covers_new_families_and_kernel_modules():
+    definitions = runpy.run_path(str(SCRIPT), run_name="block_verifier_test")
+    blocked = set(definitions["_OPTIONAL"])
+    assert {
+        "toto2",
+        "gluonts",
+        "dd_unit_scaling",
+        "unit_scaling",
+        "triton",
+        "triton_windows",
+        "flashrnn",
+        "mlstm_kernels",
+        "lightning",
+        "pytorch_lightning",
+    } <= blocked
+    probe = definitions["_BLOCK_OPTIONAL"] + """
+from importlib import import_module
+for name in blocked:
+    try:
+        import_module(name + '.unavailable_child')
+    except ModuleNotFoundError as exc:
+        assert exc.name == name
+    else:
+        raise AssertionError(name)
+assert not blocked.intersection(sys.modules)
+print(json.dumps(sorted(blocked)))
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", probe],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=10,
+        check=True,
+    )
+    assert set(json.loads(result.stdout)) == blocked
+
+
+def test_installed_catalog_exact_profiles_and_metadata(source_verifier):
+    source_verifier.catalog()
+    assert source_verifier.passed == ["offline_catalog_without_checkpoints"]
+    assert not (source_verifier.root / "empty-cache").exists()
+
+
+@pytest.mark.parametrize(
+    "mutation", ["missing_toto", "unexpected_ttm", "wrong_cadence"]
+)
+def test_catalog_refuses_missing_extra_or_drifted_profiles(tmp_path, mutation):
+    from tsfm_lab.models.catalog import catalog_entries, catalog_info
+
+    definitions = runpy.run_path(str(SCRIPT), run_name="catalog_verifier_test")
+    verifier = definitions["Verifier"](Path("tsfm"), tmp_path)
+
+    def metadata(*arguments):
+        if arguments == ("models", "list"):
+            entries = catalog_entries()
+            if mutation == "missing_toto":
+                return [entry for entry in entries if entry["adapter_id"] != "toto_2"]
+            if mutation == "unexpected_ttm":
+                next(entry for entry in entries if entry["adapter_id"] == "ttm_r2")[
+                    "variants"
+                ].append({"variant": "unreviewed"})
+            return entries
+        if arguments[:2] == ("models", "cache"):
+            return []
+        identifier = arguments[2]
+        variant = arguments[4] if len(arguments) == 5 else None
+        value = catalog_info(identifier, variant)
+        if "repository" in value:
+            value["selected_checkpoint"] = dict(value)
+        if mutation == "wrong_cadence" and variant == "90-30-ft-r2.1":
+            value["frequency_policy"] = "any_fixed"
+        return value
+
+    verifier.json_command = metadata
+    with pytest.raises(RuntimeError, match="catalog|TTM"):
+        verifier.catalog()
+
+
+def test_seven_fake_routes_use_real_protocols_without_optional_dependencies(
+    source_verifier,
+):
+    source_verifier.connections()
+    assert source_verifier.passed == [
+        "seven_fake_connections_drafts_and_explanations_without_provider_dependencies"
+    ]
+    state = json.loads(
+        (source_verifier.root / "connection-metadata/connections.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert state["selected"] is None
+    assert len(state["profiles"]) == 7
+    assert all(
+        profile["credential_ref"] is None and profile["model"] is None
+        for profile in state["profiles"]
+    )
+
+
+def test_installed_onboarding_and_guided_baselines_detach_future_records(
+    source_verifier,
+):
+    pytest.importorskip("pyarrow")
+    dependencies = subprocess.run(
+        [sys.executable, "-I", "-c", "import prompt_toolkit, rich, yaml, pyarrow"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=10,
+        check=False,
+    )
+    if dependencies.returncode:
+        pytest.skip("Isolated source fixture requires installed [cli,parquet] extras")
+    # Explicit disposable source; no installed resource lookup or user settings.
+    source = SCRIPT.parents[1] / "src/tsfm_lab/resources/seasonal.csv"
+    source_verifier.onboarding_and_future(source)
+    assert source_verifier.passed == [
+        "onboarding_preferences_guided_historical_and_future_baselines_detached_exports"
+    ]
+    assert (source_verifier.root / "future-input-unavailable.csv").is_file()
+    assert not (source_verifier.root / "future-input.csv").exists()
+    assert (source_verifier.root / "detached-future.parquet").is_file()
+    assert (
+        len(
+            json.loads(
+                (source_verifier.root / "detached-future.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+        )
+        == 4
+    )

@@ -190,6 +190,9 @@ S2 adds model-specific setup; S3 adds reviewed preparation, progress and saved
 outputs; S4 adds separate future forecasting. S5 adds DeepSeek, local Ollama and
 compatible endpoints. S6 adds TTM daily/weekly/native-horizon profiles and TOTO 2
 with its explicit Python restriction. S7 prepares this static documentation.
+S8 adds Windows path/quoting support, portable workers and locking, and a native
+Windows CI configuration. S9 adds exact installed-wheel checks of onboarding,
+historical/future baselines, saved exports and fake assistant routes.
 
 Real pretrained qualification for new behavior, live assistant and native-vault
 checks, native Windows verification and final release qualification remain open.

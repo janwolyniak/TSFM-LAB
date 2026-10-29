@@ -2,6 +2,13 @@
 
 ## 0.3.0 — Unreleased
 
+- Extend distribution audits and exact installed-wheel checks to the expanded
+  catalog, seven fake assistant routes, onboarding preferences, guided historical
+  and future baseline workers, detached exports and old saved records. Keep
+  Windows-only runtime requirements optional under their explicit extra.
+  See [development qualification](docs/v0.3.0-qualification.md) for local evidence
+  and the remaining release gates.
+
 - Add Windows drive-path and terminal quoting support, portable locking/build
   checks and a Linux/macOS/Windows Python 3.11–3.13 CI matrix. Preserve detached
   cross-platform records without changing numerical identities; prevent record-only

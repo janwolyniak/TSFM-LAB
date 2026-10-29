@@ -3,6 +3,12 @@
 For v0.3.0's additional native Windows gate and candidate PowerShell workflow,
 see the [Windows guide](windows.md) and [S8 verification](s8-windows-verification.md).
 The v0.2.0 authorization and CI exception below remain specific to that release.
+The [v0.3.0 development qualification record](v0.3.0-qualification.md) covers the
+current offline implementation. Its artifacts retain package version 0.2.0;
+they are development checks, not replacements for the published v0.2.0 assets.
+Do not tag or publish v0.3.0 until its remaining gates and publication scope are
+resolved. Use the exact `--wheel` argument for every installed verification;
+the verifier now requires byte identity rather than a matching version alone.
 
 A release candidate consists of a reviewed source revision, its source archive
 and wheel, and a verification record that identifies exactly what was exercised.

@@ -85,6 +85,7 @@ def wheel(
             *BUILDER["MODEL_SETUP_MODULES"],
             *BUILDER["GUIDED_MODULES"],
             *BUILDER["FUTURE_MODULES"],
+            *BUILDER["V030_MODULES"],
         ):
             if name == omit_module:
                 continue
@@ -106,11 +107,23 @@ def test_future_dispatch_and_record_modules_are_required_in_the_wheel(tmp_path, 
         BUILDER["inspect_wheel"](path, name="tsfm-lab", version="0.1.0")
 
 
+@pytest.mark.parametrize("module", sorted(BUILDER["V030_MODULES"]))
+def test_new_models_and_portability_modules_are_required_in_the_wheel(tmp_path, module):
+    path = wheel(tmp_path, 'torch; extra == "chronos"', omit_module=module)
+    with pytest.raises(ValueError, match="missing runtime modules"):
+        BUILDER["inspect_wheel"](path, name="tsfm-lab", version="0.1.0")
+
+
 @pytest.mark.parametrize(
     "dependency",
     [
         'torch; sys_platform == "darwin"',
         'torch; sys_platform == "linux" or extra == "chronos"',
+        'torch; sys_platform == "win32"',
+        'torch; extra == "tirex2" or sys_platform == "win32"',
+        'torch; extra == "tirex2" and (sys_platform == "win32"',
+        'torch; extra == "tirex2" and extra == "chronos"',
+        "torch;",
     ],
 )
 def test_conditional_core_runtime_cannot_be_disguised_as_an_extra(tmp_path, dependency):
@@ -130,6 +143,22 @@ def test_declared_extra_does_not_expand_the_numerical_core(tmp_path):
         "NOTICE",
         "licenses/mlstm-kernels-2.0.6.txt",
     ]
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        'sys_platform == "win32" and extra == "tirex2"',
+        'extra == "tirex2" and (sys_platform == "win32")',
+    ],
+)
+def test_windows_dependency_still_requires_explicit_extra(tmp_path, marker):
+    result = BUILDER["inspect_wheel"](
+        wheel(tmp_path, f"triton-windows==3.4.0.post21; {marker}"),
+        name="tsfm-lab",
+        version="0.1.0",
+    )
+    assert result["core_dependencies"] == ["numpy", "pandas"]
 
 
 @pytest.mark.parametrize(

@@ -101,7 +101,9 @@ def candidate(tmp_path):
     ].items():
         metadata += f"Provides-Extra: {extra}\n"
         for requirement in requirements:
-            metadata += f'Requires-Dist: {requirement}; extra == "{extra}"\n'
+            name, separator, marker = requirement.partition(";")
+            selector = f"({marker.strip()}) and " if separator else ""
+            metadata += f'Requires-Dist: {name.strip()}; {selector}extra == "{extra}"\n'
     wheel_files[DIST_INFO + "METADATA"] = metadata.encode()
     source_files["PKG-INFO"] = metadata.encode()
     wheel_files[DIST_INFO + "entry_points.txt"] = (

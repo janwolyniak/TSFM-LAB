@@ -377,11 +377,11 @@ Acceptance:
 
 ### S9: Release qualification
 
-- [ ] A fresh installed application completes onboarding, a manual baseline,
+- [x] A fresh installed application completes onboarding, a manual baseline,
   historical evaluation, and future forecasting with clearly located outputs.
 - [ ] An authorized representative pretrained run covers missing-weight download,
   cached repeat, live stages, cancellation/failure recovery, and artifact reload.
-- [ ] Offline fixtures cover every category, supported option boundary, new
+- [x] Offline fixtures cover every category, supported option boundary, new
   connection, and mode; old configuration/result/finance regressions pass.
 - [ ] Targeted and integrated tests, configured Black/Ruff checks, source/wheel
   contents, installed workflows, and the Linux/macOS/native-Windows Python
@@ -392,6 +392,14 @@ Acceptance:
 - [ ] The final release follows the [release workflow](releasing.md). Versioning,
   package/repository publication, and public documentation deployment occur only
   within their authorized scope and are recorded separately from implementation.
+
+The [development qualification record](v0.3.0-qualification.md) retains the
+executed local evidence and explicit remaining gates. The installed application
+check uses a newly copied isolated environment with existing CLI/Parquet
+dependencies and an ordinary installation of the exact new wheel, without
+resolving or installing additional dependencies. This verifies application
+installation and workflows; it does not establish fresh dependency resolution
+or any unexecuted platform/model combination. S9 remains open as a release gate.
 
 ## Deferred work
 

@@ -77,6 +77,8 @@ forecasting profiles, and [static documentation preparation](docs/public-documen
 These additions are absent from the published 0.2.0 artifacts. Real pretrained,
 live connection, native Windows and final release qualification remain open;
 0.3.0 has not been released and the documentation has not been deployed.
+The [development qualification record](docs/v0.3.0-qualification.md) records
+offline integration checks, installed-wheel workflows and the remaining gates.
 
 The source version is **0.2.0**, distributed through the
 [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
@@ -85,10 +87,13 @@ is separate and has not been performed. See the [release notes](docs/release-v0.
 [release verification record](docs/v0.2.0-verification.md), and
 [release procedure](docs/releasing.md).
 
-Hosted CI is skipped for this release under the owner's explicit exception;
+Hosted CI was skipped for v0.2.0 under the owner's explicit exception;
 local checks and installed-package verification are recorded instead. The CI
 badge tracks `main` and does not certify this release. Live assistant-provider
 and native credential-vault compatibility remain unqualified.
+The v0.3.0 matrix is configured for Linux, macOS and Windows on Python 3.11-3.13;
+account billing currently prevents hosted jobs from starting. The earlier
+release's exception does not qualify v0.3.0.
 
 ## Run the offline example
 
