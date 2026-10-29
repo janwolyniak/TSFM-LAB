@@ -15,6 +15,7 @@
 [TimesFM](docs/timesfm.md) ·
 [TiRex-2](docs/tirex2.md) ·
 [TTM](docs/ttm.md) ·
+[TOTO 2](docs/toto2.md) ·
 [Usage profiles](docs/usage-profiles.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.2.0.md) ·
@@ -23,7 +24,9 @@
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
-Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, and Granite TTM R2 adapters. A separate finance extension evaluates
+Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, Granite TTM R2/R2.1 and TOTO 2 adapters.
+The TTM additions and TOTO 2 remain subject to real inference qualification.
+A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
 
 TSFM Lab extends the smaller, finance-focused model-testing pipeline developed
@@ -38,27 +41,41 @@ to acknowledge the study when using TSFM Lab in your work.
 
 - **Evaluate:** import one regular numeric series from CSV or optional Parquet,
   configure rolling forecasts in YAML, and score pooled/per-lead MAE, RMSE, and MASE.
+- **Forecast ahead:** select separate future mode from the final observation,
+  retain original-unit forecasts and consumed history, and show accuracy as
+  unavailable while future actuals are absent. This is unreleased 0.3.0 behavior;
+  see the [future guide](docs/future-forecasting.md).
 - **Reproduce:** save experiment records, inspect history, compare compatible
   runs, and export aligned predictions as CSV, JSON, or optional Parquet.
 - **Work locally:** use the Python core, scriptable `tsfm` commands, or a
   persistent terminal prompt with inline setup, progress, and cancellation.
   Output stays in terminal scrollback; terminal dependencies remain optional.
-- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, or TTM with
+- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, TTM or TOTO 2 with
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
   experiments, and recorded runtime provenance. TTM uses explicit context profiles
-  and a native-point evaluation task.
+  and a native-point evaluation task. TOTO 2 requires Python 3.12/3.13;
+  configuration/fake-runtime checks do not establish installed or real inference support.
 - **Choose a workflow:** select Generic, Finance, Energy, Temperature, or Weather
   in `/new`. Profile-specific questions preserve declared units and measurement
   semantics; history and reports show the selected usage without changing scores.
 - **Use optional assistance:** describe an experiment for editable setup choices,
-  or request explanations of checked models, results, and finance reports. Four
-  connection routes keep account/model/usage selection explicit; outgoing content
+  or request explanations of checked models, results, and finance reports. Seven
+  development connection routes keep account/model/usage selection explicit; outgoing content
   and execution require review. See the [assistant guide](docs/language-assistance.md).
+  DeepSeek, local Ollama and compatible endpoints are unreleased additions;
+  live provider and native-vault qualification remain pending.
 - **Evaluate price decisions:** derive long/flat/short signals from saved lead-1
   forecasts, require explicit OHLC timing and costs, and inspect verified
   strategy, cash, and buy-and-hold reports without rerunning a model.
 
 ### Release status
+
+The 0.3.0 development checkout adds onboarding/preferences, model-specific setup,
+guided preparation and saved outputs, future mode, additional connections and
+forecasting profiles, and [static documentation preparation](docs/public-documentation.md).
+These additions are absent from the published 0.2.0 artifacts. Real pretrained,
+live connection, native Windows and final release qualification remain open;
+0.3.0 has not been released and the documentation has not been deployed.
 
 The source version is **0.2.0**, distributed through the
 [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
@@ -194,12 +211,16 @@ revisions, safe loading, and saved-result behavior. Small has a bounded real CPU
 check; standard has metadata/API compatibility checks without individual inference.
 The [P2 record](docs/p2-chronos2-verification.md) describes the evidence and limits.
 
-## Use Granite TTM R2
+## Use Granite TTM R2 and R2.1
 
-The optional `ttm_r2` adapter offers three R2 MSE profiles requiring exactly
-512, 1,024, or 1,536 historical observations, with forecasts up to 96 steps.
-It supports regular one-minute through hourly series. Select `/new ttm_r2`
-and a checkpoint profile; guided setup supplies a longer synthetic example.
+The optional `ttm_r2` adapter retains its three original R2 MSE profiles and adds
+512-context native horizons 192/336/720 plus R2.1 weekly 52/16 and daily 90/30.
+Each profile requires its exact context and supported cadence. R2 accepts
+one-minute through hourly series; R2.1 requires fixed `7D` or `1D` respectively.
+The five additions have offline configuration/fake-runtime checks, with real
+inference pending in the [S6 record](docs/s6-ttm-verification.md). Select `/new ttm_r2`
+and a checkpoint profile; guided setup supplies a longer hourly R2 example.
+R2.1 needs your own dataset with the required daily/weekly cadence.
 TTM uses the explicit `native_point` task and records causal external scaling
 plus the native scaler. Existing models retain their actual median or
 deterministic output labels when compared in that task. OHLC reports continue
@@ -209,6 +230,27 @@ See the [TTM guide](docs/ttm.md), [approved contract](docs/ttm-contract.md), and
 [P4 verification record](docs/p4-ttm-verification.md). Install the optional
 runtime with `python -m pip install -c requirements-ttm.txt '.[cli,ttm]'`. Checkpoints are acquired
 separately through an explicit pull.
+
+## Use TOTO 2
+
+The optional `toto_2` adapter curates the 4M TOTO 2 checkpoint on Python 3.12 or
+3.13, with project context bounds 32–2,048 in multiples of 32 and horizon 1–128.
+It uses strict local Safetensors, native median output and recorded causal
+preprocessing. These bounds are integration choices, not upstream architecture
+limits. Python 3.11 retains metadata and saved-result operations but cannot run
+this family. See the [TOTO guide](docs/toto2.md),
+[future YAML example](examples/configurations/toto2-future.yaml) and
+[S6 verification limits](docs/s6-toto2-verification.md). Runtime installation/import
+and real inference remain pending; routine checks use inert weights/fake tensors.
+
+## Prepare static documentation
+
+The [public documentation workflow](docs/public-documentation.md) builds a
+publication-ready static artifact from curated safe text, styles, catalog
+metadata and citation fields. The source repository stays private. An explicit
+HTTPS base URL is a candidate until a host and deployment are confirmed.
+No registration or deployment is part of this local build; see
+[S7 evidence](docs/s7-public-docs-verification.md).
 
 ## Use TiRex-2
 

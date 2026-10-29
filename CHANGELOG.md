@@ -2,6 +2,28 @@
 
 ## 0.3.0 — Unreleased
 
+- Add S7 curated static documentation generation with a metadata-only model
+  matrix, five category examples, separate historical/future semantics, citation
+  guidance, crawl files and consistent canonical/structured metadata. Require an
+  explicit candidate HTTPS base URL and a new output directory. Existing private
+  documentation, datasets and experiments are not copied or deployed. See the
+  [public documentation workflow](docs/public-documentation.md).
+
+- Add S6 TTM R2 native horizons 192/336/720 and R2.1 weekly/daily profiles with
+  strict config/cadence validation and recorded frequency tokens. Add the TOTO 2
+  4M family on Python 3.12/3.13 with explicit project bounds, strict safe loading,
+  native median output and refusal of nonfinite inverse outputs. Old identities
+  remain unchanged. Installation/import, real inference and native-platform
+  qualification for new behavior remain pending; see the
+  [TTM](docs/s6-ttm-verification.md) and [TOTO](docs/s6-toto2-verification.md) records.
+
+- Add S5 DeepSeek, local installed Ollama and explicit compatible endpoint
+  connections through existing reviewed drafting/explanation services. Keep
+  credentials bound to each endpoint, bounded nonstreaming protocols and no
+  automatic cloud fallback or local model pull. Fake-provider checks pass; live
+  routes and native credential-vault qualification remain pending. See the
+  [S5 record](docs/s5-connections-verification.md).
+
 - Add S4 future point forecasting from the final observation in guided/assisted,
   YAML/CLI and separate Python APIs. Enforce native/operational limits, causal
   context, UTC grids and actual output labels; save eight validated artifacts

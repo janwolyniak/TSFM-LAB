@@ -1,8 +1,8 @@
 # v0.3.0 release plan
 
-Status: **S1-S6 implemented and locally verified through 29 October 2026;
+Status: **S1-S6 implemented and S7 prepared and locally verified through 29 October 2026;
 S3 real pretrained qualification remains pending**. S4 closes S2 mode-switching
-acceptance; S7-S9 remain open. S6 real-runtime/inference qualification remains
+acceptance; S8-S9 remain open. S7 public deployment/reachability and S6 real-runtime/inference qualification remain
 pending under the owner's offline-only instruction. Additional connection evidence is retained in the
 [S5 verification record](s5-connections-verification.md).
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
@@ -295,6 +295,11 @@ the distinction between project-code, runtime, and model-weight licenses.
 
 ### S7: Public documentation and GEO
 
+The [static documentation workflow](public-documentation.md) builds only curated
+public-facing inputs. The [S7 verification record](s7-public-docs-verification.md)
+retains local tests, example execution and browser review. The explicit base URL
+is a candidate; host/URL confirmation, deployment and public checks remain separate.
+
 Prepare public, indexable documentation that accurately explains what TSFM-LAB
 does, how to install/use it, and which model workflows are supported. Public
 static documentation is in scope; the forecasting application remains local.
@@ -303,15 +308,15 @@ material does not make a private repository or dataset public.
 
 Acceptance:
 
-- [ ] Documentation includes a clear overview, installation/first-run quickstart,
+- [x] Documentation includes a clear overview, installation/first-run quickstart,
   model/variant capability matrix, examples for all five categories, historical
   versus future semantics, limitations, release notes, and citation information.
-- [ ] Examples match the qualified release; stable URLs, internal links, metadata,
+- [x] Examples match the qualified release; stable URLs, internal links, metadata,
   and any structured data agree with visible content. Core information is text
   accessible without running the forecasting app or an assistant.
-- [ ] A publication-ready static artifact has checked links, crawl/index settings,
+- [x] A publication-ready static artifact has checked links, crawl/index settings,
   and no credentials, private paths, datasets, or unapproved experiment outputs.
-- [ ] The verification record distinguishes locally checked documentation from
+- [x] The verification record distinguishes locally checked documentation from
   authorized publication and subsequent public reachability/indexability checks.
   Search indexing and AI citations are not guaranteed acceptance outcomes.
 
