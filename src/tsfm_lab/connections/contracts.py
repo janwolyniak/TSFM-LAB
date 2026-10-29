@@ -9,6 +9,13 @@ KINDS = {
     "openai_api": ("OpenAI API key", "OpenAI API billing", "api_key"),
     "anthropic_api": ("Anthropic API key", "Anthropic API billing", "api_key"),
     "gemini_api": ("Google Gemini API key", "Gemini API billing", "api_key"),
+    "deepseek_api": ("DeepSeek API key", "DeepSeek API billing", "api_key"),
+    "ollama_local": ("Local Ollama", "Local server; no cloud key or model pull", None),
+    "compatible_api": (
+        "Compatible endpoint",
+        "Selected endpoint billing; review destination",
+        "api_key",
+    ),
 }
 
 _MESSAGES = {

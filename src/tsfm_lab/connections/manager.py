@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from tsfm_lab.connections.contracts import KINDS, ConnectionError, Limits
 from tsfm_lab.connections.credentials import Credentials, SessionStore
+from tsfm_lab.connections.endpoints import EXTRA_KINDS, destination, endpoint_for
 from tsfm_lab.connections.state import StateStore, account, identifier, text
 from tsfm_lab.connections.transport import HTTPXTransport
 from tsfm_lab.connections.vault import NativeVault
@@ -96,6 +97,7 @@ class ConnectionManager:
             "label": profile["label"],
             "provider": KINDS[profile["kind"]][0],
             "usage": KINDS[profile["kind"]][1],
+            "destination": destination(profile),
             "storage": profile["storage"],
             "model": profile["model"],
             "account": copy.deepcopy(profile["account"]),
@@ -127,7 +129,7 @@ class ConnectionManager:
         self._previews.clear()
 
     @staticmethod
-    def _new_profile(kind, label, storage, workspace_id):
+    def _new_profile(kind, label, storage, workspace_id, endpoint=None):
         if kind not in KINDS or storage not in {"session", "vault"}:
             raise ConnectionError("invalid")
         text(label, maximum=80)
@@ -135,7 +137,7 @@ class ConnectionManager:
             text(workspace_id)
             if kind != "anthropic_api":
                 raise ConnectionError("invalid")
-        return {
+        profile = {
             "id": str(uuid4()),
             "kind": kind,
             "label": label,
@@ -146,14 +148,20 @@ class ConnectionManager:
             "workspace_id": workspace_id,
             "registration": None,
         }
+        root = endpoint_for(kind, endpoint)
+        if kind in EXTRA_KINDS:
+            profile["endpoint"] = root
+        return profile
 
     @public_boundary
-    def add_key(self, kind, label, value, *, storage, workspace_id=None):
+    def add_key(self, kind, label, value, *, storage, workspace_id=None, endpoint=None):
         if kind == "chatgpt_plan":
             raise ConnectionError("invalid")
-        credentials = Credentials({"api_key": value})
-        credentials.reveal("api_key")
-        profile = self._new_profile(kind, label, storage, workspace_id)
+        root = endpoint_for(kind, endpoint)
+        credentials = self._key_credentials(kind, value, root)
+        if kind == "ollama_local" and storage != "session":
+            raise ConnectionError("invalid")
+        profile = self._new_profile(kind, label, storage, workspace_id, endpoint)
         self._public_safe(profile, credentials)
         with self._lock, self.state.locked() as state:
             reference = self._reference(state)
@@ -171,6 +179,35 @@ class ConnectionManager:
                     raise
                 raise ConnectionError("storage") from None
         return self.status(profile["id"])
+
+    @staticmethod
+    def _key_credentials(kind, value, root):
+        if kind == "ollama_local":
+            if value is not None:
+                raise ConnectionError("invalid")
+            return Credentials({"local": True, "endpoint": root})
+        values = {"api_key": value}
+        if kind in EXTRA_KINDS:
+            values["endpoint"] = root
+            values["kind"] = kind
+        credentials = Credentials(values)
+        credentials.reveal("api_key")
+        return credentials
+
+    def _credentials(self, profile):
+        if profile["kind"] == "ollama_local":
+            return self._key_credentials(profile["kind"], None, destination(profile))
+        credentials = self._store(profile["storage"]).get(profile["credential_ref"])
+        if not isinstance(credentials, Credentials):
+            raise ConnectionError("credentials")
+        values = credentials.snapshot()
+        if profile["kind"] in EXTRA_KINDS or "endpoint" in values:
+            if (
+                values.get("endpoint") != destination(profile)
+                or values.get("kind") != profile["kind"]
+            ):
+                raise ConnectionError("credentials")
+        return credentials
 
     @public_boundary
     def add_plan(self, label, *, storage):
@@ -213,19 +250,24 @@ class ConnectionManager:
             return not remaining
 
     @public_boundary
-    def replace_key(self, connection_id, value, *, workspace_id=None):
-        credentials = Credentials({"api_key": value})
-        credentials.reveal("api_key")
+    def replace_key(self, connection_id, value, *, workspace_id=None, endpoint=None):
         with self._lock, self.state.locked() as state:
             profile = self._find(state, connection_id)
             if profile["kind"] == "chatgpt_plan":
                 raise ConnectionError("invalid")
+            root = endpoint_for(profile["kind"], endpoint or profile.get("endpoint"))
+            credentials = self._key_credentials(profile["kind"], value, root)
             if workspace_id is not None:
                 text(workspace_id)
                 if profile["kind"] != "anthropic_api":
                     raise ConnectionError("invalid")
             self._public_safe(
-                {"label": profile["label"], "workspace_id": workspace_id}, credentials
+                {
+                    "label": profile["label"],
+                    "workspace_id": workspace_id,
+                    "endpoint": root,
+                },
+                credentials,
             )
             reference = self._reference(state)
             store = self._store(profile["storage"])
@@ -235,6 +277,8 @@ class ConnectionManager:
                 profile.update(
                     credential_ref=reference, model=None, workspace_id=workspace_id
                 )
+                if profile["kind"] in EXTRA_KINDS:
+                    profile["endpoint"] = root
                 self._write(state)
             except BaseException as exc:
                 try:
@@ -349,9 +393,7 @@ class ConnectionManager:
             ):
                 raise ConnectionError("credentials")
             store = self._store(profile["storage"])
-            credentials = store.get(profile["credential_ref"])
-            if not isinstance(credentials, Credentials):
-                raise ConnectionError("credentials")
+            credentials = self._credentials(profile)
             if profile["kind"] == "chatgpt_plan":
                 values = credentials.snapshot()
                 saved = profile["account"]
@@ -421,6 +463,7 @@ class ConnectionManager:
             limits=self.limits,
             cancel=cancel,
             workspace_id=profile["workspace_id"],
+            **({"endpoint": profile["endpoint"]} if "endpoint" in profile else {}),
         )
         current = self.state.read()
         if self._route(self._find(current, profile["id"])) != self._route(profile):
@@ -518,9 +561,7 @@ class ConnectionManager:
         ):
             raise ConnectionError("model")
         # Previewing must inspect secrets locally; _ready could refresh tokens.
-        credentials = self._store(profile["storage"]).get(profile["credential_ref"])
-        if not isinstance(credentials, Credentials):
-            raise ConnectionError("credentials")
+        credentials = self._credentials(profile)
         if profile["kind"] == "chatgpt_plan":
             self._bound(profile["account"], credentials)
         token = str(uuid4())
@@ -532,6 +573,7 @@ class ConnectionManager:
             "workspace_id": profile["workspace_id"],
             "provider": KINDS[profile["kind"]][0],
             "usage": KINDS[profile["kind"]][1],
+            "destination": destination(profile),
             "model": profile["model"],
             "text": text,
             "instructions": instructions,
@@ -614,6 +656,7 @@ class ConnectionManager:
             limits=self.limits,
             cancel=cancel,
             workspace_id=profile["workspace_id"],
+            **({"endpoint": profile["endpoint"]} if "endpoint" in profile else {}),
         )
         self._check_cancel(cancel)
         self._check_preview_state(self.state.read(), pending[1], pending[2])

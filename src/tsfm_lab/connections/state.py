@@ -99,8 +99,21 @@ def validate_state(value):
         raise ConnectionError("state")
     seen, references = set(), set()
     for profile in value["profiles"]:
-        if type(profile) is not dict or set(profile) != _FIELDS:
+        from tsfm_lab.connections.endpoints import EXTRA_KINDS, endpoint_for
+
+        if type(profile) is not dict:
             raise ConnectionError("state")
+        fields = _FIELDS | (
+            {"endpoint"} if profile.get("kind") in EXTRA_KINDS else set()
+        )
+        if set(profile) != fields:
+            raise ConnectionError("state")
+        if profile.get("kind") in EXTRA_KINDS:
+            if (
+                endpoint_for(profile["kind"], profile["endpoint"])
+                != profile["endpoint"]
+            ):
+                raise ConnectionError("state")
         identifier(profile["id"])
         if (
             profile["id"] in seen

@@ -28,6 +28,7 @@ class AssistantFlow:
         self.emit(
             f"Connection {preview['connection_label']} · {preview['provider']} · {preview['usage']}"
         )
+        self.emit(f"Destination {preview.get('destination', preview['provider'])}")
         self.emit(f"Assistant model {preview['model']}")
         if preview["account"]:
             self.emit(

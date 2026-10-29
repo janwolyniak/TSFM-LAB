@@ -1,8 +1,9 @@
 # v0.3.0 release plan
 
-Status: **S1-S4 implemented and locally verified through 29 October 2026;
+Status: **S1-S5 implemented and locally verified through 29 October 2026;
 S3 real pretrained qualification remains pending**. S4 closes S2 mode-switching
-acceptance; S5-S9 remain open.
+acceptance; S6-S9 remain open. Additional connection evidence is retained in the
+[S5 verification record](s5-connections-verification.md).
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
 until verified; see the [S1 verification record](s1-onboarding-verification.md)
 and [S2 verification record](s2-model-setup-verification.md), followed by the
@@ -238,16 +239,16 @@ sharing a request format does not guarantee identical capabilities.
 
 Acceptance:
 
-- [ ] Users can add/select/replace/disconnect each route and select an applicable
+- [x] Users can add/select/replace/disconnect each route and select an applicable
   assistant model. Show destination and local/cloud usage before a request.
-- [ ] Provider/endpoint capabilities govern request fields, streaming completion,
+- [x] Provider/endpoint capabilities govern request fields, streaming completion,
   model discovery, and structured draft validation. Invalid or incomplete model
   output cannot bypass the ordinary configuration and execution boundary.
-- [ ] Endpoint switches never forward another connection's credentials or silently
+- [x] Endpoint switches never forward another connection's credentials or silently
   fall back to paid services. Errors, logs, settings, and exports redact secrets.
-- [ ] Fake-provider checks cover drafting/explanations, malformed/truncated output,
+- [x] Fake-provider checks cover drafting/explanations, malformed/truncated output,
   unsupported fields, authentication/quota failures, timeout, and cancellation.
-- [ ] The local Ollama path uses an already installed local server/model, makes
+- [x] The local Ollama path uses an already installed local server/model, makes
   no implicit cloud fallback or model pull, and needs no cloud key. Manual use
   remains available without any server or assistant connection.
 

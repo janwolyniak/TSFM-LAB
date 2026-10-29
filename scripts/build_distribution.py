@@ -19,6 +19,8 @@ CONNECTION_MODULES = {
     for name in (
         "__init__",
         "contracts",
+        "endpoints",
+        "additional",
         "credentials",
         "identity",
         "manager",

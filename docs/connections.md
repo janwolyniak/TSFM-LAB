@@ -10,10 +10,57 @@ saved records, comparisons, finance reports, and exports work without a connecti
 | OpenAI API key | OpenAI Platform API key | Separate OpenAI API billing |
 | Anthropic API key | Claude Console API key; explicit workspace ID if required | Anthropic API billing |
 | Google Gemini API key | Gemini Developer API key | Gemini API project quotas and billing |
+| DeepSeek API key | DeepSeek API key | DeepSeek API billing |
+| Local Ollama | No cloud key; an installed local server and model | Local compute |
+| Compatible endpoint | A separate key for the explicit API root | Selected endpoint's usage and billing |
 
 These are distinct routes. A limit, error, or unavailable model never changes the
 selected account, provider, model, or billing route automatically. Consumer Claude
 or Google subscription login is not included.
+
+The three additional routes are development features for v0.3.0; they are absent
+from the published v0.2.0 package. See [S5 verification](s5-connections-verification.md).
+
+## Additional destinations
+
+DeepSeek uses its fixed `https://api.deepseek.com` destination, `/models` discovery
+and nonstreaming `/chat/completions`. The compatible route requires an explicit
+API root, such as `https://host.example/v1`, supporting those same two paths and
+the bounded Chat Completions subset: system/user text, `max_tokens` and
+`stream: false`. Tools, reasoning controls, provider-specific structured-output
+fields and streaming are not requested. A successful reply must contain exactly
+one assistant message with `finish_reason: stop`; truncation or tool calls fail.
+Compatibility is tested per protocol, not promised for every server claiming it.
+Both drafting and explanations still pass their ordinary strict local validators.
+
+API roots require HTTPS except for explicit HTTP loopback destinations. Credentials
+in URLs, query strings, fragments, redirects and unsafe path segments are refused.
+The destination appears in model discovery and every outgoing-context review.
+Replacing an endpoint requires entering its own key and discovering/selecting its
+model again; it invalidates pending approvals. Keys are bound to the saved
+destination and route inside protected storage. Editing public endpoint metadata
+cannot forward a previously stored key to another destination.
+
+The Ollama route accepts only an HTTP loopback root (default
+`http://127.0.0.1:11434`). It discovers installed models with `/api/tags`, checks the
+selected model with `/api/show`, and uses nonstreaming `/api/chat` with a bounded
+`num_predict` allowance. Cloud names and remote-model metadata are refused.
+Requests use Ollama's explicit `:local` source suffix; a server must support that
+contract. Unsupported servers fail rather than triggering a retry with an
+unqualified name. Inspection must advertise `completion`; embedding-only models
+cannot be used for assistance. Returned remote metadata is rejected as well.
+Run a trusted local-only Ollama server with cloud access disabled, as described in
+[Ollama's cloud controls](https://docs.ollama.com/faq#how-do-i-disable-ollamas-cloud-features).
+The application never pulls a model, starts a server or changes its configuration.
+Disconnected/missing servers leave manual forecasting available. The nonsecret
+local route can be reused after restart without a vault or cloud key; `replace`
+changes its root. It never falls back to an external provider.
+
+These protocols follow the official [DeepSeek Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/)
+and Ollama [local model discovery](https://docs.ollama.com/api/tags),
+[model inspection](https://docs.ollama.com/api-reference/show-model-details), and
+[chat API](https://docs.ollama.com/api/chat). Real-provider qualification remains
+separate from the retained fake-provider evidence.
 
 ## Setup
 

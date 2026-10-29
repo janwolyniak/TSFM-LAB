@@ -169,10 +169,20 @@ def list_models(
     limits=_DEFAULT_LIMITS,
     cancel=None,
     workspace_id=None,
+    endpoint=None,
 ):
     """Discover only; the caller must choose a model explicitly."""
     try:
         operation = _Operation(limits, cancel)
+        from tsfm_lab.connections.endpoints import EXTRA_KINDS, endpoint_for
+
+        endpoint_for(kind, endpoint)
+        if kind in EXTRA_KINDS:
+            if workspace_id is not None:
+                raise ConnectionError("invalid")
+            from tsfm_lab.connections.additional import list_models as additional_models
+
+            return additional_models(kind, credentials, transport, operation, endpoint)
         headers = _headers(kind, credentials, workspace_id)
         variants = _secret_variants(credentials)
         models, cursors, identifiers = [], set(), set()
@@ -284,13 +294,22 @@ def generate(
     limits=_DEFAULT_LIMITS,
     cancel=None,
     workspace_id=None,
+    endpoint=None,
 ):
     """Make exactly one bounded generation request, accepting only complete text."""
     try:
         operation = _Operation(limits, cancel)
-        headers = _headers(kind, credentials, workspace_id)
+        from tsfm_lab.connections.endpoints import EXTRA_KINDS, endpoint_for
+
+        endpoint_for(kind, endpoint)
+        if kind in EXTRA_KINDS and workspace_id is not None:
+            raise ConnectionError("invalid")
+        headers = (
+            _headers(kind, credentials, workspace_id) if kind not in EXTRA_KINDS else {}
+        )
         variants = _secret_variants(credentials)
-        model = _model_id(model, kind)
+        if kind not in EXTRA_KINDS:
+            model = _model_id(model, kind)
         if (
             type(text) is not str
             or not text.strip()
@@ -302,6 +321,29 @@ def generate(
         if len((text + instructions).encode()) > limits.max_input_bytes:
             raise ConnectionError("bounds")
         _reject_secret(model + instructions + text, variants)
+        if kind in EXTRA_KINDS:
+            from tsfm_lab.connections.additional import generate as additional_generate
+
+            result = additional_generate(
+                kind,
+                credentials,
+                transport,
+                operation,
+                endpoint,
+                model,
+                instructions,
+                text,
+                output_tokens,
+            )
+            if not result.strip() or any(
+                unicodedata.category(c) == "Cc" and c not in "\n\r\t" for c in result
+            ):
+                raise ConnectionError("response")
+            if len(result.encode()) > limits.max_text_bytes:
+                raise ConnectionError("bounds")
+            _reject_secret(result, variants)
+            operation.check()
+            return result
         url, body = _generation_request(kind, model, instructions, text, output_tokens)
         headers["Content-Type"] = "application/json"
         if kind == "chatgpt_plan":
