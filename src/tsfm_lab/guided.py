@@ -118,6 +118,10 @@ def _native_bounds(config, metadata):
         raise ConfigError("Context length is unsupported by the reviewed checkpoint")
     if horizon > metadata["native_prediction_length"]:
         raise ConfigError("Forecast horizon is unsupported by the reviewed checkpoint")
+    if adapter == "toto_2":
+        from tsfm_lab.models.toto2_profile import validate_bounds
+
+        validate_bounds(context, horizon)
     if adapter == "ttm_r2":
         from tsfm_lab.models.ttm_profile import validate_frequency
 
@@ -148,6 +152,12 @@ def _review_data(config):
     validate_workflow_dataset(config.workflow, dataset)
     evaluation_bounds(dataset, config.evaluation)
     validate_settings(config.model, config.evaluation, dataset.frequency)
+    if config.model["adapter_id"] == "toto_2":
+        from tsfm_lab.evaluation.windows import iter_windows
+        from tsfm_lab.models.toto2_profile import validate_values
+
+        for window in iter_windows(dataset, config.evaluation):
+            validate_values(window.request.context_values)
     return canonical_fingerprint(dataset)
 
 

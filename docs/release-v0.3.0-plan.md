@@ -1,8 +1,9 @@
 # v0.3.0 release plan
 
-Status: **S1-S5 implemented and locally verified through 29 October 2026;
+Status: **S1-S6 implemented and locally verified through 29 October 2026;
 S3 real pretrained qualification remains pending**. S4 closes S2 mode-switching
-acceptance; S6-S9 remain open. Additional connection evidence is retained in the
+acceptance; S7-S9 remain open. S6 real-runtime/inference qualification remains
+pending under the owner's offline-only instruction. Additional connection evidence is retained in the
 [S5 verification record](s5-connections-verification.md).
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
 until verified; see the [S1 verification record](s1-onboarding-verification.md)
@@ -259,6 +260,9 @@ Existing-family implementation is retained in the
 TOTO 2 on Python 3.12-3.13 on 29 October 2026; the application keeps Python 3.11
 support. Real inference is deferred at the owner's request: use offline tests
 without installing optional runtimes or downloading weights.
+The [TOTO 2 decision and verification record](s6-toto2-verification.md) retains
+the exact selected checkpoint, compatible published runtime constraints, licenses,
+project bounds, offline contract evidence and remaining qualification gates.
 
 Prioritize additional useful variants of existing families, particularly TTM
 R2.1 daily/weekly profiles and additional supported native horizons. Add **one**
@@ -270,7 +274,7 @@ substituting another family or introducing an environment manager.
 
 Acceptance:
 
-- [ ] A retained decision record selects exact existing-family additions and one
+- [x] A retained decision record selects exact existing-family additions and one
   new family, with official model/config/runtime/license references and explicit
   supported frequency/context/horizon and output semantics.
 - [ ] Runtime compatibility is settled before implementation. Dependency changes
@@ -278,10 +282,10 @@ Acceptance:
 - [ ] Each new integration/profile behavior has contract tests and representative
   bounded real inference evidence; materially different architectures/behaviors
   are not treated as untested larger sizes of an unchanged adapter.
-- [ ] Compatible larger variants retain separate compatibility and real-inference
+- [x] Compatible larger variants retain separate compatibility and real-inference
   status under the existing catalog policy; no inherited accuracy, resource,
   or maintainer-verification claim is fabricated.
-- [ ] New choices work through the wizard, configuration, safe loading, progress,
+- [x] New choices work through the wizard, configuration, safe loading, progress,
   cancellation, original-unit outputs, and saved-result reload/export. Applicable
   future-mode support is verified explicitly; unsupported combinations are shown.
 

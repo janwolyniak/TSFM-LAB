@@ -291,6 +291,10 @@ class _Guide:
 
         def context_limit(value):
             number = _positive(value)
+            if self.fields["adapter"] == "toto_2" and number % 32:
+                raise ConfigError(
+                    "TOTO 2 context length must be a multiple of 32; no padding is applied"
+                )
             if number < low or (high is not None and number > high):
                 raise ConfigError(
                     f"Context length must be between {low} and {high} observations"

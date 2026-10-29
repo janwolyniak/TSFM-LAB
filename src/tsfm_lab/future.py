@@ -23,7 +23,7 @@ from tsfm_lab.models.checkpoints import validate_checkpoint_record
 from tsfm_lab.models.settings import model_settings, validate_settings
 from tsfm_lab.point_tasks import output_statistics, validate_model_frequency
 
-_RAW_FLOAT32 = {"chronos_bolt", "chronos_2", "timesfm_2p5", "tirex_2"}
+_RAW_FLOAT32 = {"chronos_bolt", "chronos_2", "timesfm_2p5", "tirex_2", "toto_2"}
 
 
 def _json(value):
@@ -65,6 +65,10 @@ def prepare_future_request(
         validate_settings(model, spec, dataset.frequency)
     elif adapter_id is not None:
         model_settings(adapter_id)
+        if adapter_id == "toto_2":
+            from tsfm_lab.models.toto2_profile import validate_bounds
+
+            validate_bounds(spec.context_length, spec.horizon)
     try:
         times = dataset.timestamps[-spec.context_length :].as_unit("ns")
         origin = times[-1]

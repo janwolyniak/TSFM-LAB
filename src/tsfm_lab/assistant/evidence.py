@@ -45,6 +45,15 @@ _FORECAST_OPTIONS = (
     "constant_scale",
     "native_scaling",
     "native_inverse",
+    "frequency_token",
+    "decode_block_size",
+    "has_missing_values",
+    "scaler_fallback_min_obs",
+    "quantile_real_cap_k",
+    "normalization",
+    "quantile_policy",
+    "nonfinite_policy",
+    "bounds_policy",
 )
 _VARIANT = (
     "repository",
@@ -58,6 +67,7 @@ _VARIANT = (
     "max_horizon",
     "project_inference_status",
     "verification_label",
+    "frequency_policy",
 )
 _COUNTS = (
     "attempted_windows",
@@ -329,6 +339,7 @@ def _configuration(result):
         "timesfm_2p5",
         "tirex_2",
         "ttm_r2",
+        "toto_2",
     }:
         safe_runtime["forecast_options"] = _pick(
             runtime.get("forecast_options", {}), _FORECAST_OPTIONS

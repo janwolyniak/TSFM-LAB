@@ -300,6 +300,10 @@ def plan_checkpoint(
     """Inspect an offline snapshot first; otherwise review only metadata and config."""
     cp._repository(repository)
     cp._revision(revision)
+    if repository == "Datadog/Toto-2.0-4m":
+        from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+        ensure_supported_python()
     if type(offline) is not bool:
         raise cp.CheckpointError("offline must be a boolean")
     _cancel(should_cancel)
@@ -404,6 +408,10 @@ def prepare_checkpoint(plan, *, progress=None, should_cancel=None):
         raise cp.CheckpointError("Expected a reviewed checkpoint plan")
     cp._repository(plan.repository)
     cp._sha(plan.resolved_revision)
+    if plan.repository == "Datadog/Toto-2.0-4m":
+        from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+        ensure_supported_python()
     path = _snapshot(plan.cache_dir, plan.repository, plan.resolved_revision)
     _cancel(should_cancel)
     _emit(progress, type="stage", stage="cache")

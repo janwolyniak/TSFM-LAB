@@ -16,6 +16,7 @@ _LABELS = {
     "timesfm_2p5": ("TimesFM", "2.5", "size"),
     "tirex_2": ("TiRex", "2", "training_profile"),
     "ttm_r2": ("IBM Granite TTM", "R2 / R2.1", "context_horizon"),
+    "toto_2": ("Datadog TOTO", "2", "size"),
 }
 _PREPROCESSING = {
     "chronos_bolt": "Required native context normalization and inverse; no external transform option.",
@@ -23,6 +24,7 @@ _PREPROCESSING = {
     "timesfm_2p5": "Required native input normalization and inverse; fixed forecast options.",
     "tirex_2": "Fixed native profile preprocessing and inverse to original units; no external transform option.",
     "ttm_r2": "Required context-only population z-score, native std scaling, and inverse to original units.",
+    "toto_2": "Required native causal std/asinh and inverse; context must be a multiple of 32. No imputation, clipping, external transform or context padding.",
 }
 
 
@@ -163,6 +165,10 @@ def validate_settings(
         )
         if evaluation.context_length < period:
             raise ValueError("context_length must contain a complete baseline season")
+    if model["adapter_id"] == "toto_2":
+        from tsfm_lab.models.toto2_profile import validate_bounds
+
+        validate_bounds(evaluation.context_length, evaluation.horizon)
     if frequency is not None:
         fixed_interval(frequency)
         if (

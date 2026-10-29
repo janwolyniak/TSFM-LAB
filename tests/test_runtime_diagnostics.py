@@ -4,10 +4,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from tsfm_lab import runtime_diagnostics as diagnostics
+from tsfm_lab.models import toto2_profile
 from tsfm_lab.models.registry import ADAPTER_PROFILES
 
 VERSIONS = {
@@ -28,6 +30,16 @@ VERSIONS = {
     "tokenizers": "0.22.0",
     "scikit-learn": "1.7.2",
     "filelock": "3.20.3",
+    "toto-2": "2.0.0",
+    "gluonts": "0.16.2",
+    "dd-unit-scaling": "0.1.0",
+    "unit-scaling": "0.3.5",
+    "einops": "0.8.2",
+    "jaxtyping": "0.3.11",
+    "lightning": "2.4.0",
+    "pytorch-lightning": "2.4.0",
+    "scipy": "1.15.3",
+    "matplotlib": "3.10.8",
 }
 
 
@@ -40,6 +52,7 @@ def result_for(adapter):
 
 
 def test_supported_catalog_versions_are_metadata_checks_only(monkeypatch):
+    monkeypatch.setattr(toto2_profile, "sys", SimpleNamespace(version_info=(3, 12)))
     calls = []
 
     def version(name):
@@ -48,7 +61,7 @@ def test_supported_catalog_versions_are_metadata_checks_only(monkeypatch):
 
     monkeypatch.setattr(diagnostics, "version", version)
     entries = diagnostics.runtime_diagnostics()
-    assert len(entries) == 7
+    assert len(entries) == 8
     assert all(entry["status"] == "available" for entry in entries)
     assert len(calls) == len(set(calls))
     assert {entry["adapter_id"] for entry in entries[2:]} == {
@@ -59,7 +72,19 @@ def test_supported_catalog_versions_are_metadata_checks_only(monkeypatch):
     )
 
 
+def test_toto_python_restriction_leaves_other_families_available(monkeypatch):
+    monkeypatch.setattr(toto2_profile, "sys", SimpleNamespace(version_info=(3, 11)))
+    monkeypatch.setattr(diagnostics, "version", VERSIONS.__getitem__)
+    entries = diagnostics.runtime_diagnostics()
+    assert entries[-1]["adapter_id"] == "toto_2"
+    assert entries[-1]["status"] == "incompatible"
+    assert "Python 3.12 or 3.13" in entries[-1]["detail"]
+    assert all(entry["status"] == "available" for entry in entries[:-1])
+
+
 def test_missing_optionals_leave_baselines_available(monkeypatch):
+    monkeypatch.setattr(toto2_profile, "sys", SimpleNamespace(version_info=(3, 12)))
+
     def absent(name):
         raise diagnostics.PackageNotFoundError(name)
 
@@ -138,7 +163,7 @@ def forbidden(*args, **kwargs):
 sys.meta_path.insert(0, Block())
 socket.create_connection = socket.socket = forbidden
 from tsfm_lab.runtime_diagnostics import runtime_diagnostics
-assert len(runtime_diagnostics()) == 7
+assert len(runtime_diagnostics()) == 8
 """
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(

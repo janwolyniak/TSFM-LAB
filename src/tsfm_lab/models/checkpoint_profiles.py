@@ -77,6 +77,24 @@ def _bolt_bounds(context, horizon):
 
 def config_metadata(config: dict) -> dict:
     """Validate runtime-compatible architecture and return native checkpoint fields."""
+    if "num_variate_layers_per_group" in config or "variate_layer_first" in config:
+        from tsfm_lab.models.toto2_profile import (
+            MAX_CONTEXT,
+            MAX_HORIZON,
+            QUANTILES,
+            validate_config,
+        )
+
+        validate_config(config)
+        architecture, pipeline, model_type = _IDENTITIES["toto_2"]
+        return {
+            "architecture": architecture,
+            "pipeline_class": pipeline,
+            "model_type": model_type,
+            "native_context_length": MAX_CONTEXT,
+            "native_prediction_length": MAX_HORIZON,
+            "quantiles": QUANTILES.copy(),
+        }
     if "stack_config" in config or "act_func" in config:
         from tsfm_lab.models.tirex2_profile import QUANTILES, validated_profile
 
@@ -171,6 +189,10 @@ def validate_record_profile(record: dict) -> str:
         validate_native(context, horizon, record["quantiles"])
     elif adapter == "tirex_2":
         from tsfm_lab.models.tirex2_profile import validate_native
+
+        validate_native(context, horizon, record["quantiles"])
+    elif adapter == "toto_2":
+        from tsfm_lab.models.toto2_profile import validate_native
 
         validate_native(context, horizon, record["quantiles"])
     elif (

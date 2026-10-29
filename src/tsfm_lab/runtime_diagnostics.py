@@ -71,6 +71,21 @@ def runtime_diagnostics() -> list[dict]:
                 unreadable.add(package)
     for profile in ADAPTER_PROFILES:
         missing, incompatible = [], []
+        if profile.adapter_id == "toto_2":
+            from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+            try:
+                ensure_supported_python()
+            except ImportError as exc:
+                entries.append(
+                    {
+                        "adapter_id": profile.adapter_id,
+                        "label": profile.display_name,
+                        "status": "incompatible",
+                        "detail": str(exc),
+                    }
+                )
+                continue
         for package, requirement in profile.runtime_requirements:
             found = installed[package]
             if package in unreadable:

@@ -416,6 +416,10 @@ def resolve_checkpoint(
     """Resolve metadata if permitted, then require already-cached exact files."""
     _repository(repository)
     _revision(revision)
+    if repository == "Datadog/Toto-2.0-4m":
+        from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+        ensure_supported_python()
     if type(offline) is not bool:
         raise CheckpointError("offline must be a boolean")
     if offline:
@@ -447,6 +451,10 @@ def pull_checkpoint(
     """Explicitly download a reviewed pinned config, then only safe checkpoint files."""
     _repository(repository)
     _revision(revision)
+    if repository == "Datadog/Toto-2.0-4m":
+        from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+        ensure_supported_python()
     hub = _hub()
     info = hub.HfApi(token=False).model_info(
         repository, revision=revision, files_metadata=True, token=False
