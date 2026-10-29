@@ -1,5 +1,4 @@
 import io
-import os
 import signal
 
 import pytest
@@ -66,7 +65,7 @@ def test_sigint_is_deferred_until_poll_boundary_and_handler_is_restored():
     def poll():
         worker.calls += 1
         if worker.calls == 1:
-            os.kill(os.getpid(), signal.SIGINT)
+            signal.raise_signal(signal.SIGINT)
             assert not worker.cancelled
             return []
         assert worker.cancelled

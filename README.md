@@ -17,6 +17,7 @@
 [TTM](docs/ttm.md) ·
 [TOTO 2](docs/toto2.md) ·
 [Usage profiles](docs/usage-profiles.md) ·
+[Windows target](docs/windows.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
 [Release notes](docs/release-v0.2.0.md) ·
 [Research origin and citation](#research-origin-and-citation) ·

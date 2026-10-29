@@ -404,13 +404,13 @@ def test_file_limit_applies_before_read_decode_and_before_any_write(
 
 
 @pytest.mark.parametrize("kind", ["regular", "symlink", "dangling_symlink"])
-def test_existing_destinations_are_never_replaced(payload, tmp_path, kind):
+def test_existing_destinations_are_never_replaced(payload, tmp_path, kind, symlinks):
     target, source = tmp_path / "target.json", tmp_path / "user.txt"
     source.write_text("user-owned")
     if kind == "regular":
         target.write_text("existing")
     else:
-        target.symlink_to(source if kind == "symlink" else tmp_path / "missing")
+        symlinks(target, source if kind == "symlink" else tmp_path / "missing")
     with pytest.raises(FileExistsError):
         reports.save_report(reports.seal_report(payload), target)
     assert source.read_text() == "user-owned"

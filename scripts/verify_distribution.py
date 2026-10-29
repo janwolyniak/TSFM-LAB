@@ -1,6 +1,6 @@
 """Verify an installed wheel in isolation; never install or download dependencies.
 
-Run with the clean environment's bin directory on PATH:
+Run with the clean environment's bin (Windows: Scripts) directory on PATH:
     python -I scripts/verify_distribution.py
 """
 
@@ -155,7 +155,7 @@ def installed_environment(wheel=None):
         not direct or not json.loads(direct).get("dir_info", {}).get("editable", False),
         "Editable installations do not verify wheel contents",
     )
-    expected = Path(sys.executable).parent / "tsfm"
+    expected = Path(sys.executable).parent / ("tsfm.exe" if os.name == "nt" else "tsfm")
     discovered = shutil.which("tsfm")
     require(
         expected.is_file() and os.access(expected, os.X_OK),
@@ -164,7 +164,7 @@ def installed_environment(wheel=None):
     )
     require(
         discovered is not None and Path(discovered).resolve() == expected.resolve(),
-        "PATH selects a different tsfm executable; prepend this environment's bin directory",
+        "PATH selects a different tsfm executable; prepend this environment's executable directory",
         expected_launcher=str(expected),
         discovered_launcher=discovered,
     )

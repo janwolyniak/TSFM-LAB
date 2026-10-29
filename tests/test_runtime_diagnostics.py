@@ -13,6 +13,7 @@ from tsfm_lab.models import toto2_profile
 from tsfm_lab.models.registry import ADAPTER_PROFILES
 
 VERSIONS = {
+    "triton-windows": "3.4.0.post21",
     "chronos-forecasting": "2.2.0",
     "torch": "2.8.0+cpu",
     "transformers": "4.56.0",

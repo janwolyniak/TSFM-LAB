@@ -1,5 +1,9 @@
 # Building, verifying, and publishing v0.2.0
 
+For v0.3.0's additional native Windows gate and candidate PowerShell workflow,
+see the [Windows guide](windows.md) and [S8 verification](s8-windows-verification.md).
+The v0.2.0 authorization and CI exception below remain specific to that release.
+
 A release candidate consists of a reviewed source revision, its source archive
 and wheel, and a verification record that identifies exactly what was exercised.
 On 27 October 2026, the owner authorized finalizing **v0.2.0**, its Git tag, and

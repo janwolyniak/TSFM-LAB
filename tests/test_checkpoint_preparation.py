@@ -452,7 +452,7 @@ def test_cancellation_is_checked_inside_checkpoint_hashing(tmp_path):
     assert checks == 2
 
 
-def test_hub_blob_name_checks_detect_corruption_without_a_prior_receipt(hub):
+def test_hub_blob_name_checks_detect_corruption_without_a_prior_receipt(hub, symlinks):
     path = hub.snapshot()
     blobs = path.parent.parent / "blobs"
     path.mkdir(parents=True)
@@ -465,7 +465,7 @@ def test_hub_blob_name_checks_detect_corruption_without_a_prior_receipt(hub):
         )
         blob = blobs / digest
         blob.write_bytes(b"changed bytes" if name == "model.safetensors" else raw)
-        (path / name).symlink_to(blob)
+        symlinks(path / name, blob)
     with pytest.raises(cp.CheckpointError, match="blob hash mismatch"):
         prep.plan_checkpoint(REPOSITORY, SHA, cache_dir=hub.root, offline=True)
     assert hub.events == []

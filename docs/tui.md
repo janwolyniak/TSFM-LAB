@@ -1,5 +1,8 @@
 # Interactive terminal
 
+The v0.3.0 [Windows candidate guide](windows.md) documents native PowerShell
+paths, backslash quoting and the still-pending Windows Terminal qualification.
+
 TSFM opens a persistent local command prompt inside your terminal. Commands,
 questions, progress, and results form one transcript in normal terminal scrollback.
 It uses the terminal's background and a small amount of accent color. There are

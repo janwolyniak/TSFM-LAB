@@ -1,6 +1,5 @@
 """A persistent local command prompt with inline results and guided setup."""
 
-import shlex
 from contextlib import ExitStack
 from difflib import get_close_matches
 from importlib.resources import as_file, files
@@ -11,6 +10,8 @@ from rich.text import Text
 
 from tsfm_lab import __version__
 from tsfm_lab.config import ConfigError, load_run_config
+from tsfm_lab.local_paths import active_path_text
+from tsfm_lab.repl.arguments import split_arguments
 from tsfm_lab.repl.progress import execute, execute_guided
 from tsfm_lab.repl.prompt import COMMANDS, TerminalInput
 from tsfm_lab.repl.records import RecordCommands
@@ -33,6 +34,8 @@ class TerminalSession:
     ):
         self.preference_store = preference_store
         self.preferences = preference_store.load() if preference_store else None
+        if workspace is not None:
+            active_path_text(str(workspace))
         self._workspace_override = (
             Path(workspace).expanduser().resolve() if workspace is not None else None
         )
@@ -108,7 +111,7 @@ class TerminalSession:
         if not line.strip():
             return
         try:
-            words = shlex.split(line)
+            words = split_arguments(line)
             command, arguments = words[0], words[1:]
             command = command if command.startswith("/") else f"/{command}"
             handlers = {
@@ -497,6 +500,7 @@ class TerminalSession:
         if arguments:
             if not arguments[0].strip() or "://" in arguments[0]:
                 raise ConfigError("Enter a local workspace directory")
+            active_path_text(arguments[0])
             self.workspace = Path(arguments[0]).expanduser().resolve()
             self.records.workspace = self.workspace
             self.known_ids = []

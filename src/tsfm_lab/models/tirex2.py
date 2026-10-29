@@ -23,6 +23,7 @@ from tsfm_lab.models.checkpoints import (
     verify_checkpoint,
 )
 from tsfm_lab.models.tirex2_profile import forecast_options_for_record
+from tsfm_lab.platform_runtime import platform_requirements
 
 _DISTRIBUTIONS = (
     "tirex-2",
@@ -40,6 +41,11 @@ _DISTRIBUTIONS = (
 def _runtime():
     try:
         installed = {name: version(name) for name in _DISTRIBUTIONS}
+        for name, requirement in platform_requirements("tirex_2"):
+            if version(name) != requirement.removeprefix("=="):
+                raise ImportError(
+                    "TiRex-2 on Windows requires the candidate pin in requirements-tirex2.txt; native inference remains unqualified"
+                )
         from packaging.version import Version
 
         exact = {
@@ -177,7 +183,11 @@ class TiRex2:
         }
 
     def environment_metadata(self):
-        return {name: version(name) for name in _DISTRIBUTIONS}
+        names = (
+            *_DISTRIBUTIONS,
+            *(name for name, _ in platform_requirements("tirex_2")),
+        )
+        return {name: version(name) for name in names}
 
     def validate(self, spec: ForecastSettings):
         if not 0 < spec.context_length <= self._max_context:

@@ -55,6 +55,10 @@ class GuidedRunPlan:
         local_checkpoint_sha256=None,
         source_sha256=None,
     ):
+        if is_future(config) and config._record_only:
+            raise ConfigError(
+                "Saved future configurations are read-only; load a native configuration before planning"
+            )
         object.__setattr__(self, "_config", copy.deepcopy(config))
         object.__setattr__(self, "checkpoint", checkpoint)
         object.__setattr__(self, "dataset_sha256", dataset_sha256)
@@ -171,6 +175,10 @@ def review_guided(config, *, offline=False, progress=None, should_cancel=None):
         raise ConfigError(
             "Guided preparation requires a validated experiment configuration"
         )
+    if is_future(config) and config._record_only:
+        raise ConfigError(
+            "Saved future configurations are read-only; load a native configuration before review"
+        )
     _cancel(should_cancel)
     snapshot = copy.deepcopy(config)
     fingerprint = _review_data(snapshot)
@@ -274,6 +282,10 @@ def execute_guided(
     if not isinstance(plan, GuidedRunPlan):
         raise ConfigError("Expected a reviewed guided run plan")
     config = plan.config
+    if is_future(config) and config._record_only:
+        raise ConfigError(
+            "Saved future configurations are read-only; load a native configuration before running"
+        )
     record = PreparationRecord(config, plan, operation_id)
 
     def stage(value):

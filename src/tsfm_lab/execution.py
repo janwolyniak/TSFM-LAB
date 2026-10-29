@@ -145,6 +145,10 @@ class ManagedRun:
     def __init__(self, config: ExperimentConfig, grace_seconds=3.0, *, _target=None):
         if not isinstance(config, (ExperimentConfig, FutureForecastConfig)):
             raise ValueError("ManagedRun requires a validated ExperimentConfig")
+        if isinstance(config, FutureForecastConfig) and config._record_only:
+            raise ValueError(
+                "Saved future configurations are read-only; load a native configuration before starting a worker"
+            )
         if (
             isinstance(grace_seconds, bool)
             or not isinstance(grace_seconds, (int, float))
@@ -178,6 +182,10 @@ class ManagedRun:
     def start(self) -> None:
         if self._started or self._closed:
             raise RuntimeError("A managed run can only be started once")
+        if isinstance(self.config, FutureForecastConfig) and self.config._record_only:
+            raise ValueError(
+                "Saved future configurations are read-only; load a native configuration before starting a worker"
+            )
         try:
             with tempfile.NamedTemporaryFile(
                 mode="ab", prefix="tsfm-run-", suffix=".log", delete=False

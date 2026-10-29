@@ -39,6 +39,10 @@ def run_future_config(
     """Validate before model access; publish a complete future record last."""
     if not isinstance(config, FutureForecastConfig):
         raise ConfigError("Future execution requires FutureForecastConfig")
+    if config._record_only:
+        raise ConfigError(
+            "Saved future configurations are read-only; load a native configuration before running"
+        )
 
     def check_cancel():
         if should_cancel and should_cancel():

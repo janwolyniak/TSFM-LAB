@@ -53,7 +53,8 @@ def cooperative_worker(config, events, cancellation):
 
 
 def unresponsive_worker(config, events, cancellation):
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    if os.name != "nt":
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
     _record(config, events)
     time.sleep(60)
 
@@ -182,6 +183,10 @@ def test_cooperative_cancellation_retains_cancelled_record(config_factory):
         worker.close()
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="POSIX child signal delivery; Windows console event is tested separately",
+)
 def test_worker_ignores_sigint_until_controller_requests_event_cancellation(
     config_factory,
 ):
@@ -220,7 +225,7 @@ def test_worker_ignores_sigint_until_controller_requests_event_cancellation(
         worker.close()
 
 
-def test_unresponsive_worker_is_terminated_then_killed_without_false_completion(
+def test_unresponsive_worker_is_forcibly_stopped_and_reaped_without_false_completion(
     config_factory,
 ):
     config = load_config(config_factory())

@@ -1,7 +1,6 @@
 """Small line editor: completion and history without taking over the screen."""
 
 import os
-import shlex
 from collections.abc import Callable
 
 from prompt_toolkit import PromptSession
@@ -21,6 +20,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 
 from tsfm_lab.models.catalog import catalog_entries
+from tsfm_lab.repl.arguments import quote_argument, split_arguments
 from tsfm_lab.repl.text import literal
 
 COMMANDS = {
@@ -75,11 +75,11 @@ class CommandCompleter(Completer):
             parts = line.split(maxsplit=count)
             raw = parts[count] if len(parts) > count else ""
             try:
-                parsed = shlex.split(raw)
+                parsed = split_arguments(raw)
             except ValueError:
                 quote = raw[0] if raw.startswith(("'", '"')) else ""
                 try:
-                    parsed = shlex.split(raw + quote)
+                    parsed = split_arguments(raw + quote)
                 except ValueError:
                     return
             path = parsed[0] if parsed else ""
@@ -90,7 +90,7 @@ class CommandCompleter(Completer):
                     path[: len(path) + completion.start_position] + completion.text
                 )
                 yield Completion(
-                    shlex.quote(candidate), -len(raw), display=completion.display
+                    quote_argument(candidate), -len(raw), display=completion.display
                 )
 
 

@@ -46,6 +46,7 @@ tirex2 = [
     "mlstm-kernels==2.0.6",
     "ninja==1.13.2",
     "narwhals==2.13.0",
+    "triton-windows==3.4.0.post21; sys_platform == 'win32'",
 ]
 ttm = [
     "granite-tsfm==0.3.4",

@@ -19,7 +19,9 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "verify_distribution.
 def bare_environment(tmp_path):
     environment = tmp_path / "bare-environment"
     venv.EnvBuilder(with_pip=False).create(environment)
-    return environment, environment / "bin" / "python"
+    return environment, environment / (
+        "Scripts/python.exe" if os.name == "nt" else "bin/python"
+    )
 
 
 def invoke(interpreter, *, isolated=True, cwd=None):
@@ -116,16 +118,20 @@ def test_finance_stage_runs_real_commands_without_model_imports_or_original_sour
     pytest.importorskip("typer")
     definitions = runpy.run_path(str(SCRIPT), run_name="finance_verifier_test")
     source = SCRIPT.parents[1] / "src"
-    launcher = tmp_path / "tsfm"
+    launcher = tmp_path / "fixture_launcher.py"
     # The test explicitly selects source; the installed verifier itself forbids this.
     launcher.write_text(
-        f"#!{sys.executable}\n"
-        + definitions["_BLOCK_OPTIONAL"]
+        definitions["_BLOCK_OPTIONAL"]
         + f"\nsys.path.insert(0, {str(source)!r})\n"
         + "import runpy\nrunpy.run_module('tsfm_lab', run_name='__main__')\n"
     )
-    launcher.chmod(0o755)
     verifier = definitions["Verifier"](launcher, tmp_path)
+    real_command = verifier.command
+
+    def fixture_command(*arguments, expected=0):
+        return real_command(str(launcher), *arguments, expected=expected, python=True)
+
+    verifier.command = fixture_command
     verifier.finance()
     assert verifier.passed == [
         "finance_backtest_self_contained_reload_export_and_overwrite_refusal"
@@ -146,7 +152,8 @@ def installed_probe(tmp_path, monkeypatch):
     package.mkdir(parents=True)
     origin = package / "__init__.py"
     origin.write_text('__version__ = "0.1.0"\n')
-    launcher = environment / "bin/tsfm"
+    binaries = environment / ("Scripts" if os.name == "nt" else "bin")
+    launcher = binaries / ("tsfm.exe" if os.name == "nt" else "tsfm")
     launcher.parent.mkdir()
     launcher.write_text("fixture")
     launcher.chmod(0o755)
@@ -171,7 +178,7 @@ def installed_probe(tmp_path, monkeypatch):
             flags=SimpleNamespace(isolated=1),
             prefix=str(environment),
             base_prefix="/base",
-            executable=str(environment / "bin/python"),
+            executable=str(binaries / ("python.exe" if os.name == "nt" else "python")),
             version=sys.version,
         ),
     )

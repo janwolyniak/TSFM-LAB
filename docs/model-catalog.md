@@ -1,5 +1,9 @@
 # Model catalog and project verification
 
+Platform availability is separate from adapter compatibility and checkpoint
+inference evidence. See the [native Windows candidate matrix](windows.md);
+all optional Windows runtimes still require native qualification.
+
 The catalog separates an adapter family from its curated checkpoint variants.
 An adapter defines the supported runtime, input/output contract, and limits;
 a variant identifies particular upstream weights. A larger variant can be

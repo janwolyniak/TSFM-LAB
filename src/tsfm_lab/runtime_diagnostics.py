@@ -4,6 +4,7 @@ import re
 from importlib.metadata import PackageNotFoundError, version
 
 from tsfm_lab.models.registry import ADAPTER_PROFILES
+from tsfm_lab.platform_runtime import platform_requirements
 
 
 def _release(value: str) -> tuple[int, ...]:
@@ -22,7 +23,9 @@ def _matches(installed: str, requirement: str) -> bool:
     try:
         release = _release(installed)
         for clause in requirement.split(","):
-            match = re.fullmatch(r"(==|>=|<)([0-9]+(?:\.[0-9]+)*)", clause)
+            match = re.fullmatch(
+                r"(==|>=|<)([0-9]+(?:\.[0-9]+)*(?:\.post[0-9]+)?)", clause
+            )
             if match is None:
                 return False
             operator, wanted = match.groups()
@@ -59,7 +62,9 @@ def runtime_diagnostics() -> list[dict]:
     installed = {}
     unreadable = set()
     for profile in ADAPTER_PROFILES:
-        for package, _ in profile.runtime_requirements:
+        for package, _ in profile.runtime_requirements + platform_requirements(
+            profile.adapter_id
+        ):
             if package in installed:
                 continue
             try:
@@ -86,7 +91,10 @@ def runtime_diagnostics() -> list[dict]:
                     }
                 )
                 continue
-        for package, requirement in profile.runtime_requirements:
+        for (
+            package,
+            requirement,
+        ) in profile.runtime_requirements + platform_requirements(profile.adapter_id):
             found = installed[package]
             if package in unreadable:
                 incompatible.append(f"{package}: cannot read package metadata")

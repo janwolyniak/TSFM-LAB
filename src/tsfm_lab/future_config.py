@@ -2,7 +2,8 @@
 
 import copy
 from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import field as dataclass_field
+from pathlib import Path, PurePath
 from typing import Any
 
 import pandas as pd
@@ -65,10 +66,11 @@ class FutureForecastConfig:
     model: dict[str, Any]
     forecast: FutureForecastSpec
     runtime: dict[str, Any]
-    output_directory: Path
+    output_directory: PurePath
     source_yaml: str
     source_path: Path
     workflow: dict[str, Any] | None = None
+    _record_only: bool = dataclass_field(default=False, repr=False, compare=False)
 
     @property
     def entered_origin(self):
@@ -101,7 +103,9 @@ class FutureForecastConfig:
         }
 
 
-def _validate_future(raw, source_path: Path, source_yaml: str) -> FutureForecastConfig:
+def _validate_future(
+    raw, source_path: Path, source_yaml: str, *, _path_resolver=_local_path
+) -> FutureForecastConfig:
     required = {"schema_version", "mode", "model", "dataset", "forecast"}
     fields = _mapping(
         raw,
@@ -116,7 +120,7 @@ def _validate_future(raw, source_path: Path, source_yaml: str) -> FutureForecast
         raise ConfigError(
             "Future configuration requires schema_version 2 and mode future_forecast"
         )
-    model = _model(fields["model"], source_path.parent)
+    model = _model(fields["model"], source_path.parent, _path_resolver=_path_resolver)
     values = _mapping(
         fields["forecast"],
         "forecast",
@@ -136,7 +140,9 @@ def _validate_future(raw, source_path: Path, source_yaml: str) -> FutureForecast
     forecast = FutureForecastSpec(
         **{"point_statistic": settings.supported_tasks[0], **values}
     )
-    dataset = _dataset(fields["dataset"], source_path.parent)
+    dataset = _dataset(
+        fields["dataset"], source_path.parent, _path_resolver=_path_resolver
+    )
     validate_settings(model, forecast, dataset["frequency"])
     workflow = normalize_workflow(fields.get("workflow"))
     validate_workflow_units(workflow, dataset["units"])
@@ -147,12 +153,13 @@ def _validate_future(raw, source_path: Path, source_yaml: str) -> FutureForecast
         model=model,
         forecast=forecast,
         runtime=_runtime(fields.get("runtime", {}), model),
-        output_directory=_local_path(
+        output_directory=_path_resolver(
             output.get("directory", "./results"), "output.directory", source_path.parent
         ),
         source_yaml=source_yaml,
         source_path=source_path,
         workflow=workflow,
+        _record_only=_path_resolver is not _local_path,
     )
 
 
@@ -175,7 +182,7 @@ def load_future_config(path: str | Path) -> FutureForecastConfig:
 
 
 def future_config_from_mapping(
-    mapping: dict, *, base_directory: Path
+    mapping: dict, *, base_directory: Path, _path_resolver=_local_path
 ) -> FutureForecastConfig:
     """Validate future Python/manual choices through the same strict YAML boundary."""
     try:
@@ -184,7 +191,10 @@ def future_config_from_mapping(
         if len(text.encode("utf-8")) > MAX_CONFIG_BYTES:
             raise ConfigError("Configuration exceeds the 1 MiB limit")
         return _validate_future(
-            yaml.load(text, Loader=_ConfigLoader), directory / "interactive.yaml", text
+            yaml.load(text, Loader=_ConfigLoader),
+            directory / "interactive.yaml",
+            text,
+            _path_resolver=_path_resolver,
         )
     except ConfigError:
         raise

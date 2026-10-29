@@ -113,9 +113,14 @@ def resolved_configuration(config, origin):
 
 def validate_configuration(configuration):
     from tsfm_lab.future_config import future_config_from_mapping
+    from tsfm_lab.local_paths import recorded_path_resolver
 
     try:
-        config = future_config_from_mapping(configuration, base_directory=Path.cwd())
+        config = future_config_from_mapping(
+            configuration,
+            base_directory=Path.cwd(),
+            _path_resolver=recorded_path_resolver,
+        )
         if config.forecast.origin == "latest":
             raise StoreError("Saved future configuration requires a concrete origin")
         if config.resolved_dict() != configuration:
@@ -411,6 +416,9 @@ def _provenance(result, config):
             for name, _ in adapter_profile(model["adapter_id"]).runtime_requirements
         }
     )
+    from tsfm_lab.platform_runtime import optional_provenance_packages
+
+    packages |= optional_provenance_packages(model["adapter_id"])
     object_fields(
         environment,
         {"python", "numpy", "pandas", "os", "machine"},

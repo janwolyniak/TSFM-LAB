@@ -1,5 +1,11 @@
 # TiRex-2 checkpoints and inference
 
+Native Windows remains a [candidate integration](windows.md). The Windows-only
+`triton-windows==3.4.0.post21` constraint is matched to Torch 2.8; diagnostics and
+loading require it on Windows, while old and cross-platform records remain
+readable without that package. Native imports, eager CPU inference and cache
+replay have not been qualified.
+
 The optional `tirex_2` adapter evaluates one regular univariate series on CPU,
 using float32 model arithmetic and the native median quantile. Four curated
 repositories share the 82,501,744-parameter architecture. Their training and

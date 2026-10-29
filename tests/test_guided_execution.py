@@ -33,7 +33,8 @@ def collect(worker, *, until=None, timeout=10):
 
 
 def hanging_before_core(config, events, cancellation):
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    if os.name != "nt":
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
     events.send({"type": "stage", "stage": "downloading", "run_id": None})
     while True:
         time.sleep(0.05)

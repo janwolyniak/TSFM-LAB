@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
+from tsfm_lab.local_paths import checkpoint_record_path
 from tsfm_lab.models.catalog import CURATED_REPOSITORIES
 from tsfm_lab.models.checkpoint_profiles import (
     checkpoint_adapter,
@@ -241,12 +242,11 @@ def validate_checkpoint_record(record: dict) -> dict:
         }
         if record["schema_version"] == 2:
             fields.add("point_forecast")
-        if set(record) != fields or ".." in Path(record["path"]).parts:
+        if set(record) != fields:
             raise CheckpointError("Invalid checkpoint record fields or path")
-        if (
-            record["source"] not in {"local", "huggingface"}
-            or not isinstance(record["path"], str)
-            or not Path(record["path"]).is_absolute()
+        path = checkpoint_record_path(record["path"])
+        if record["source"] not in {"local", "huggingface"} or not isinstance(
+            record["path"], str
         ):
             raise CheckpointError(
                 "Checkpoint record requires an absolute path and known source"
@@ -261,12 +261,15 @@ def validate_checkpoint_record(record: dict) -> dict:
             _repository(record["repository"])
             _revision(record["requested_revision"])
             _sha(record["resolved_revision"])
-            _snapshot_path(
-                Path(record["path"]),
-                record["repository"],
-                record["resolved_revision"],
-                check_directory=False,
-            )
+            if (
+                path.name != record["resolved_revision"]
+                or path.parent.name != "snapshots"
+                or path.parent.parent.name
+                != "models--" + record["repository"].replace("/", "--")
+            ):
+                raise CheckpointError(
+                    "Cached snapshot path does not match repository and exact SHA"
+                )
         files = record["files"]
         if not isinstance(files, dict) or not _REQUIRED <= set(files) <= _FILES:
             raise CheckpointError("Checkpoint record has invalid consumed files")

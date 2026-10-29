@@ -233,12 +233,12 @@ def test_missing_or_invalid_json_config_is_rejected(tmp_path):
             inspect_local_checkpoint(path)
 
 
-def test_local_consumed_symlink_cannot_escape_selected_directory(tmp_path):
+def test_local_consumed_symlink_cannot_escape_selected_directory(tmp_path, symlinks):
     path = write_checkpoint(tmp_path / "checkpoint")
     outside = tmp_path / "outside.safetensors"
     outside.write_bytes(b"outside")
     (path / "model.safetensors").unlink()
-    (path / "model.safetensors").symlink_to(outside)
+    symlinks(path / "model.safetensors", outside)
     with pytest.raises(CheckpointError, match="escapes"):
         inspect_local_checkpoint(path)
 
@@ -403,7 +403,7 @@ def test_unknown_repositories_fail_before_optional_imports(monkeypatch, reposito
 
 
 def test_hub_blob_symlinks_are_supported_but_arbitrary_external_files_are_not(
-    hub, tmp_path
+    hub, tmp_path, symlinks
 ):
     path = write_checkpoint(hub.path())
     blobs = path.parent.parent / "blobs"
@@ -413,13 +413,13 @@ def test_hub_blob_symlinks_are_supported_but_arbitrary_external_files_are_not(
         target = blobs / hashlib.sha256(contents).hexdigest()
         target.write_bytes(contents)
         (path / name).unlink()
-        (path / name).symlink_to(target)
+        symlinks(path / name, target)
     checkpoint = resolve_checkpoint(REPOSITORY, SHA, cache_dir=hub.root)
     assert verify_checkpoint(checkpoint).fingerprint == checkpoint.fingerprint
     (path / "model.safetensors").unlink()
     outside = tmp_path / "outside"
     outside.write_bytes(b"outside")
-    (path / "model.safetensors").symlink_to(outside)
+    symlinks(path / "model.safetensors", outside)
     with pytest.raises(CheckpointError, match="escapes"):
         resolve_checkpoint(REPOSITORY, SHA, cache_dir=hub.root)
 
@@ -494,13 +494,13 @@ def test_pull_rejects_loader_directives_before_downloading_weights(hub, directiv
 )
 @pytest.mark.parametrize("symlink", [False, True])
 def test_added_peft_sidecars_invalidate_checkpoint_even_if_consumed_bytes_match(
-    tmp_path, sidecar, symlink
+    tmp_path, sidecar, symlink, symlinks
 ):
     path = write_checkpoint(tmp_path / "checkpoint")
     checkpoint = inspect_local_checkpoint(path)
     before = copy.deepcopy(checkpoint.record())
     if symlink:
-        (path / sidecar).symlink_to(tmp_path / "unavailable-sidecar")
+        symlinks(path / sidecar, tmp_path / "unavailable-sidecar")
     else:
         (path / sidecar).write_bytes(b"unrecorded adapter")
     assert checkpoint.record() == before

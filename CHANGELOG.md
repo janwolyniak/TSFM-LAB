@@ -2,6 +2,12 @@
 
 ## 0.3.0 — Unreleased
 
+- Add Windows drive-path and terminal quoting support, portable locking/build
+  checks and a Linux/macOS/Windows Python 3.11–3.13 CI matrix. Preserve detached
+  cross-platform records without changing numerical identities; prevent record-only
+  configurations from starting work. Native Windows qualification remains pending.
+  See [Windows support and limits](docs/windows.md).
+
 - Add S7 curated static documentation generation with a metadata-only model
   matrix, five category examples, separate historical/future semantics, citation
   guidance, crawl files and consistent canonical/structured metadata. Require an

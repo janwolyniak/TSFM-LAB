@@ -2,7 +2,8 @@
 
 Status: **S1-S6 implemented and S7 prepared and locally verified through 29 October 2026;
 S3 real pretrained qualification remains pending**. S4 closes S2 mode-switching
-acceptance; S8-S9 remain open. S7 public deployment/reachability and S6 real-runtime/inference qualification remain
+acceptance. S8 portability is implemented with local evidence; native acceptance
+and S9 remain open. S7 public deployment/reachability and S6 real-runtime/inference qualification remain
 pending under the owner's offline-only instruction. Additional connection evidence is retained in the
 [S5 verification record](s5-connections-verification.md).
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
@@ -311,7 +312,7 @@ Acceptance:
 - [x] Documentation includes a clear overview, installation/first-run quickstart,
   model/variant capability matrix, examples for all five categories, historical
   versus future semantics, limitations, release notes, and citation information.
-- [x] Examples match the qualified release; stable URLs, internal links, metadata,
+- [ ] Examples match the qualified release; stable URLs, internal links, metadata,
   and any structured data agree with visible content. Core information is text
   accessible without running the forecasting app or an assistant.
 - [x] A publication-ready static artifact has checked links, crawl/index settings,
@@ -325,6 +326,12 @@ substitute for crawlable, useful documentation. Public checks follow publication
 authorization under the existing contribution workflow.
 
 ### S8: Native Windows compatibility
+
+The [Windows guide and support matrix](windows.md) and
+[S8 verification record](s8-windows-verification.md) retain portability changes,
+local checks, native-only test cases and remaining gates. The nine-job matrix is
+configured; hosted checks are billing-blocked. Public documentation examples,
+links and metadata pass locally, with final qualified-release alignment pending S9.
 
 Target native Windows 11 x64 with Python 3.11-3.13, alongside the existing Linux
 and macOS targets. Users must be able to install and run the application from
@@ -359,7 +366,7 @@ Acceptance:
   including protected credential persistence or explicit session-only fallback,
   browser sign-in where applicable, cancellation, and secret redaction. Routine
   checks use fake providers; real connection checks remain separately authorized.
-- [ ] CI includes native Windows jobs for Python 3.11-3.13, covering configured
+- [x] CI includes native Windows jobs for Python 3.11-3.13, covering configured
   lint/format checks, applicable tests, source/wheel builds, and a clean installed
   baseline workflow. Replace POSIX-only shell assumptions; platform-specific test
   exclusions need documented reasons and equivalent Windows coverage.

@@ -158,6 +158,7 @@ def fake_runtime(monkeypatch):
         disable_error=None,
         loading_info=SimpleNamespace(missing_keys=[], unexpected_keys=[]),
         versions={
+            "triton-windows": "3.4.0.post21",
             "tirex-2": "0.4.0",
             "torch": "2.8.0",
             "huggingface-hub": "0.35.3",

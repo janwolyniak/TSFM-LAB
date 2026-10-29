@@ -196,7 +196,8 @@ class StateStore:
                 if os.name == "nt":
                     import msvcrt
 
-                    os.write(descriptor, b"0")
+                    # Windows permits locking a byte beyond EOF. Writing first
+                    # would fail against another process's existing byte lock.
                     os.lseek(descriptor, 0, 0)
                 else:
                     import fcntl

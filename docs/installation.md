@@ -1,5 +1,10 @@
 # Installing TSFM Lab
 
+For the v0.3.0 development Windows candidate, see the
+[native Windows guide](windows.md), including explicit PowerShell executable
+paths and the pending native qualification matrix. Published v0.2.0 instructions
+below retain their original platform scope.
+
 Optional assistant connections have a separate `[connections]` extra; see the
 [connection guide](connections.md). Forecasting and saved-record operations do
 not require provider packages or credentials.

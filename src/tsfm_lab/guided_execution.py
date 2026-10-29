@@ -31,6 +31,10 @@ def _now():
 
 class PreparationRecord:
     def __init__(self, config, plan, operation_id=None):
+        if is_future(config) and config._record_only:
+            raise ValueError(
+                "Saved future configurations are read-only; preparation requires a native configuration"
+            )
         self.operation_id = operation_id or str(uuid4())
         if str(UUID(self.operation_id)) != self.operation_id:
             raise ValueError("Preparation ID must be a canonical UUID")
