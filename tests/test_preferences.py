@@ -147,6 +147,31 @@ def test_unwritable_probe_has_actionable_error(tmp_path, monkeypatch):
     assert list(tmp_path.iterdir()) == []
 
 
+@pytest.mark.parametrize("root_only", [False, True])
+def test_missing_drive_root_fails_without_looping_or_creating_paths(
+    tmp_path, monkeypatch, root_only
+):
+    selected = Path(tmp_path.anchor) if root_only else tmp_path / "offline drive/runs"
+    probes = []
+
+    def unavailable(path):
+        probes.append(path)
+        assert len(probes) <= len(selected.parents) + 1, "Root traversal repeated"
+        return False
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Unavailable roots must fail before a write probe")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("tsfm_lab.preferences._local_path", lambda _: selected)
+        patch.setattr(Path, "exists", unavailable)
+        patch.setattr("tsfm_lab.preferences.tempfile.TemporaryFile", forbidden)
+        with pytest.raises(ConfigError, match="Choose another directory"):
+            validate_directory(selected)
+    assert probes[-1] == Path(selected.anchor)
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_failed_validation_preserves_previous_preferences(
     tmp_path, preferences, monkeypatch
 ):

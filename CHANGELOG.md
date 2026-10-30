@@ -2,6 +2,9 @@
 
 ## 0.3.0 — Unreleased
 
+- Reject unavailable directory roots during onboarding and settings validation
+  instead of looping indefinitely when a Windows drive is absent.
+
 - Extend distribution audits and exact installed-wheel checks to the expanded
   catalog, seven fake assistant routes, onboarding preferences, guided historical
   and future baseline workers, detached exports and old saved records. Keep

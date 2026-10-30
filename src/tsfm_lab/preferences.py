@@ -37,7 +37,10 @@ def validate_directory(path: Path) -> Path:
     try:
         ancestor = selected
         while not ancestor.exists():
-            ancestor = ancestor.parent
+            parent = ancestor.parent
+            if parent == ancestor:
+                raise OSError("The directory root is unavailable")
+            ancestor = parent
         if not ancestor.is_dir():
             raise OSError("A path component is a file")
         with tempfile.TemporaryFile(dir=ancestor):
