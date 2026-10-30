@@ -40,6 +40,7 @@ def test_catalog_is_offline_compact_and_borderless(commands):
         "chronos_2",
         "tirex_2",
         "ttm_r2",
+        "toto_2",
     }
     rendered = output.getvalue()
     assert "apache-2.0" in rendered and "2048" in rendered and "64" in rendered

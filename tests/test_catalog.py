@@ -26,6 +26,7 @@ def test_catalog_metadata_is_json_compatible_and_has_cpu_only_verified_bounds():
         "chronos_2",
         "tirex_2",
         "ttm_r2",
+        "toto_2",
     ]
     assert json.loads(json.dumps(entries, allow_nan=False)) == entries
     bolt = catalog_info("chronos_bolt")
@@ -86,7 +87,7 @@ def test_tirex_training_profiles_keep_repository_specific_limits_and_notices():
     assert "NXAI Community License" in notices and "commercial terms" in notices
     assert "https://github.com/NX-AI/mlstm_kernels/blob/v2.0.6/LICENSE" in notices
     for entry in catalog_entries():
-        if entry["adapter_id"] != "tirex_2":
+        if entry["adapter_id"] not in {"tirex_2", "toto_2"}:
             assert entry["runtime_notices"] == []
         if entry["source"] == "huggingface":
             assert entry["runtime_requirements"]["huggingface-hub"] == "==0.35.3"

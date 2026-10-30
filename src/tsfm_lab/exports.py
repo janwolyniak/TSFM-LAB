@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from tsfm_lab.experiments import ExperimentStore
+from tsfm_lab.run_modes import read_completed
 
 
 class ExportError(ValueError):
@@ -26,7 +27,7 @@ def export_predictions(
         raise ExportError("Export format must be csv, parquet, or json")
     if target.exists() or target.is_symlink():
         raise FileExistsError(f"Export destination already exists: {target}")
-    _, predictions = ExperimentStore(workspace).load_result(run_id)
+    _, predictions = read_completed(ExperimentStore(workspace), run_id)
     target.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(prefix=".tsfm-export-", dir=target.parent)
     os.close(descriptor)

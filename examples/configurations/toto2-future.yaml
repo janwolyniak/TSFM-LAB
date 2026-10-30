@@ -1,0 +1,22 @@
+schema_version: 2
+mode: future_forecast
+name: toto2-4m-future
+model:
+  source: huggingface
+  adapter_id: toto_2
+  repository: Datadog/Toto-2.0-4m
+  revision: 8306a9801cf98c0f5ffe4b2dcc8f496e616d84d9
+  offline: true
+dataset:
+  path: ../datasets/seasonal.csv
+  timestamp_column: timestamp
+  target_column: demand
+  frequency: 1h
+  units: synthetic_units
+forecast:
+  context_length: 32
+  horizon: 8
+  point_statistic: median
+  origin: latest
+output:
+  directory: ../../results

@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.3.0 — 2026-10-30
+
+- Reject unavailable directory roots during onboarding and settings validation
+  instead of looping indefinitely when a Windows drive is absent.
+
+- Extend distribution audits and exact installed-wheel checks to the expanded
+  catalog, seven fake assistant routes, onboarding preferences, guided historical
+  and future baseline workers, detached exports and old saved records. Keep
+  Windows-only runtime requirements optional under their explicit extra.
+  See [development qualification](docs/v0.3.0-qualification.md) for local evidence
+  and the remaining release gates.
+
+- Add Windows drive-path and terminal quoting support, portable locking/build
+  checks and a Linux/macOS/Windows Python 3.11–3.13 CI matrix. Preserve detached
+  cross-platform records without changing numerical identities; prevent record-only
+  configurations from starting work. Native Windows qualification remains pending.
+  See [Windows support and limits](docs/windows.md).
+
+- Add S7 curated static documentation generation with a metadata-only model
+  matrix, five category examples, separate historical/future semantics, citation
+  guidance, crawl files and consistent canonical/structured metadata. Require an
+  explicit candidate HTTPS base URL and a new output directory. Existing private
+  documentation, datasets and experiments are not copied or deployed. See the
+  [public documentation workflow](docs/public-documentation.md).
+
+- Add S6 TTM R2 native horizons 192/336/720 and R2.1 weekly/daily profiles with
+  strict config/cadence validation and recorded frequency tokens. Add the TOTO 2
+  4M family on Python 3.12/3.13 with explicit project bounds, strict safe loading,
+  native median output and refusal of nonfinite inverse outputs. Old identities
+  remain unchanged. Installation/import, real inference and native-platform
+  qualification for new behavior remain pending; see the
+  [TTM](docs/s6-ttm-verification.md) and [TOTO](docs/s6-toto2-verification.md) records.
+
+- Add S5 DeepSeek, local installed Ollama and explicit compatible endpoint
+  connections through existing reviewed drafting/explanation services. Keep
+  credentials bound to each endpoint, bounded nonstreaming protocols and no
+  automatic cloud fallback or local model pull. Fake-provider checks pass; live
+  routes and native credential-vault qualification remain pending. See the
+  [S5 record](docs/s5-connections-verification.md).
+
+- Add S4 future point forecasting from the final observation in guided/assisted,
+  YAML/CLI and separate Python APIs. Enforce native/operational limits, causal
+  context, UTC grids and actual output labels; save eight validated artifacts
+  with unavailable accuracy. Reuse reviewed preparation and managed cancellation,
+  preserve historical schemas, and refuse future comparison/finance reports.
+  Explanations retain metadata-only disclosure. See
+  [future forecasting](docs/future-forecasting.md).
+
+- Accept checked historical guided runs in finance reports, retaining the report's
+  original five parent-artifact identities after validating all seven guided
+  artifacts. Preserve report schema and accounting results; reject damaged
+  chart/provenance outputs before accounting.
+
+- Add S3 guided checkpoint review/preparation with exact-revision/file consent,
+  offline cache reuse, runtime and integrity checks, managed stage/byte/window
+  progress, and durable cancellation/failure records. Save checked SVG/provenance
+  outputs atomically with guided schema-2 manifests while preserving old records
+  and script defaults. Real pretrained qualification remains pending. See
+  [guided preparation](docs/guided-preparation.md).
+
+- Add S2 model-specific setup with friendly family/generation/variant choices,
+  applicable options before dataset selection, original-unit previews, and
+  advanced checkpoint details. Share settings validation across guided/assisted,
+  YAML, and Python entry points; preserve compatible edits and refresh dependent
+  choices on back navigation. Historical semantics and valid record identities
+  remain unchanged. See [model-specific setup](docs/model-setup.md).
+
+- Begin S1 with optional first-launch onboarding, `/setup`, `/settings`, and
+  atomic nonsecret directory/category/export preferences. Reuse optional assistant
+  connection management and the offline baseline demo; retain explicit option and
+  YAML precedence. Report runtime package compatibility without installing or
+  importing inference frameworks. See [onboarding](docs/onboarding.md).
+
 ## 0.2.0 — 2026-10-27
 
 Released through GitHub with source and wheel assets. Hosted CI is skipped under

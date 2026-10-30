@@ -40,6 +40,8 @@ class Terminal:
             NO_COLOR="1",
             TERM="xterm-256color",
             PROMPT_TOOLKIT_NO_CPR="1",
+            TSFM_LAB_SETTINGS_DIR=str(directory / "settings"),
+            HF_HUB_CACHE=str(directory / "cache"),
         )
         self.process = subprocess.Popen(
             [
@@ -100,7 +102,9 @@ class Terminal:
 def terminal(tmp_path, request):
     value = Terminal(tmp_path, size=request.param)
     try:
-        value.expect("›")
+        value.expect("First-launch setup")
+        value.command("skip", "Setup skipped")
+        value.expect("›", after=value.data.rfind(b"Setup skipped"))
         yield value
     finally:
         value.close()

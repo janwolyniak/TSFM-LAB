@@ -23,6 +23,7 @@ _ACTIVE = ("pending", "preparing", "loading", "running", "evaluating", "saving")
 _TERMINAL = {"completed", "failed", "cancelled"}
 _INITIAL = {"configuration.json", "input.yaml"}
 _ARTIFACTS = _INITIAL | {"metrics.json", "result.json", "predictions.csv"}
+_GUIDED_ARTIFACTS = _ARTIFACTS | {"forecast.svg", "provenance.json"}
 
 
 def _json(value) -> bytes:
@@ -131,12 +132,20 @@ class ExperimentStore:
         return run_id
 
     def get_manifest(self, run_id: str) -> dict:
-        manifest = _decode(_read(self._directory(run_id) / "manifest.json"))
+        raw = _read(self._directory(run_id) / "manifest.json")
+        manifest = _decode(raw)
+        if (
+            type(manifest.get("schema_version")) is int
+            and manifest["schema_version"] == 3
+        ):
+            from tsfm_lab.future_store import validate_manifest
+            from tsfm_lab.future_validation import decode_json
+
+            return validate_manifest(decode_json(raw), run_id)
         try:
-            if (
-                type(manifest["schema_version"]) is not int
-                or manifest["schema_version"] != 1
-            ):
+            if type(manifest["schema_version"]) is not int or manifest[
+                "schema_version"
+            ] not in {1, 2}:
                 raise ValueError("Unsupported manifest schema")
             if manifest["run_id"] != run_id or manifest["status"] not in {
                 *_ACTIVE,
@@ -150,10 +159,17 @@ class ExperimentStore:
                 if timestamp.tzinfo is None:
                     raise ValueError("Manifest timestamps need a timezone")
             names = set(manifest["artifacts"])
-            if not _INITIAL <= names <= _ARTIFACTS or (
-                manifest["status"] == "completed" and names != _ARTIFACTS
+            allowed = (
+                _ARTIFACTS if manifest["schema_version"] == 1 else _GUIDED_ARTIFACTS
+            )
+            if not _INITIAL <= names <= allowed or (
+                manifest["status"] == "completed" and names != allowed
             ):
                 raise ValueError("Invalid artifact allowlist")
+            if manifest["schema_version"] == 2 and manifest["status"] != "completed":
+                raise ValueError(
+                    "Guided output manifests require completed publication"
+                )
             for identity in manifest["artifacts"].values():
                 if (
                     set(identity) != {"sha256", "size"}
@@ -171,6 +187,10 @@ class ExperimentStore:
 
     def set_status(self, run_id: str, status: str, error: dict | None = None) -> dict:
         manifest = self.get_manifest(run_id)
+        if manifest["schema_version"] == 3:
+            from tsfm_lab.future_store import FutureStore
+
+            return FutureStore(self.workspace).set_status(run_id, status, error)
         current = manifest["status"]
         if current in _TERMINAL or status == "completed":
             raise ValueError(
@@ -224,7 +244,19 @@ class ExperimentStore:
                 dtype={name: str for name in PREDICTION_IDENTITIES},
                 float_precision="round_trip",
             )
-            return result, validate_predictions(frame, result)
+            frame = validate_predictions(frame, result)
+            if manifest["schema_version"] == 2:
+                from tsfm_lab.output_artifacts import validate_output_artifacts
+
+                validate_output_artifacts(
+                    {
+                        name: contents[name]
+                        for name in ("forecast.svg", "provenance.json")
+                    },
+                    result,
+                    frame,
+                )
+            return result, frame
         except (KeyError, UnicodeError, ValueError, TypeError) as exc:
             raise StoreError(f"Cannot reload result: {exc}") from exc
 
@@ -235,8 +267,13 @@ class ExperimentStore:
         predictions: pd.DataFrame,
         *,
         cancel_check: Callable[[], bool] | None = None,
+        include_outputs: bool = False,
     ) -> dict:
+        if type(include_outputs) is not bool:
+            raise ValueError("include_outputs must be a boolean")
         manifest = self.get_manifest(run_id)
+        if manifest["schema_version"] == 3:
+            raise StoreError("Future records require FutureStore.complete()")
         if manifest["status"] in _TERMINAL:
             raise ValueError("Terminal experiments cannot be overwritten")
         if cancel_check and cancel_check():
@@ -262,6 +299,16 @@ class ExperimentStore:
             "metrics.json": _json(result["metrics"]),
             "predictions.csv": frame.to_csv(index=False, float_format="%.17g").encode(),
         }
+        if include_outputs:
+            from tsfm_lab.output_artifacts import (
+                build_output_artifacts,
+                validate_output_artifacts,
+            )
+
+            outputs = build_output_artifacts(result, frame)
+            validate_output_artifacts(outputs, result, frame)
+            artifacts.update(outputs)
+            manifest["schema_version"] = 2
         for name, raw in artifacts.items():
             if cancel_check and cancel_check():
                 raise KeyboardInterrupt(
@@ -285,6 +332,10 @@ class ExperimentStore:
         forecast tables on the terminal's process-monitoring path.
         """
         manifest = self.get_manifest(run_id)
+        if manifest["schema_version"] == 3:
+            from tsfm_lab.future_store import FutureStore
+
+            return FutureStore(self.workspace).result_summary(run_id)
         if manifest["status"] != "completed":
             raise StoreError("Only completed experiments have result summaries")
         raw = _read(self._directory(run_id) / "result.json")
@@ -310,9 +361,30 @@ class ExperimentStore:
 
     def load_result(self, run_id: str) -> tuple[dict, pd.DataFrame]:
         manifest = self.get_manifest(run_id)
+        if manifest["schema_version"] == 3:
+            raise StoreError(
+                "Historical results cannot load future forecasts; use load_future_result()"
+            )
         if manifest["status"] != "completed":
             raise StoreError("Only completed experiments have reloadable results")
         return self._result(run_id, manifest)
+
+    def load_future_result(self, run_id: str):
+        from tsfm_lab.future_store import FutureStore
+
+        return FutureStore(self.workspace).load_future_result(run_id)
+
+    def output_paths(self, run_id: str) -> dict[str, str]:
+        """Return only checked completed artifact paths; older runs omit extras."""
+        manifest = self.get_manifest(run_id)
+        if manifest["status"] != "completed":
+            raise StoreError("Only completed experiments have output paths")
+        if manifest["schema_version"] == 3:
+            self.load_future_result(run_id)
+        else:
+            self._result(run_id, manifest)
+        directory = self._directory(run_id)
+        return {name: str(directory / name) for name in sorted(manifest["artifacts"])}
 
     def load_configuration(self, run_id: str) -> dict:
         """Read a detached, checked setup snapshot without source files or runtimes."""
@@ -321,6 +393,11 @@ class ExperimentStore:
         if _identity(raw) != manifest["artifacts"]["configuration.json"]:
             raise StoreError("Configuration checksum or size mismatch")
         configuration = _decode(raw)
+        if manifest["schema_version"] == 3:
+            from tsfm_lab.future_validation import decode_json, validate_configuration
+
+            configuration = decode_json(raw)
+            validate_configuration(configuration)
         try:
             _workflow(configuration)
         except (TypeError, ValueError, KeyError, AttributeError) as exc:
@@ -340,7 +417,10 @@ class ExperimentStore:
             try:
                 manifest = self.get_manifest(directory.name)
                 if manifest["status"] == "completed":
-                    self.load_result(directory.name)
+                    if manifest["schema_version"] == 3:
+                        self.load_future_result(directory.name)
+                    else:
+                        self.load_result(directory.name)
             except (StoreError, OSError) as exc:
                 manifest = {
                     **(manifest or {}),

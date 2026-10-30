@@ -1,5 +1,8 @@
 # Interactive terminal
 
+The v0.3.0 [Windows candidate guide](windows.md) documents native PowerShell
+paths, backslash quoting and the still-pending Windows Terminal qualification.
+
 TSFM opens a persistent local command prompt inside your terminal. Commands,
 questions, progress, and results form one transcript in normal terminal scrollback.
 It uses the terminal's background and a small amount of accent color. There are
@@ -22,6 +25,12 @@ shell commands and JSON output keep their existing behavior. The numerical core
 imports neither the prompt editor nor any terminal framework.
 
 ## A first session
+
+In the v0.3.0 development checkout, first launch offers optional setup; choose
+`skip` to go directly to the prompt. `/setup` revisits directory choices, runtime
+diagnostics, and optional connection/demo setup. `/settings` shows or edits saved
+defaults. These commands are absent from the published v0.2.0 package. See
+[onboarding](onboarding.md) for persistence, overrides, and cancellation.
 
 Type `/demo`, then answer `y` to run the original synthetic baseline. A short
 summary appears before confirmation, progress stays inline, and the results are
@@ -50,6 +59,8 @@ and scores 1.0 on all three metrics. These are arithmetic checks on
 | Command | Behavior |
 | --- | --- |
 | `/help` | Show commands and keyboard shortcuts. |
+| `/setup` | Revisit optional onboarding and runtime diagnostics (v0.3.0 development). |
+| `/settings` | View or edit saved nonsecret preferences (v0.3.0 development). |
 | `/demo [last_value\|seasonal_naive]` | Review and confirm the bundled offline experiment. |
 | `/new [adapter]` | Ask setup questions one at a time, then review and confirm. |
 | `/run CONFIG.yaml` | Execute a saved configuration and use its configured results directory. |
@@ -75,9 +86,19 @@ input history, so they do not pollute command recall.
 
 `/new` first offers guided setup (default) or describing a goal. `/new describe`
 opens the optional [language workflow](language-assistance.md); `/new guided`
-opens manual setup directly. Guided setup asks for a usage profile, then a model and any checkpoint details,
-then a dataset, profile-specific measurements/units, mapping fields
-when using your own file, name, evaluation settings, and explicit timestamp bounds.
+opens manual setup directly. In the v0.3.0 S2 checkout, guided setup asks for
+usage, friendly family/generation/variant, applicable model options, then dataset
+mapping/measurement/units and historical evaluation settings. Context and horizon
+precede dataset selection; an original-unit preview follows data validation.
+Repository/revision/cache controls are available through advanced checkpoint
+options. See [model-specific setup](model-setup.md) for exact controls and limits.
+
+The S3 checkout adds [guided checkpoint preparation](guided-preparation.md).
+Choose automatic preparation, offline cached use, or a local directory. Missing
+weights require a specific final download/run confirmation, default no. Completion
+and `/show` list the checked forecast CSV, results/provenance JSON, and saved SVG
+chart. `/demo` also saves the chart; `/run CONFIG.yaml` keeps its prior no-download
+behavior.
 Empty answers accept the displayed default. Validation errors reprompt the field
 or step. `/back` returns to the previous setup step; `/cancel`, Escape, or Ctrl+C
 aborts setup. Nothing runs or creates a workspace until the final confirmation.
@@ -89,8 +110,9 @@ return to that question. The [connection guide](connections.md) explains the fou
 account/billing routes, storage, explicit model choice, and checks. Language
 proposals prefill these same questions and cannot bypass preparation or confirmation.
 
-Chronos-Bolt and TimesFM 2.5 use CPU/float32 and an already cached exact revision
-or compatible standalone local checkpoint. Select them with `/new chronos_bolt`
+Chronos-Bolt and TimesFM 2.5 use CPU/float32 and a checked exact revision
+or compatible standalone local checkpoint. S3 can prepare missing weights after
+explicit confirmation; cached mode stays offline. Select them with `/new chronos_bolt`
 or `/new timesfm_2p5`, or choose the model during `/new`. Setup validates the
 adapter/repository pairing, local architecture metadata, and supported
 context/horizon limits without loading model runtimes or downloading weights.

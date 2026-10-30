@@ -5,6 +5,7 @@ import configparser
 import hashlib
 import json
 import re
+import runpy
 import subprocess
 import sys
 import tarfile
@@ -14,11 +15,15 @@ from contextlib import redirect_stdout
 from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 
+_CONTRACT = runpy.run_path(str(Path(__file__).with_name("release_contract.py")))
+
 CONNECTION_MODULES = {
     f"tsfm_lab/connections/{name}.py"
     for name in (
         "__init__",
         "contracts",
+        "endpoints",
+        "additional",
         "credentials",
         "identity",
         "manager",
@@ -44,6 +49,41 @@ ASSISTANT_MODULES = {
         "service",
         "ui",
     )
+}
+ONBOARDING_MODULES = {
+    "tsfm_lab/preferences.py",
+    "tsfm_lab/runtime_diagnostics.py",
+    "tsfm_lab/repl/onboarding.py",
+}
+MODEL_SETUP_MODULES = {
+    "tsfm_lab/models/settings.py",
+    "tsfm_lab/repl/model_selection.py",
+}
+GUIDED_MODULES = {
+    "tsfm_lab/guided.py",
+    "tsfm_lab/guided_execution.py",
+    "tsfm_lab/output_artifacts.py",
+    "tsfm_lab/models/preparation.py",
+}
+FUTURE_MODULES = {
+    f"tsfm_lab/{name}.py"
+    for name in (
+        "future",
+        "future_config",
+        "future_application",
+        "future_store",
+        "future_validation",
+        "future_outputs",
+        "future_views",
+        "run_modes",
+    )
+}
+V030_MODULES = {
+    "tsfm_lab/models/toto2.py",
+    "tsfm_lab/models/toto2_profile.py",
+    "tsfm_lab/local_paths.py",
+    "tsfm_lab/platform_runtime.py",
+    "tsfm_lab/repl/arguments.py",
 }
 
 SOURCE_FILES = {
@@ -118,6 +158,8 @@ SOURCE_FILES = {
     "tests/fixtures/release_legacy_v1/verify.py",
     "docs/p8-release-verification.md",
     "docs/release-v0.2.0.md",
+    "docs/release-v0.3.0.md",
+    "docs/v0.3.0-verification.md",
     "docs/v0.2.0-verification.md",
     "research/fev_compatibility/README.md",
     "research/fev_compatibility/run_study.py",
@@ -136,6 +178,86 @@ SOURCE_FILES |= (
 )
 SOURCE_FILES |= {f"src/{name}" for name in CONNECTION_MODULES}
 SOURCE_FILES |= {f"src/{name}" for name in ASSISTANT_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in ONBOARDING_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in MODEL_SETUP_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in GUIDED_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in FUTURE_MODULES}
+SOURCE_FILES |= {f"src/{name}" for name in V030_MODULES}
+SOURCE_FILES |= {
+    "requirements-toto2.txt",
+    "docs/s5-connections-verification.md",
+    "docs/s6-ttm-verification.md",
+    "docs/s6-toto2-verification.md",
+    "docs/toto2.md",
+    "docs/windows.md",
+    "docs/s8-windows-verification.md",
+    "docs/public-documentation.md",
+    "docs/s7-public-docs-verification.md",
+    "docs/public/guide.md",
+    "docs/public/style.css",
+    "docs/v0.3.0-qualification.md",
+    "scripts/build_public_docs.py",
+    "scripts/check_installed_distribution.py",
+    "examples/configurations/toto2-future.yaml",
+    "tests/fixtures/toto2/config.json",
+    "tests/fixtures/toto2/README.md",
+    "tests/test_additional_connections.py",
+    "tests/test_ttm_expansion.py",
+    "tests/test_toto2.py",
+    "tests/test_toto2_workflow.py",
+    "tests/test_public_docs.py",
+    "tests/test_portable_paths.py",
+    "tests/test_windows_boundaries.py",
+    "tests/test_windows_console.py",
+    "tests/windows_console_helpers.py",
+}
+SOURCE_FILES |= {
+    f"tests/fixtures/ttm_s6/{profile}.json"
+    for profile in (
+        "52-16-ft-r2.1",
+        "90-30-ft-r2.1",
+        "512-192-r2",
+        "512-336-r2",
+        "512-720-r2",
+    )
+}
+SOURCE_FILES |= {
+    "docs/future-forecast-contract.md",
+    "docs/future-forecasting.md",
+    "docs/s4-future-verification.md",
+    "examples/configurations/future-baseline.yaml",
+    "tests/test_future_application.py",
+    "tests/test_future_config.py",
+    "tests/test_future_core.py",
+    "tests/test_future_store.py",
+    "tests/test_future_setup.py",
+    "tests/test_future_assistant.py",
+    "tests/test_future_recovery.py",
+}
+SOURCE_FILES |= {
+    "docs/guided-preparation.md",
+    "docs/s3-preparation-verification.md",
+    "tests/test_checkpoint_preparation.py",
+    "tests/test_guided.py",
+    "tests/test_guided_execution.py",
+    "tests/test_guided_ui.py",
+    "tests/test_output_artifacts.py",
+}
+SOURCE_FILES |= {
+    "docs/model-setup.md",
+    "docs/s2-model-setup-verification.md",
+    "tests/test_model_settings.py",
+    "tests/test_model_selection.py",
+    "tests/test_model_setup.py",
+}
+SOURCE_FILES |= {
+    "docs/onboarding.md",
+    "docs/release-v0.3.0-plan.md",
+    "docs/s1-onboarding-verification.md",
+    "tests/test_preferences.py",
+    "tests/test_runtime_diagnostics.py",
+    "tests/test_onboarding.py",
+}
 SOURCE_FILES |= {"docs/language-assistance.md", "docs/p7-language-verification.md"}
 SOURCE_FILES |= {
     f"tests/fixtures/release_legacy_v1/{name}"
@@ -221,6 +343,11 @@ def inspect_wheel(path, *, name, version):
         }
         required |= CONNECTION_MODULES
         required |= ASSISTANT_MODULES
+        required |= ONBOARDING_MODULES
+        required |= MODEL_SETUP_MODULES
+        required |= GUIDED_MODULES
+        required |= FUTURE_MODULES
+        required |= V030_MODULES
         if "tsfm_lab/tui/app.py" in names:
             required.add("tsfm_lab/tui/app.tcss")
         if not required <= names:
@@ -259,9 +386,9 @@ def inspect_wheel(path, *, name, version):
         core = set()
         for item in dependencies:
             requirement, _, marker = item.partition(";")
-            # Only the backend's exact extra selector establishes optionality.
-            # Other/compound markers remain core for this conservative audit.
-            if re.fullmatch(r"""\s*extra\s*==\s*(["'])[A-Za-z0-9._-]+\1\s*""", marker):
+            # Windows conditions cannot make a dependency core unless its extra
+            # is selected. OR and unknown selectors fail the bounded parser.
+            if _CONTRACT["is_optional_requirement"](item):
                 continue
             match = re.match(r"[A-Za-z0-9._-]+", requirement)
             if not match:

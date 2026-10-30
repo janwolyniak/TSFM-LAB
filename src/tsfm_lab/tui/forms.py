@@ -8,7 +8,9 @@ from pathlib import Path
 
 from tsfm_lab.application import load_dataset
 from tsfm_lab.config import ConfigError, ExperimentConfig, config_from_mapping
+from tsfm_lab.config import _dataset as validated_dataset_options
 from tsfm_lab.contracts import Dataset, fixed_interval
+from tsfm_lab.data import canonical_fingerprint
 from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.models.catalog import (
     CHECKPOINT_REPOSITORIES,
@@ -16,6 +18,7 @@ from tsfm_lab.models.catalog import (
     catalog_info,
 )
 from tsfm_lab.models.factory import build_model
+from tsfm_lab.models.settings import model_settings
 from tsfm_lab.point_tasks import validate_model_frequency
 from tsfm_lab.workflows import (
     normalize_workflow,
@@ -24,6 +27,8 @@ from tsfm_lab.workflows import (
 )
 
 _DEFAULTS = {
+    "mode": "historical_evaluation",
+    "forecast_origin": "latest",
     "name": "New experiment",
     "adapter": "last_value",
     "point_statistic": "median",
@@ -68,6 +73,9 @@ def default_fields(initial_adapter: str = "last_value") -> dict[str, str]:
     if initial_adapter not in {entry["adapter_id"] for entry in catalog_entries()}:
         raise ConfigError("Choose a supported model adapter")
     fields = {**_DEFAULTS, "adapter": initial_adapter}
+    settings = model_settings(initial_adapter)
+    fields["context_length"] = str(settings.default_context)
+    fields["horizon"] = str(settings.default_horizon)
     info = catalog_info(initial_adapter)
     if info["point_statistic"] in info["supported_tasks"]:
         fields["point_statistic"] = info["point_statistic"]
@@ -158,7 +166,7 @@ def profile_guidance(profile: str, frequency: str = "") -> str:
         "weather": "Use one measured variable from one station and declare whether each value is instantaneous or summarizes an interval.",
     }.get(
         profile,
-        "Evaluate historical forecasts against observed targets on the declared regular time grid.",
+        "Forecast a regular time series in its declared units; choose historical evaluation or future forecasting after preview.",
     )
     if profile in {"energy", "temperature", "weather"} and frequency:
         if fixed_interval(frequency) == fixed_interval("1h"):
@@ -231,7 +239,21 @@ def _mapping(fields: dict[str, str], workspace: Path) -> dict:
         "name": fields["name"],
         "model": _model(fields),
         "dataset": _dataset(fields),
-        "evaluation": {
+    }
+    mode = fields["mode"]
+    if mode == "future_forecast":
+        mapping.update(
+            schema_version=2,
+            mode=mode,
+            forecast={
+                "context_length": _integer(fields, "context_length"),
+                "horizon": _integer(fields, "horizon"),
+                "point_statistic": fields["point_statistic"],
+                "origin": fields["forecast_origin"] or "latest",
+            },
+        )
+    elif mode == "historical_evaluation":
+        mapping["evaluation"] = {
             "context_length": _integer(fields, "context_length"),
             "horizon": _integer(fields, "horizon"),
             "stride": _integer(fields, "stride"),
@@ -240,9 +262,10 @@ def _mapping(fields: dict[str, str], workspace: Path) -> dict:
             "evaluation_end": fields["evaluation_end"],
             "metrics": ["mae", "rmse", "mase"],
             "point_statistic": fields["point_statistic"],
-        },
-        "output": {"directory": str(workspace)},
-    }
+        }
+    else:
+        raise ConfigError("Choose historical evaluation or future forecasting")
+    mapping["output"] = {"directory": str(workspace)}
     workflow = workflow_from_fields(fields)
     if workflow is not None:
         mapping["workflow"] = workflow
@@ -265,24 +288,62 @@ def validate_model_fields(
     fields: dict[str, str], *, workspace: Path, base_directory: Path
 ) -> None:
     fields = _draft(fields)
-    mapping = _minimal_mapping(workspace)
-    mapping["name"], mapping["model"] = fields["name"], _model(fields)
-    mapping["evaluation"]["point_statistic"] = fields["point_statistic"]
+    selection = _model(fields)
+    settings = (
+        model_settings(
+            fields["adapter"],
+            repository=(
+                fields["repository"] if fields["source"] == "huggingface" else None
+            ),
+            revision=(
+                fields["revision"] or None
+                if fields["source"] == "huggingface"
+                else None
+            ),
+        )
+        if fields["adapter"] in CHECKPOINT_REPOSITORIES
+        else model_settings(fields["adapter"])
+    )
+    context = settings.default_context
+    # This prototype validates model fields before the user inspects a dataset.
+    frequency = {"daily_fixed_v1": "1D", "weekly_fixed_v1": "7D"}.get(
+        settings.frequency_policy, "1h"
+    )
     if fields["adapter"] == "seasonal_naive":
-        mapping["evaluation"]["context_length"] = _integer(fields, "seasonal_period")
-    config_from_mapping(mapping, base_directory=base_directory)
+        context = _integer(fields, "seasonal_period")
+    if fields["mode"] == "future_forecast":
+        from tsfm_lab.future_config import future_config_from_mapping
+
+        prototype = {
+            **fields,
+            "context_length": str(context),
+            "horizon": "1",
+            "dataset_path": "validation.csv",
+            "frequency": frequency,
+            "forecast_origin": "latest",
+        }
+        future_config_from_mapping(
+            _mapping(prototype, workspace), base_directory=base_directory
+        )
+    else:
+        mapping = _minimal_mapping(workspace)
+        mapping["name"], mapping["model"] = fields["name"], selection
+        mapping["dataset"]["frequency"] = frequency
+        mapping["evaluation"].update(
+            point_statistic=fields["point_statistic"], context_length=context
+        )
+        config_from_mapping(mapping, base_directory=base_directory)
 
 
 def inspect_data(
     fields: dict[str, str], *, workspace: Path, base_directory: Path
 ) -> Dataset:
     """Validate file mapping and read data; callers schedule this off the UI thread."""
-    mapping = _minimal_mapping(workspace)
-    mapping["dataset"] = _dataset(_draft(fields))
-    config = config_from_mapping(mapping, base_directory=base_directory)
+    fields = _draft(fields)
+    options = validated_dataset_options(_dataset(fields), Path(base_directory))
     try:
-        dataset = load_dataset(config.dataset)
-        validate_workflow_dataset(workflow_from_fields(_draft(fields)), dataset)
+        dataset = load_dataset(options)
+        validate_workflow_dataset(workflow_from_fields(fields), dataset)
         return dataset
     except (ValueError, OSError, ImportError) as exc:
         raise ConfigError(str(exc)) from exc
@@ -308,8 +369,15 @@ def suggested_bounds(dataset: Dataset, fields: dict[str, str]) -> dict[str, str]
 def config_from_fields(
     fields: dict[str, str], *, workspace: Path, base_directory: Path
 ) -> ExperimentConfig:
+    fields = _draft(fields)
+    if fields["mode"] == "future_forecast":
+        from tsfm_lab.future_config import future_config_from_mapping
+
+        return future_config_from_mapping(
+            _mapping(fields, workspace), base_directory=base_directory
+        )
     return config_from_mapping(
-        _mapping(_draft(fields), workspace), base_directory=base_directory
+        _mapping(fields, workspace), base_directory=base_directory
     )
 
 
@@ -347,20 +415,78 @@ class PreparedExperiment:
         )
 
 
+@dataclass(frozen=True)
+class PreparedFutureForecast:
+    config: object
+    observations: int
+    request: object
+    dataset_sha256: str
+    source_sha256: str
+
+    def review_plan(self):
+        """Retain the displayed source identity through screen confirmation."""
+        from tsfm_lab.guided import review_guided
+
+        plan = review_guided(self.config, offline=True)
+        if (
+            plan.dataset_sha256 != self.dataset_sha256
+            or plan.source_sha256 != self.source_sha256
+        ):
+            raise ConfigError(
+                "The dataset changed during review; review the forecast again"
+            )
+        return plan
+
+    def summary(self):
+        config, spec, request = self.config, self.config.forecast, self.request
+        return (
+            f"{config.name}\n\nMode: Future forecasting\nUsage: {workflow_summary(config.workflow)}\n"
+            f"Model: {catalog_info(config.model['adapter_id'])['display_name']}\n"
+            f"Target: {config.dataset['target_column']} ({config.dataset['units']}) · Frequency: {config.dataset['frequency']}\n"
+            f"Context: {spec.context_length} observations · Horizon: {spec.horizon} observations\n"
+            f"Forecast task: {spec.point_statistic}\nOrigin: {request.origin.isoformat()}\n"
+            f"Future targets: {request.target_timestamps[0].isoformat()} to {request.target_timestamps[-1].isoformat()}\n"
+            "Accuracy unavailable: future_actuals_absent\n"
+            f"Workspace: {config.output_directory}"
+        )
+
+
 def prepare_experiment(
-    fields: dict[str, str], *, workspace: Path, base_directory: Path
+    fields: dict[str, str],
+    *,
+    workspace: Path,
+    base_directory: Path,
+    resolve_model: bool = True,
 ) -> PreparedExperiment:
     """Validate the complete task without model initialization or downloads."""
     config = config_from_fields(
         fields, workspace=workspace, base_directory=base_directory
     )
+    if fields.get("mode") == "future_forecast":
+        from tsfm_lab.future import prepare_future_request
+
+        dataset = load_dataset(config.dataset)
+        validate_workflow_dataset(config.workflow, dataset)
+        request = prepare_future_request(dataset, config.forecast, model=config.model)
+        if resolve_model:
+            model = build_model(config.model, config.runtime)
+            validate_model_frequency(model, dataset.frequency)
+            model.validate(config.forecast)
+        return PreparedFutureForecast(
+            config,
+            len(dataset.values),
+            request,
+            canonical_fingerprint(dataset),
+            dataset.provenance["source_sha256"],
+        )
     try:
         dataset = load_dataset(config.dataset)
         validate_workflow_dataset(config.workflow, dataset)
         start, end = evaluation_bounds(dataset, config.evaluation)
-        model = build_model(config.model, config.runtime)
-        validate_model_frequency(model, dataset.frequency)
-        model.validate(config.evaluation)
+        if resolve_model:
+            model = build_model(config.model, config.runtime)
+            validate_model_frequency(model, dataset.frequency)
+            model.validate(config.evaluation)
     except (ValueError, OSError, ImportError) as exc:
         raise ConfigError(str(exc)) from exc
     spec = config.evaluation

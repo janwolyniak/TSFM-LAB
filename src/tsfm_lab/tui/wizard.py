@@ -28,6 +28,7 @@ from tsfm_lab.models.catalog import (
 )
 from tsfm_lab.tui.forms import (
     PreparedExperiment,
+    PreparedFutureForecast,
     default_fields,
     demo_fields,
     inspect_data,
@@ -102,10 +103,12 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         self._busy = False
         self._cancelled = False
         self._prepared: PreparedExperiment | None = None
+        self._future_plan = None
         self._review_snapshot: dict[str, str] | None = None
         self._adapter_reference = initial_adapter
         self._profile_reference: tuple[str, str] | None = None
         self._usage_profile_reference = "generic"
+        self._mode_reference = "historical_evaluation"
         self._example_declarations: dict[str, str] = {}
 
     @property
@@ -266,6 +269,20 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                 yield Button("Inspect dataset", id="wizard-inspect")
                 yield Static("", id="wizard-data-summary", markup=False)
             with VerticalScroll(id="wizard-evaluation", classes="wizard-page"):
+                yield _selection(
+                    "Forecast mode",
+                    "mode",
+                    [
+                        ("Historical evaluation", "historical_evaluation"),
+                        ("Future forecasting", "future_forecast"),
+                    ],
+                    self._defaults["mode"],
+                )
+                yield _field(
+                    "Forecast origin (latest or final observed timestamp)",
+                    "forecast-origin",
+                    self._defaults["forecast_origin"],
+                )
                 for label, key in (
                     ("Context length (observations)", "context_length"),
                     ("Forecast horizon (observations)", "horizon"),
@@ -295,6 +312,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         self._sync_checkpoint_profiles()
         self._update_model_visibility()
         self._update_usage_visibility()
+        self._update_mode_visibility()
         self._show_step()
 
     def _fields(self) -> dict[str, str]:
@@ -326,6 +344,12 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         )
         self.query_one("#wizard-hub-fields").display = source == "huggingface"
         self.query_one("#wizard-local-fields").display = source == "local"
+
+    def _update_mode_visibility(self):
+        future = self.query_one("#wizard-mode", Select).value == "future_forecast"
+        for key in ("stride", "mase-period", "evaluation-start", "evaluation-end"):
+            self.query_one(f"#wizard-{key}", Input).parent.display = not future
+        self.query_one("#wizard-forecast-origin", Input).parent.display = future
 
     def _update_usage_visibility(self) -> None:
         profile = str(self.query_one("#wizard-usage-profile", Select).value)
@@ -481,7 +505,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
         first = {
             "model": "name",
             "data": "dataset-path",
-            "evaluation": "context-length",
+            "evaluation": "mode",
             "review": "run",
         }[self.step]
         self.query_one(f"#wizard-{first}").focus(scroll_visible=False)
@@ -491,6 +515,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
 
     def _invalidate(self) -> None:
         self._prepared, self._review_snapshot = None, None
+        self._future_plan = None
         if self.is_mounted:
             self.query_one("#wizard-run", Button).disabled = True
 
@@ -542,6 +567,26 @@ class WizardScreen(Screen[ExperimentConfig | None]):
                     self._select_checkpoint_profile(repository, str(event.value))
             elif event.select.id == "wizard-usage-profile":
                 self._sync_usage_profile()
+            elif event.select.id == "wizard-mode":
+                mode = str(event.value)
+                if mode != self._mode_reference:
+                    for key in (
+                        "stride",
+                        "mase-period",
+                        "evaluation-start",
+                        "evaluation-end",
+                    ):
+                        self.query_one(f"#wizard-{key}", Input).value = ""
+                    self.query_one("#wizard-forecast-origin", Input).value = (
+                        "latest" if mode == "future_forecast" else ""
+                    )
+                    if mode == "historical_evaluation":
+                        self.query_one("#wizard-stride", Input).value = self.query_one(
+                            "#wizard-horizon", Input
+                        ).value
+                        self.query_one("#wizard-mase-period", Input).value = "4"
+                    self._mode_reference = mode
+                self._update_mode_visibility()
             self._update_model_visibility()
             self._update_usage_visibility()
 
@@ -596,7 +641,7 @@ class WizardScreen(Screen[ExperimentConfig | None]):
             and self._review_snapshot == self._fields()
             and not self._busy
         ):
-            self.dismiss(self._prepared.config)
+            self.dismiss(self._future_plan or self._prepared.config)
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
@@ -660,9 +705,15 @@ class WizardScreen(Screen[ExperimentConfig | None]):
             prepared = await asyncio.to_thread(
                 prepare_experiment, fields, **self._arguments()
             )
+            future_plan = (
+                await asyncio.to_thread(prepared.review_plan)
+                if isinstance(prepared, PreparedFutureForecast)
+                else None
+            )
             if self._cancelled:
                 return
             self._prepared, self._review_snapshot = prepared, fields
+            self._future_plan = future_plan
             self.query_one("#wizard-summary", Static).update(prepared.summary())
             self._step_index = 3
             self._show_step()

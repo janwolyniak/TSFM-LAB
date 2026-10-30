@@ -4,14 +4,20 @@ Language assistance is optional. Guided setup, saved YAML runs, results, finance
 reports, comparisons, and exports continue to work offline without a connection.
 The forecasting model and the assistant model are separate choices.
 
+In the v0.3.0 S2 checkout, proposals share the
+[model-specific settings contract](model-setup.md) with manual setup, YAML, and
+Python configuration. Known variant limits are checked locally; unsupported or
+conflicting suggestions remain visible for correction in the ordinary guide.
+
 ## Describe an experiment
 
 Start `tsfm`, enter `/new`, and choose `describe` rather than the default `guided`.
 You can also enter `/new describe` directly. `/new guided` and `/new ADAPTER_ID`
 open the ordinary guide. `/demo` retains its existing confirmation.
 
-1. Choose a local CSV or Parquet dataset. Its path stays on this machine.
-2. Describe a historical evaluation in plain words, for example:
+1. Choose a local CSV or Parquet dataset and explicitly select historical
+   evaluation or future forecasting. The path stays on this machine.
+2. Describe the selected task in plain words, for example:
    “Evaluate the historical temperature series in Celsius with context 128,
    horizon 24 and stride 24. Use Chronos-2 Small.”
 3. Review the assistant connection, account/workspace, model, usage method,
@@ -26,10 +32,12 @@ Select and discover an assistant model through `/connections` first. That menu
 is also reachable during ordinary setup. See [connection setup](connections.md).
 Credentials belong in its hidden prompt, never in an assistant message.
 
-Only historical evaluation with observed targets is supported. Requests for
-tomorrow/next week, training, panels, covariates, generated code, or new trading
-rules do not gain execution authority. Choose historical evaluation explicitly
-when changing an unsupported or unclear intent; it is never substituted silently.
+The S4 checkout supports [future forecasting](future-forecasting.md) from the
+last observed timestamp using separately validated schema-2 drafts. Human mode
+selection governs every preview and resolution; a provider cannot switch modes.
+Training, panels, covariates, generated code and new trading rules remain outside
+the execution contract. Historical evaluation is never silently substituted for
+a future request. Changing mode requires a fresh preview and confirmation.
 
 Clarification retains bounded original user intent and earlier choices. It can
 fill missing fields, but a response that changes a prior nonblank choice is
@@ -58,6 +66,11 @@ Experiment explanations require a completed record that passes full saved-artifa
 validation. Finance explanations require a saved report that passes its fingerprint
 and accounting checks. They need no original data or inference runtime. Unverified
 pending/failed records and corrupt reports are refused.
+
+Future explanations use only validated metadata: origin and context/target
+bounds, N/L/H, units/cadence, model/settings and actual point label. Accuracy is
+explicitly unavailable. Observation values, prediction values, row tables, value
+summaries and paths remain excluded from outgoing explanation evidence.
 
 Checked local facts appear separately from optional assistant wording. Exact
 numbers, units, undefined-value reasons, evaluation periods, assumptions, and

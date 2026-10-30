@@ -2,8 +2,8 @@
 
 **Local time-series forecast evaluation with reproducible experiments.**
 
-[![Source version: 0.2.0](https://img.shields.io/badge/source-v0.2.0-2563eb)](pyproject.toml)
-[![GitHub release: v0.2.0](https://img.shields.io/badge/GitHub_release-v0.2.0-15803d)](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
+[![Source version: 0.3.0](https://img.shields.io/badge/source-v0.3.0-2563eb)](pyproject.toml)
+[![GitHub release: v0.3.0](https://img.shields.io/badge/GitHub_release-v0.3.0-15803d)](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0)
 [![Python checks](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml/badge.svg?branch=main&event=push)](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](docs/installation.md)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-15803d)](LICENSE)
@@ -15,15 +15,19 @@
 [TimesFM](docs/timesfm.md) ·
 [TiRex-2](docs/tirex2.md) ·
 [TTM](docs/ttm.md) ·
+[TOTO 2](docs/toto2.md) ·
 [Usage profiles](docs/usage-profiles.md) ·
+[Windows target](docs/windows.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
-[Release notes](docs/release-v0.2.0.md) ·
+[Release notes](docs/release-v0.3.0.md) ·
 [Research origin and citation](#research-origin-and-citation) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
-Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, and Granite TTM R2 adapters. A separate finance extension evaluates
+Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, Granite TTM R2/R2.1 and TOTO 2 adapters.
+The TTM additions and TOTO 2 remain subject to real inference qualification.
+A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
 
 TSFM Lab extends the smaller, finance-focused model-testing pipeline developed
@@ -38,39 +42,54 @@ to acknowledge the study when using TSFM Lab in your work.
 
 - **Evaluate:** import one regular numeric series from CSV or optional Parquet,
   configure rolling forecasts in YAML, and score pooled/per-lead MAE, RMSE, and MASE.
+- **Forecast ahead:** select separate future mode from the final observation,
+  retain original-unit forecasts and consumed history, and show accuracy as
+  unavailable while future actuals are absent. This is 0.3.0 behavior;
+  see the [future guide](docs/future-forecasting.md).
 - **Reproduce:** save experiment records, inspect history, compare compatible
   runs, and export aligned predictions as CSV, JSON, or optional Parquet.
 - **Work locally:** use the Python core, scriptable `tsfm` commands, or a
   persistent terminal prompt with inline setup, progress, and cancellation.
   Output stays in terminal scrollback; terminal dependencies remain optional.
-- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, or TTM with
+- **Add pretrained forecasts:** choose Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, TTM or TOTO 2 with
   curated checkpoints, explicit downloads, exact revisions, local/cache-only
   experiments, and recorded runtime provenance. TTM uses explicit context profiles
-  and a native-point evaluation task.
+  and a native-point evaluation task. TOTO 2 requires Python 3.12/3.13;
+  configuration/fake-runtime checks do not establish installed or real inference support.
 - **Choose a workflow:** select Generic, Finance, Energy, Temperature, or Weather
   in `/new`. Profile-specific questions preserve declared units and measurement
   semantics; history and reports show the selected usage without changing scores.
 - **Use optional assistance:** describe an experiment for editable setup choices,
-  or request explanations of checked models, results, and finance reports. Four
+  or request explanations of checked models, results, and finance reports. Seven
   connection routes keep account/model/usage selection explicit; outgoing content
   and execution require review. See the [assistant guide](docs/language-assistance.md).
+  DeepSeek, local Ollama and compatible endpoints are 0.3.0 additions;
+  live provider and native-vault qualification remain pending.
 - **Evaluate price decisions:** derive long/flat/short signals from saved lead-1
   forecasts, require explicit OHLC timing and costs, and inspect verified
   strategy, cash, and buy-and-hold reports without rerunning a model.
 
 ### Release status
 
-The source version is **0.2.0**, distributed through the
-[GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
-as a source archive and installable wheel with SHA-256 checksums. PyPI publication
-is separate and has not been performed. See the [release notes](docs/release-v0.2.0.md),
-[release verification record](docs/v0.2.0-verification.md), and
-[release procedure](docs/releasing.md).
+Version **0.3.0** adds onboarding/preferences, model-specific setup, guided
+preparation and saved outputs, future forecasting, additional connections and
+model profiles, Windows portability, and
+[static documentation preparation](docs/public-documentation.md).
+The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0)
+provides a source archive, installable wheel, verification manifest and checksums.
+PyPI publication and documentation hosting remain separate and have not been
+performed. The repository's visibility remains unchanged.
 
-Hosted CI is skipped for this release under the owner's explicit exception;
-local checks and installed-package verification are recorded instead. The CI
-badge tracks `main` and does not certify this release. Live assistant-provider
-and native credential-vault compatibility remain unqualified.
+The release follows local review, offline tests and exact installed-package
+verification. **New real-model inference, native Windows/Windows Terminal,
+live-provider and native-vault checks remain unqualified.** TOTO 2 supports
+Python 3.12–3.13 only. The nine-job Linux/macOS/Windows Python 3.11–3.13 CI matrix
+is configured, but account billing prevents hosted jobs from starting; those
+failures are not test results. Publication follows the owner's request with
+these limits retained. See the [release notes](docs/release-v0.3.0.md),
+[release verification record](docs/v0.3.0-verification.md), and
+[release procedure](docs/releasing.md). The CI badge tracks `main` and does not
+certify a release whose jobs could not start.
 
 ## Run the offline example
 
@@ -194,12 +213,16 @@ revisions, safe loading, and saved-result behavior. Small has a bounded real CPU
 check; standard has metadata/API compatibility checks without individual inference.
 The [P2 record](docs/p2-chronos2-verification.md) describes the evidence and limits.
 
-## Use Granite TTM R2
+## Use Granite TTM R2 and R2.1
 
-The optional `ttm_r2` adapter offers three R2 MSE profiles requiring exactly
-512, 1,024, or 1,536 historical observations, with forecasts up to 96 steps.
-It supports regular one-minute through hourly series. Select `/new ttm_r2`
-and a checkpoint profile; guided setup supplies a longer synthetic example.
+The optional `ttm_r2` adapter retains its three original R2 MSE profiles and adds
+512-context native horizons 192/336/720 plus R2.1 weekly 52/16 and daily 90/30.
+Each profile requires its exact context and supported cadence. R2 accepts
+one-minute through hourly series; R2.1 requires fixed `7D` or `1D` respectively.
+The five additions have offline configuration/fake-runtime checks, with real
+inference pending in the [S6 record](docs/s6-ttm-verification.md). Select `/new ttm_r2`
+and a checkpoint profile; guided setup supplies a longer hourly R2 example.
+R2.1 needs your own dataset with the required daily/weekly cadence.
 TTM uses the explicit `native_point` task and records causal external scaling
 plus the native scaler. Existing models retain their actual median or
 deterministic output labels when compared in that task. OHLC reports continue
@@ -209,6 +232,27 @@ See the [TTM guide](docs/ttm.md), [approved contract](docs/ttm-contract.md), and
 [P4 verification record](docs/p4-ttm-verification.md). Install the optional
 runtime with `python -m pip install -c requirements-ttm.txt '.[cli,ttm]'`. Checkpoints are acquired
 separately through an explicit pull.
+
+## Use TOTO 2
+
+The optional `toto_2` adapter curates the 4M TOTO 2 checkpoint on Python 3.12 or
+3.13, with project context bounds 32–2,048 in multiples of 32 and horizon 1–128.
+It uses strict local Safetensors, native median output and recorded causal
+preprocessing. These bounds are integration choices, not upstream architecture
+limits. Python 3.11 retains metadata and saved-result operations but cannot run
+this family. See the [TOTO guide](docs/toto2.md),
+[future YAML example](examples/configurations/toto2-future.yaml) and
+[S6 verification limits](docs/s6-toto2-verification.md). Runtime installation/import
+and real inference remain pending; routine checks use inert weights/fake tensors.
+
+## Prepare static documentation
+
+The [public documentation workflow](docs/public-documentation.md) builds a
+publication-ready static artifact from curated safe text, styles, catalog
+metadata and citation fields. The source repository stays private. An explicit
+HTTPS base URL is a candidate until a host and deployment are confirmed.
+No registration or deployment is part of this local build; see
+[S7 evidence](docs/s7-public-docs-verification.md).
 
 ## Use TiRex-2
 
@@ -308,7 +352,7 @@ without resolving dependencies. Use an empty output directory. `[tui]` supplies
 the original headless Textual regression tests; those skip when Textual is
 unavailable. The active prompt uses `[cli]`; its tests include real pseudo-terminal
 interactions. CI installs both sets without model downloads. The configured CI matrix covers Python 3.11,
-3.12, and 3.13 on Linux and macOS. Local verification used Python 3.13.6 on macOS;
+3.12, and 3.13 on Linux, macOS and Windows. Local verification used Python 3.11–3.13 on macOS;
 the live matrix status is available in the CI results linked above. Release checks include an installation into a
 clean environment; see the [Milestone 5 record](docs/milestone5-verification.md).
 See the [Milestone 1 record](docs/verification.md) and
@@ -318,11 +362,12 @@ See the [Milestone 1 record](docs/verification.md) and
 [prompt rework record](docs/terminal-rework.md), for evidence and limits.
 
 The [release guide](docs/releasing.md) describes artifact verification and
-publication. The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0)
+publication. The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0)
 provides packages; PyPI publication remains separate.
 The [P8 preparation record](docs/p8-release-verification.md) preserves the earlier
-qualification evidence. The [v0.2.0 verification record](docs/v0.2.0-verification.md)
-describes final release checks, the CI exception, and remaining verification limits.
+qualification evidence. The [v0.3.0 verification record](docs/v0.3.0-verification.md)
+describes current release checks and remaining verification limits. Earlier
+[v0.2.0 evidence](docs/v0.2.0-verification.md) remains historical.
 
 ## Design and implementation plan
 
@@ -334,6 +379,11 @@ describes final release checks, the CI exception, and remaining verification lim
   formulas, aggregation, and comparison requirements.
 - [Development roadmap](docs/roadmap.md): review decisions, implementation tasks,
   and milestone acceptance criteria.
+- [v0.3.0 plan](docs/release-v0.3.0-plan.md): staged release scope; development
+  includes [first-launch onboarding](docs/onboarding.md), `/setup`, `/settings`,
+  [model-specific guided setup](docs/model-setup.md), and
+  [guided preparation and outputs](docs/guided-preparation.md), and
+  [future forecasting](docs/future-forecasting.md).
 - [Adapter extension guide](docs/adapters.md): the current protocol and a runnable
   direct-Python example, including limits on shell/catalog integration.
 
@@ -341,7 +391,7 @@ The agreed implementation sequence starts with Python, NumPy, and pandas;
 uses Typer and Rich for shell commands and prompt_toolkit for the persistent
 interactive prompt. Model runtimes remain optional. Chronos-Bolt is the first integrated
 family, followed by TimesFM 2.5, Chronos-2, TiRex-2, and TTM. Further work follows the
-[next release plan](docs/next-release-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
+[v0.3.0 plan](docs/release-v0.3.0-plan.md). The [finance contract](docs/finance-extension.md) defines the separate
 OHLC extension; the [benchmarking study](docs/benchmarking-extension.md) records
 the bounded compatibility findings before further benchmark integration.
 

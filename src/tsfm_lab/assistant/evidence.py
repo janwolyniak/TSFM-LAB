@@ -45,6 +45,15 @@ _FORECAST_OPTIONS = (
     "constant_scale",
     "native_scaling",
     "native_inverse",
+    "frequency_token",
+    "decode_block_size",
+    "has_missing_values",
+    "scaler_fallback_min_obs",
+    "quantile_real_cap_k",
+    "normalization",
+    "quantile_policy",
+    "nonfinite_policy",
+    "bounds_policy",
 )
 _VARIANT = (
     "repository",
@@ -58,6 +67,7 @@ _VARIANT = (
     "max_horizon",
     "project_inference_status",
     "verification_label",
+    "frequency_policy",
 )
 _COUNTS = (
     "attempted_windows",
@@ -329,6 +339,7 @@ def _configuration(result):
         "timesfm_2p5",
         "tirex_2",
         "ttm_r2",
+        "toto_2",
     }:
         safe_runtime["forecast_options"] = _pick(
             runtime.get("forecast_options", {}), _FORECAST_OPTIONS
@@ -379,6 +390,8 @@ def _result(result, statistics):
 
 def experiment_evidence(store, run_id: str) -> dict:
     """Project only a completed result accepted by full artifact validation."""
+    if store.get_manifest(run_id).get("kind") == "future_forecast":
+        return future_evidence(store, run_id)
     result, predictions = store.load_result(run_id)
     data = _result(result, predictions["point_statistic"].unique().tolist())
     return _envelope(
@@ -387,6 +400,66 @@ def experiment_evidence(store, run_id: str) -> dict:
         omitted={
             "by_lead_count": max(data["metrics"]["total_leads"] - _LEADS, 0),
         },
+    )
+
+
+def future_evidence(store, run_id: str) -> dict:
+    """Project future metadata without any observed or predicted values."""
+    result, _, _ = store.load_future_result(run_id)
+    request, provenance = result["request"], result["provenance"]
+    runtime = _pick(
+        provenance["runtime"],
+        ("device", "dtype", "batch_size", "seed", "seed_used", "deterministic"),
+    )
+    if "forecast_options" in provenance["runtime"]:
+        runtime["forecast_options"] = _pick(
+            provenance["runtime"]["forecast_options"], _FORECAST_OPTIONS
+        )
+    data = {
+        "mode": "future_forecast",
+        "target": _pick(
+            result["output"],
+            ("target_name", "units", "requested_task", "point_statistic"),
+        ),
+        "request": {
+            **_pick(
+                request,
+                (
+                    "origin",
+                    "context_start",
+                    "context_end",
+                    "context_length",
+                    "horizon",
+                    "frequency",
+                ),
+            ),
+            "first_target_timestamp": request["target_timestamps"][0],
+            "last_target_timestamp": request["target_timestamps"][-1],
+        },
+        "counts": _pick(
+            result["counts"],
+            ("source_observations", "context_observations", "forecast_rows"),
+        ),
+        "model": _model({"model": provenance["model"]}, {}),
+        "runtime": runtime,
+        "preprocessing": _pick(
+            provenance["preprocessing"],
+            ("policy", "adapter_id", "adapter_version", "point_forecast"),
+        ),
+        "evaluation": _pick(result["evaluation"], ("status", "reason", "metrics")),
+    }
+    return _envelope(
+        "future_forecast",
+        data,
+        omitted={"observed_and_predicted_value_summaries": True},
+        glossary={
+            "origin": "Final observed timestamp; predictions start strictly afterward.",
+            "accuracy": "Accuracy is unavailable because actual future observations are absent.",
+            "native_point": "A model-native point output does not establish a median or mean.",
+        },
+        limitations=(
+            "Metadata only: no observed or predicted values, value summaries, tables, or source paths are included.",
+        ),
     )
 
 

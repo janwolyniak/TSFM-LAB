@@ -1,6 +1,7 @@
 """Small disposable configurations for the complete shell workflow."""
 
 import json
+import os
 import shutil
 import weakref
 from contextlib import contextmanager
@@ -11,6 +12,23 @@ from uuid import uuid4
 import numpy as np
 import pytest
 import yaml
+
+
+@pytest.fixture
+def symlinks():
+    """Skip only Windows' missing symlink privilege, retaining ordinary IO tests."""
+
+    def create(path, target, *, target_is_directory=False):
+        try:
+            path.symlink_to(target, target_is_directory=target_is_directory)
+        except OSError as exc:
+            if os.name == "nt" and exc.winerror == 1314:
+                pytest.skip(
+                    "Windows symlink privilege unavailable; regular-file/cache-copy tests remain active"
+                )
+            raise
+
+    return create
 
 
 @pytest.fixture

@@ -96,17 +96,64 @@ def _specifiers(value):
     return tuple(sorted(result))
 
 
+def _marker(marker, extra=None):
+    """Parse the release's extra and Windows selectors, with conjunction only."""
+    tokens, position = [], 0
+    while position < len(marker.rstrip()):
+        match = re.match(
+            r"""\s*(\(|\)|and\b|extra\b|sys_platform\b|==|"[A-Za-z0-9._-]+"|'[A-Za-z0-9._-]+')""",
+            marker[position:],
+        )
+        require(match is not None, f"Unsupported dependency marker: {marker}")
+        tokens.append(match[1])
+        position += match.end()
+        require(len(tokens) <= 64, "Dependency marker is too complex")
+    index, selectors = 0, {}
+
+    def expression(depth=0):
+        nonlocal index
+        require(depth <= 8, "Dependency marker is too complex")
+        while True:
+            require(index < len(tokens), "Incomplete dependency marker")
+            if tokens[index] == "(":
+                index += 1
+                expression(depth + 1)
+                require(
+                    index < len(tokens) and tokens[index] == ")",
+                    "Invalid dependency marker grouping",
+                )
+                index += 1
+            else:
+                require(index + 2 < len(tokens), "Incomplete dependency selector")
+                name, operator, quoted = tokens[index : index + 3]
+                require(
+                    name in {"extra", "sys_platform"}
+                    and operator == "=="
+                    and quoted[:1] in {"'", '"'},
+                    "Unsupported dependency selector",
+                )
+                require(name not in selectors, "Repeated dependency selector")
+                selectors[name] = quoted[1:-1]
+                index += 3
+            if index >= len(tokens) or tokens[index] != "and":
+                return
+            index += 1
+
+    if tokens:
+        expression()
+        require(index == len(tokens), "Unsupported dependency marker")
+    if "extra" in selectors:
+        require(extra is None, "Unexpected extra selector in source requirement")
+        extra = _name(selectors["extra"])
+    platform = selectors.get("sys_platform")
+    require(platform in {None, "win32"}, "Unsupported platform selector")
+    return extra, platform
+
+
 def _requirement(value, extra=None):
     requirement, separator, marker = value.partition(";")
-    if separator:
-        match = re.fullmatch(
-            r"""\s*extra\s*==\s*(["'])([A-Za-z0-9._-]+)\1\s*""", marker
-        )
-        require(
-            match is not None and extra is None,
-            f"Unsupported dependency marker: {value}",
-        )
-        extra = _name(match[2])
+    require(not separator or marker.strip(), "Empty dependency marker")
+    extra, platform = _marker(marker, extra)
     match = re.fullmatch(
         r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)(?:\[([A-Za-z0-9._, -]+)\])?\s*(.*?)\s*",
         requirement,
@@ -117,7 +164,15 @@ def _requirement(value, extra=None):
             _name(item.strip()) for item in (match[2] or "").split(",") if item.strip()
         )
     )
-    return _name(match[1]), extras, _specifiers(match[3]), extra
+    return _name(match[1]), extras, _specifiers(match[3]), extra, platform
+
+
+def is_optional_requirement(value):
+    """A conditional dependency remains optional only with a mandatory extra."""
+    try:
+        return _requirement(value)[3] is not None
+    except ValueError:
+        return False
 
 
 def metadata_contract(raw, configuration):

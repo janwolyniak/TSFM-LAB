@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
+from tsfm_lab.local_paths import checkpoint_record_path
 from tsfm_lab.models.catalog import CURATED_REPOSITORIES
 from tsfm_lab.models.checkpoint_profiles import (
     checkpoint_adapter,
@@ -134,14 +135,22 @@ def _config_file(path: Path, root: Path, *, hub: bool) -> tuple[dict, dict]:
         ) from exc
 
 
-def _file(path: Path, root: Path, *, hub: bool) -> tuple[Path, dict]:
+def _file(
+    path: Path, root: Path, *, hub: bool, should_cancel=None
+) -> tuple[Path, dict]:
     try:
+        if should_cancel and should_cancel():
+            raise KeyboardInterrupt
         resolved = _safe_file(path, root, hub=hub)
         digest, size = hashlib.sha256(), 0
         with resolved.open("rb") as stream:
             while chunk := stream.read(1024 * 1024):
+                if should_cancel and should_cancel():
+                    raise KeyboardInterrupt
                 digest.update(chunk)
                 size += len(chunk)
+        if should_cancel and should_cancel():
+            raise KeyboardInterrupt
         if not size:
             raise CheckpointError(f"Checkpoint file is empty: {path.name}")
         return resolved, {"sha256": digest.hexdigest(), "size": size}
@@ -233,12 +242,11 @@ def validate_checkpoint_record(record: dict) -> dict:
         }
         if record["schema_version"] == 2:
             fields.add("point_forecast")
-        if set(record) != fields or ".." in Path(record["path"]).parts:
+        if set(record) != fields:
             raise CheckpointError("Invalid checkpoint record fields or path")
-        if (
-            record["source"] not in {"local", "huggingface"}
-            or not isinstance(record["path"], str)
-            or not Path(record["path"]).is_absolute()
+        path = checkpoint_record_path(record["path"])
+        if record["source"] not in {"local", "huggingface"} or not isinstance(
+            record["path"], str
         ):
             raise CheckpointError(
                 "Checkpoint record requires an absolute path and known source"
@@ -253,12 +261,15 @@ def validate_checkpoint_record(record: dict) -> dict:
             _repository(record["repository"])
             _revision(record["requested_revision"])
             _sha(record["resolved_revision"])
-            _snapshot_path(
-                Path(record["path"]),
-                record["repository"],
-                record["resolved_revision"],
-                check_directory=False,
-            )
+            if (
+                path.name != record["resolved_revision"]
+                or path.parent.name != "snapshots"
+                or path.parent.parent.name
+                != "models--" + record["repository"].replace("/", "--")
+            ):
+                raise CheckpointError(
+                    "Cached snapshot path does not match repository and exact SHA"
+                )
         files = record["files"]
         if not isinstance(files, dict) or not _REQUIRED <= set(files) <= _FILES:
             raise CheckpointError("Checkpoint record has invalid consumed files")
@@ -311,8 +322,16 @@ def _reject_adapters(names):
 
 
 def _inspect(
-    path: Path, source: str, repository=None, requested=None, resolved=None
+    path: Path,
+    source: str,
+    repository=None,
+    requested=None,
+    resolved=None,
+    *,
+    should_cancel=None,
 ) -> ResolvedCheckpoint:
+    if should_cancel and should_cancel():
+        raise KeyboardInterrupt
     if source == "huggingface":
         _snapshot_path(Path(path), repository, resolved)
     path = Path(path).expanduser().resolve()
@@ -333,7 +352,10 @@ def _inspect(
         candidate = path / name
         if name in _REQUIRED or candidate.exists() or candidate.is_symlink():
             consumed[name], files[name] = _file(
-                candidate, path, hub=source == "huggingface"
+                candidate,
+                path,
+                hub=source == "huggingface",
+                **({"should_cancel": should_cancel} if should_cancel else {}),
             )
     license = None
     if "README.md" in consumed:
@@ -397,6 +419,10 @@ def resolve_checkpoint(
     """Resolve metadata if permitted, then require already-cached exact files."""
     _repository(repository)
     _revision(revision)
+    if repository == "Datadog/Toto-2.0-4m":
+        from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+        ensure_supported_python()
     if type(offline) is not bool:
         raise CheckpointError("offline must be a boolean")
     if offline:
@@ -428,6 +454,10 @@ def pull_checkpoint(
     """Explicitly download a reviewed pinned config, then only safe checkpoint files."""
     _repository(repository)
     _revision(revision)
+    if repository == "Datadog/Toto-2.0-4m":
+        from tsfm_lab.models.toto2_profile import ensure_supported_python
+
+        ensure_supported_python()
     hub = _hub()
     info = hub.HfApi(token=False).model_info(
         repository, revision=revision, files_metadata=True, token=False

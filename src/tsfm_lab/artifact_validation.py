@@ -134,6 +134,26 @@ def _checkpoint_identity(model, runtime, spec, environment, frequency):
     ):
         raise StoreError("Checkpoint capabilities or runtime disagree with metadata")
     distributions = tuple(name for name, _ in profile.runtime_requirements)
+    if adapter == "toto_2":
+        from tsfm_lab.models.toto2_profile import (
+            MIN_CONTEXT,
+            validate_bounds,
+            validate_runtime_options,
+        )
+
+        if (
+            caps["min_context"] != MIN_CONTEXT
+            or runtime.get("torch_compile") is not False
+        ):
+            raise StoreError(
+                "TOTO 2 requires its project context bound and eager inference"
+            )
+        from tsfm_lab.runtime_diagnostics import _release
+
+        if _release(environment["python"])[:2] not in {(3, 12), (3, 13)}:
+            raise StoreError("TOTO 2 execution provenance requires Python 3.12 or 3.13")
+        validate_bounds(spec.context_length, spec.horizon)
+        validate_runtime_options(runtime.get("forecast_options"))
     if adapter == "ttm_r2":
         from tsfm_lab.models.ttm_profile import (
             validate_frequency,
@@ -149,7 +169,7 @@ def _checkpoint_identity(model, runtime, spec, environment, frequency):
             or runtime.get("torch_compile") is not False
         ):
             raise StoreError("TTM requires its fixed context and native_point task")
-        validate_frequency(frequency)
+        validate_frequency(frequency, record["point_forecast"]["frequency_policy"])
         validate_runtime_options(runtime.get("forecast_options"), record)
     if adapter == "tirex_2":
         from tsfm_lab.models.tirex2_profile import forecast_options_for_record

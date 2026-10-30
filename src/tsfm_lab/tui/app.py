@@ -15,6 +15,7 @@ from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, R
 from tsfm_lab.config import ExperimentConfig
 from tsfm_lab.execution import ManagedRun
 from tsfm_lab.repl.text import literal
+from tsfm_lab.run_modes import forecast_spec, is_future
 from tsfm_lab.tui.views import HistoryScreen, ModelScreen, ResultsScreen
 from tsfm_lab.tui.wizard import WizardScreen
 from tsfm_lab.workflows import PROFILE_NAMES, workflow_summary
@@ -81,13 +82,18 @@ class RunningScreen(Screen):
         yield Header()
         with VerticalScroll(id="running-body"):
             yield Label(self.config.name, id="running-title")
-            dataset, spec = self.config.dataset, self.config.evaluation
+            dataset, spec = self.config.dataset, forecast_spec(self.config)
+            mode_detail = (
+                f" · Origin {spec.origin}"
+                if is_future(self.config)
+                else f" · Stride {spec.stride}"
+            )
             yield Label(
                 Text(
                     literal(
                         f"Usage {workflow_summary(self.config.workflow)}\n"
                         f"{dataset['target_column']} · {dataset['units']} · {dataset['frequency']}\n"
-                        f"Context {spec.context_length} · Horizon {spec.horizon} observations · Stride {spec.stride}"
+                        f"Context {spec.context_length} · Horizon {spec.horizon} observations{mode_detail}"
                     )
                 ),
                 id="execution-target",
@@ -225,13 +231,25 @@ class LabApp(App):
     def _configured(self, config) -> None:
         if config is None:
             return
+        from tsfm_lab.guided import GuidedRunPlan
+
+        selected = config
+        if isinstance(config, GuidedRunPlan):
+            config = config.config
         self.workspace = config.output_directory
         self.push_screen(RunningScreen(config))
-        self.call_after_refresh(self._start_run, config)
+        self.call_after_refresh(self._start_run, selected)
 
     def _start_run(self, config) -> None:
+        from tsfm_lab.guided import GuidedRunPlan
+        from tsfm_lab.guided_execution import ManagedGuidedRun
+
         try:
-            self.active_run = self.worker_factory(config)
+            self.active_run = (
+                ManagedGuidedRun(config)
+                if isinstance(config, GuidedRunPlan)
+                else self.worker_factory(config)
+            )
             self.active_run.start()
         except (OSError, ValueError, RuntimeError) as exc:
             if self.active_run is not None:

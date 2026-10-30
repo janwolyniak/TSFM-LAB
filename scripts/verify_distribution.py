@@ -1,7 +1,7 @@
 """Verify an installed wheel in isolation; never install or download dependencies.
 
-Run with the clean environment's bin directory on PATH:
-    python -I scripts/verify_distribution.py
+Run with the clean environment's bin (Windows: Scripts) directory on PATH:
+    python -I scripts/verify_distribution.py --wheel dist/tsfm_lab-VERSION-py3-none-any.whl
 """
 
 import argparse
@@ -39,6 +39,21 @@ _OPTIONAL = (
     "jwt",
     "cryptography",
     "keyring",
+    "toto2",
+    "gluonts",
+    "dd_unit_scaling",
+    "unit_scaling",
+    "lightning",
+    "pytorch_lightning",
+    "triton",
+    "triton_windows",
+    "safetensors",
+    "accelerate",
+    "tokenizers",
+    "einops",
+    "jaxtyping",
+    "matplotlib",
+    "ninja",
 )
 _COLUMNS = {
     "request_id",
@@ -69,11 +84,14 @@ _FINANCE_COLUMNS = {
     "cash_equity",
     "buy_and_hold_equity",
 } | {f"strategy_{name}" for name in _FINANCE_STRATEGY_FIELDS}
-_BLOCK_OPTIONAL = """import importlib.abc
+_BLOCK_OPTIONAL = (
+    """import importlib.abc
 import json
 import sys
 
-blocked = {'torch', 'chronos', 'timesfm', 'transformers', 'huggingface_hub', 'textual', 'tirex2', 'flashrnn', 'mlstm_kernels', 'tsfm_public', 'httpx', 'jwt', 'cryptography', 'keyring'}
+blocked = set("""
+    + repr(_OPTIONAL)
+    + """)
 
 class Block(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -82,6 +100,7 @@ class Block(importlib.abc.MetaPathFinder):
 
 sys.meta_path.insert(0, Block())
 """
+)
 
 
 class VerificationError(RuntimeError):
@@ -155,7 +174,7 @@ def installed_environment(wheel=None):
         not direct or not json.loads(direct).get("dir_info", {}).get("editable", False),
         "Editable installations do not verify wheel contents",
     )
-    expected = Path(sys.executable).parent / "tsfm"
+    expected = Path(sys.executable).parent / ("tsfm.exe" if os.name == "nt" else "tsfm")
     discovered = shutil.which("tsfm")
     require(
         expected.is_file() and os.access(expected, os.X_OK),
@@ -164,7 +183,7 @@ def installed_environment(wheel=None):
     )
     require(
         discovered is not None and Path(discovered).resolve() == expected.resolve(),
-        "PATH selects a different tsfm executable; prepend this environment's bin directory",
+        "PATH selects a different tsfm executable; prepend this environment's executable directory",
         expected_launcher=str(expected),
         discovered_launcher=discovered,
     )
@@ -202,18 +221,19 @@ def installed_environment(wheel=None):
             name: importlib.util.find_spec(name) is not None for name in _OPTIONAL
         },
     }
-    if wheel is not None:
-        helper = Path(__file__).with_name("verify_release_identity.py")
-        spec = importlib.util.spec_from_file_location("tsfm_release_identity", helper)
-        identity_helper = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(identity_helper)
-        evidence["wheel_identity"] = identity_helper.verify_installed(
-            wheel, origin.parent
-        )
-        require(
-            evidence["wheel_identity"]["version"] == distribution.version,
-            "The supplied wheel version differs from the installed distribution",
-        )
+    require(
+        wheel is not None,
+        "Supply --wheel with the exact built wheel installed with [cli,parquet]; installed version alone does not verify release bytes",
+    )
+    helper = Path(__file__).with_name("verify_release_identity.py")
+    spec = importlib.util.spec_from_file_location("tsfm_release_identity", helper)
+    identity_helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(identity_helper)
+    evidence["wheel_identity"] = identity_helper.verify_installed(wheel, origin.parent)
+    require(
+        evidence["wheel_identity"]["version"] == distribution.version,
+        "The supplied wheel version differs from the installed distribution",
+    )
     return expected, evidence
 
 
@@ -298,6 +318,7 @@ class Verifier:
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 timeout=min(30, remaining),
                 check=False,
             )
@@ -375,6 +396,7 @@ class Verifier:
         self.native_point_fixture()
         self.usage_profiles()
         self.connections()
+        self.onboarding_and_future(dataset)
         self.managed_worker(dataset)
         self.optional_boundaries()
         self.legacy_records()
@@ -440,10 +462,40 @@ class Verifier:
                 "chronos_2",
                 "tirex_2",
                 "ttm_r2",
+                "toto_2",
             },
             "Installed model catalog differs from supported adapters",
         )
+        expected_variants = {
+            "last_value": set(),
+            "seasonal_naive": set(),
+            "chronos_bolt": {"tiny", "small", "base"},
+            "timesfm_2p5": {"200m"},
+            "chronos_2": {"small", "standard"},
+            "tirex_2": {"main", "fevbench", "gifteval-zs", "gifteval-pretrain"},
+            "ttm_r2": {
+                "512-96-r2",
+                "1024-96-r2",
+                "1536-96-r2",
+                "512-192-r2",
+                "512-336-r2",
+                "512-720-r2",
+                "52-16-ft-r2.1",
+                "90-30-ft-r2.1",
+            },
+            "toto_2": {"4m"},
+        }
+        require(
+            len(catalog) == len(expected_variants), "Installed catalog repeats adapters"
+        )
         for entry in catalog:
+            variants = [item["variant"] for item in entry["variants"]]
+            require(
+                len(variants) == len(expected_variants[entry["adapter_id"]])
+                and set(variants) == expected_variants[entry["adapter_id"]],
+                "Installed catalog differs from the exact supported checkpoint variants",
+                adapter=entry["adapter_id"],
+            )
             adapter = entry["adapter_id"]
             expected = (
                 "deterministic"
@@ -468,6 +520,7 @@ class Verifier:
             ("google/timesfm-2.5-200m-pytorch", "timesfm_2p5"),
             ("autogluon/chronos-2-small", "chronos_2"),
             ("amazon/chronos-2", "chronos_2"),
+            ("Datadog/Toto-2.0-4m", "toto_2"),
             ("NX-AI/TiRex-2", "tirex_2"),
             ("NX-AI/TiRex-2-fevbench", "tirex_2"),
             ("NX-AI/TiRex-2-gifteval-zs", "tirex_2"),
@@ -548,10 +601,89 @@ class Verifier:
                 "Installed TiRex-2 profile bounds, verification, or runtime notices are incorrect",
                 repository=repository,
             )
-        for variant, revision, context, weight_bytes in (
-            ("512-96-r2", "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f", 512, 3240592),
-            ("1024-96-r2", "1a382618f3c5b63836281ad632e54724e55e85a5", 1024, 11879480),
-            ("1536-96-r2", "f6ed09d67cf42e4877f7fa33d98326911385693d", 1536, 12344144),
+        toto = self.json_command("models", "info", "Datadog/Toto-2.0-4m")
+        require(
+            toto["capabilities"]["min_context"] == 32
+            and toto["capabilities"]["max_context"] == 2048
+            and toto["capabilities"]["max_horizon"] == 128
+            and toto["point_statistic"] == "median"
+            and toto["selected_checkpoint"]["variant"] == "4m"
+            and toto["selected_checkpoint"]["reference_revision"]
+            == "8306a9801cf98c0f5ffe4b2dcc8f496e616d84d9"
+            and toto["selected_checkpoint"]["weight_bytes"] == 16582848
+            and toto["selected_checkpoint"]["project_inference_status"]
+            == "not_recorded"
+            and toto["runtime_requirements"]["toto-2"] == "==2.0.0"
+            and toto["runtime_requirements"]["gluonts"] == "==0.16.2"
+            and toto["runtime_requirements"]["numpy"] == "==2.1.3"
+            and "Python 3.12" in "\n".join(toto["runtime_notices"]),
+            "Installed TOTO-2 bounds, qualification, or runtime metadata is incorrect",
+        )
+        for variant, revision, context, horizon, weight_bytes, cadence in (
+            (
+                "512-96-r2",
+                "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f",
+                512,
+                96,
+                3240592,
+                "minute_hour_fixed_v1",
+            ),
+            (
+                "1024-96-r2",
+                "1a382618f3c5b63836281ad632e54724e55e85a5",
+                1024,
+                96,
+                11879480,
+                "minute_hour_fixed_v1",
+            ),
+            (
+                "1536-96-r2",
+                "f6ed09d67cf42e4877f7fa33d98326911385693d",
+                1536,
+                96,
+                12344144,
+                "minute_hour_fixed_v1",
+            ),
+            (
+                "512-192-r2",
+                "25f4a00a25e1d0b67c40a10b06645d72e2266929",
+                512,
+                192,
+                3634200,
+                "minute_hour_fixed_v1",
+            ),
+            (
+                "512-336-r2",
+                "0009f51f52c87473e60ff3a03cd8633ee85d61e8",
+                512,
+                336,
+                4224600,
+                "minute_hour_fixed_v1",
+            ),
+            (
+                "512-720-r2",
+                "bcfc4a497430a228afcbaf378f18f316642ece2a",
+                512,
+                720,
+                5799000,
+                "minute_hour_fixed_v1",
+            ),
+            (
+                "52-16-ft-r2.1",
+                "8c9c1d742ec5893d6419e3aa2ab21ed23e28df85",
+                52,
+                16,
+                319440,
+                "weekly_fixed_v1",
+            ),
+            (
+                "90-30-ft-r2.1",
+                "6e5cb8ee51e0634a45637490f5db43148b2fa6be",
+                90,
+                30,
+                3496760,
+                "daily_fixed_v1",
+            ),
         ):
             value = self.json_command(
                 "models",
@@ -566,13 +698,15 @@ class Verifier:
                 and value["capabilities"]["min_context"]
                 == value["capabilities"]["max_context"]
                 == context
-                and value["capabilities"]["max_horizon"] == 96
+                and value["capabilities"]["max_horizon"] == horizon
                 and value["point_statistic"] == "native_point"
                 and value["supported_tasks"] == ["native_point"]
-                and value["frequency_policy"] == "minutely_hourly"
+                and value["frequency_policy"] == cadence
                 and selected["variant"] == variant
                 and selected["reference_revision"] == revision
                 and selected["weight_bytes"] == weight_bytes
+                and selected["project_inference_status"]
+                == ("recorded" if variant == "512-96-r2" else "not_recorded")
                 and value["runtime_requirements"]["granite-tsfm"] == "==0.3.4",
                 "Installed TTM variant, native semantics, or pinned metadata is incorrect",
                 variant=variant,
@@ -1268,13 +1402,42 @@ class Fake:
     answer = 'confirmed'
     def send(self, request, **kwargs):
         self.calls.append(request)
+        if self.kind in {'deepseek_api','compatible_api','ollama_local'}:
+            endpoint = {'deepseek_api':'https://api.deepseek.com', 'compatible_api':'https://installed-compatible.example/v1','ollama_local':'http://127.0.0.1:11434'}[self.kind]
+            assert request.endpoint == endpoint and request.url.startswith(endpoint+'/')
+            if self.kind == 'ollama_local':
+                assert 'Authorization' not in request.headers
+                assert fake_secret not in json.dumps(request.headers)
+                assert request.url in {endpoint+'/api/tags',endpoint+'/api/show',endpoint+'/api/chat'}
+                if request.method == 'POST':
+                    assert request.json_body['model'] == 'fake-model:local'
+                if request.url.endswith('/api/show'):
+                    assert request.json_body == {'model':'fake-model:local'}
+                    return HTTPResponse(200,json.dumps({'model_info':{'general.architecture':'fake'},'capabilities':['completion']}).encode())
+                if request.url.endswith('/api/chat'):
+                    assert set(request.json_body) == {'model','messages','stream','options'}
+                    assert request.json_body['stream'] is False
+                    assert set(request.json_body['options']) == {'num_predict'}
+            else:
+                assert request.headers['Authorization'] == 'Bearer '+fake_secret
+                assert request.url == endpoint + ('/models' if request.method == 'GET' else '/chat/completions')
+                if request.method == 'POST':
+                    assert set(request.json_body) == {'model','messages','max_tokens','stream'}
+                    assert request.json_body['model'] == 'fake-model' and request.json_body['stream'] is False
         if request.method == 'GET':
             payload = {
                 'chatgpt_plan': {'models':[{'slug':'fake-model','visibility':'list'}]},
                 'openai_api': {'data':[{'id':'fake-model'}]},
+                'deepseek_api': {'data':[{'id':'fake-model'}]},
+                'compatible_api': {'data':[{'id':'fake-model'}]},
+                'ollama_local': {'models':[{'name':'fake-model'}]},
                 'anthropic_api': {'data':[{'id':'fake-model'}],'has_more':False},
                 'gemini_api': {'models':[{'name':'models/fake-model','supportedGenerationMethods':['generateContent']}]},
             }[self.kind]
+        elif self.kind == 'ollama_local':
+            payload = {'done':True,'done_reason':'stop','message':{'role':'assistant','content':self.answer}}
+        elif self.kind in {'deepseek_api','compatible_api'}:
+            payload = {'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':self.answer}}]}
         elif self.kind == 'anthropic_api':
             payload = {'type':'message','role':'assistant','stop_reason':'end_turn','content':[{'type':'text','text':self.answer}]}
         elif self.kind == 'gemini_api':
@@ -1288,6 +1451,7 @@ class Fake:
 
 transport = Fake()
 manager = ConnectionManager(StateStore(Path('connection-metadata')),transport=transport,oauth_factory=lambda _:SimpleNamespace(revoke=lambda *a,**kw:True))
+assert set(KINDS) == {'chatgpt_plan','openai_api','anthropic_api','gemini_api','deepseek_api','ollama_local','compatible_api'}
 for kind in KINDS:
     transport.kind = kind
     transport.answer = 'confirmed'
@@ -1297,7 +1461,8 @@ for kind in KINDS:
         credentials = Credentials({**account,'access_token':fake_secret,'refresh_token':fake_secret+'-refresh','id_token':fake_secret+'-identity','token_type':'Bearer','scopes':['chatgpt.tokens.use.direct'],'access_expires_at':time.time()+3600,'identity_pending':False})
         manager.finish_sign_in(item['id'],SimpleNamespace(account=account,credentials=credentials,identity_pending=False),manager.state.read()['generation'])
     else:
-        item = manager.add_key(kind,'Installed fake '+kind,fake_secret,storage='session')
+        endpoints = {'deepseek_api':'https://api.deepseek.com','compatible_api':'https://installed-compatible.example/v1','ollama_local':'http://127.0.0.1:11434'}
+        item = manager.add_key(kind,'Installed fake '+kind,None if kind == 'ollama_local' else fake_secret,storage='session',endpoint=endpoints.get(kind))
     manager.select(item['id'])
     assert [model.identifier for model in manager.models()] == ['fake-model']
     manager.set_model('fake-model')
@@ -1324,19 +1489,208 @@ for kind in KINDS:
     assert str(dataset) not in preview['text'] and fake_secret not in json.dumps(preview)
     assert assistant.submit_explanation(preview,confirmed=True)[0].text == 'This is the supported baseline model.'
     manager.disconnect(item['id'])
-assert len(transport.calls) == 16
+assert len(transport.calls) == 31
+assert sum(request.method == 'GET' for request in transport.calls) == 7
+assert sum(request.url.endswith('/api/show') for request in transport.calls) == 3
+assert sum(request.method == 'POST' and not request.url.endswith('/api/show') for request in transport.calls) == 21
 assert not manager.session._secrets
 assert fake_secret not in manager.state.path.read_text()
 assert not blocked.intersection(sys.modules)
-print(json.dumps({'fake_routes':4,'inference_requests':12,'optional_loaded':[]}))
+print(json.dumps({'fake_routes':7,'inference_requests':21,'transport_calls':31,'optional_loaded':[]}))
 """
         require(
             strict_json(self.command("-c", probe, python=True).stdout)
-            == {"fake_routes": 4, "inference_requests": 12, "optional_loaded": []},
+            == {
+                "fake_routes": 7,
+                "inference_requests": 21,
+                "transport_calls": 31,
+                "optional_loaded": [],
+            },
             "Installed fake connection and language workflow failed",
         )
         self.done(
-            "four_fake_connections_drafts_and_explanations_without_provider_dependencies"
+            "seven_fake_connections_drafts_and_explanations_without_provider_dependencies"
+        )
+
+    def onboarding_and_future(self, dataset):
+        self.check = "installed_onboarding_guided_baselines_and_future_records"
+        # Every chosen path, preference file, source copy and worker is disposable.
+        future_source = self.root / "future-input.csv"
+        future_source.write_bytes(dataset.read_bytes())
+        workspace = self.root / "onboarding" / "Łódź work" / "saved forecasts"
+        fields = self.config("last_value", future_source, workspace)
+        fields.pop("evaluation")
+        fields.update(
+            schema_version=2,
+            mode="future_forecast",
+            forecast={
+                "context_length": 8,
+                "horizon": 4,
+                "point_statistic": "median",
+                "origin": "latest",
+            },
+        )
+        self.save_config("guided-future", fields)
+        probe = _BLOCK_OPTIONAL + """
+import io
+import time
+from pathlib import Path
+from unittest.mock import patch
+import pandas as pd
+from rich.console import Console
+from tsfm_lab.comparison import compare_runs
+from tsfm_lab.application import load_dataset
+from tsfm_lab.experiments import ExperimentStore, StoreError
+from tsfm_lab.exports import export_predictions
+from tsfm_lab.finance.backtest import backtest_run
+from tsfm_lab.finance.contracts import BacktestRules
+from tsfm_lab.finance.ohlc import OHLCData
+from tsfm_lab.future_config import load_future_config
+from tsfm_lab.guided import review_guided
+from tsfm_lab.guided_execution import ManagedGuidedRun
+from tsfm_lab.preferences import PreferenceStore
+from tsfm_lab.repl.onboarding import configure_preferences
+from tsfm_lab.repl.records import RecordCommands
+from tsfm_lab.repl.session import TerminalSession
+
+root = Path.cwd()
+workspace = root/'onboarding'/'Łódź work'/'saved forecasts'
+store = PreferenceStore(root/'onboarding'/'settings')
+assert not store.path.exists()
+class Editor:
+    def __init__(self, lines=(), answers=None):
+        self.lines = iter(lines)
+        self.answers = {name:iter(values) for name,values in (answers or {}).items()}
+        self.questions = []
+    def read(self):
+        return next(self.lines,'/exit')
+    def ask(self,label,default='',choices=()):
+        self.questions.append(label)
+        return next(self.answers.get(label,iter(())),default)
+editor = Editor(['/new last_value','/settings','/exit'], {
+    'Workspace directory':[str(workspace.parent)], 'Results directory':['saved forecasts'],
+    'Model cache directory':['model cache'], 'Default category':['temperature'],
+    'Default export format':['json'], 'Usage profile':['generic'], 'Run experiment?':['yes']
+})
+output = io.StringIO()
+session = TerminalSession(preference_store=store,editor=editor,console=Console(file=output,width=4096,color_system=None))
+session.run()
+preferences = store.load()
+assert preferences.onboarding_status == 'completed'
+assert preferences.workspace == workspace.parent and preferences.results_directory == workspace
+assert preferences.cache_directory == workspace.parent/'model cache'
+assert preferences.category == 'temperature' and preferences.export_format == 'json'
+assert session.connection_manager is None and session.last_run
+assert editor.questions.count('First-launch setup') == 1
+assert editor.questions.count('Run experiment?') == 1
+before_preferences = store.path.read_bytes()
+restart = Editor(['/settings','/exit'])
+TerminalSession(preference_store=store,editor=restart,console=Console(file=io.StringIO(),color_system=None)).run()
+assert 'First-launch setup' not in restart.questions
+cancel = Editor(answers={'Workspace directory':[str(root/'cancelled-work')],'Results directory':['/cancel']})
+assert configure_preferences(cancel.ask,lambda _:None,preferences,store) is None
+assert store.path.read_bytes() == before_preferences and not (root/'cancelled-work').exists()
+assert not preferences.cache_directory.exists()
+records = ExperimentStore(workspace)
+historical_id = session.last_run
+historical, rows = records.load_result(historical_id)
+assert len(rows) == 16 and historical['metrics']['overall']['mae']['value'] == 2.5
+historical_names = {'configuration.json','input.yaml','metrics.json','result.json','predictions.csv','forecast.svg','provenance.json'}
+assert records.get_manifest(historical_id)['schema_version'] == 2
+assert records.output_paths(historical_id) == {name:str(workspace/'experiments'/historical_id/name) for name in historical_names}
+for name in ('predictions.csv','result.json','forecast.svg','provenance.json'):
+    assert str(workspace/'experiments'/historical_id/name) in output.getvalue()
+
+configuration = load_future_config(root/'guided-future.yaml')
+data = load_dataset(configuration.dataset)
+plan = review_guided(configuration,offline=True)
+worker = ManagedGuidedRun(plan)
+events = []
+try:
+    worker.start()
+    end = time.monotonic()+10
+    while worker.is_running and time.monotonic()<end:
+        events.extend(worker.poll())
+        time.sleep(.005)
+    assert not worker.is_running
+    terminal = [event for event in events if event['type'] in {'completed','failed','cancelled'}]
+    assert len(terminal) == 1 and terminal[0]['type'] == 'completed', events
+    assert worker._inner._process.exitcode == 0
+    future_id = terminal[0]['run_id']
+    assert terminal[0]['result']['mode'] == 'future_forecast' and 'metrics' not in terminal[0]['result']
+finally:
+    log = worker.log_path
+    worker.close()
+assert not log.exists()
+future, predictions, observations = records.load_future_result(future_id)
+assert len(predictions) == 4 and len(observations) == 8 and 'actual' not in predictions
+assert list(predictions.prediction) == [float(data.values[-1])]*4
+assert list(predictions.target_timestamp) == [data.timestamps[-1]+pd.Timedelta(hours=lead) for lead in range(1,5)]
+assert future['evaluation'] == {'schema_version':1,'mode':'future_forecast','status':'unavailable','reason':'future_actuals_absent','metrics':None}
+assert 'metrics' not in future
+future_names = {'configuration.json','input.yaml','result.json','predictions.csv','observations.csv','evaluation.json','forecast.svg','provenance.json'}
+assert records.get_manifest(future_id)['schema_version'] == 3
+assert records.output_paths(future_id) == {name:str(workspace/'experiments'/future_id/name) for name in future_names}
+try:
+    compare_runs([historical_id,future_id],workspace)
+except ValueError as exc:
+    assert 'future' in str(exc).lower()
+else:
+    raise AssertionError('Future record entered historical comparison')
+ohlc = OHLCData(data.timestamps-pd.Timedelta(minutes=45),data.timestamps,data.values,data.values+1,data.values-1,data.values,'1h',data.units,data.series_id)
+def forbidden(*args,**kwargs):
+    raise AssertionError('Saved reload/export or finance refusal executed source/model/accounting')
+with patch('tsfm_lab.finance.backtest.evaluate_cases',forbidden):
+    try:
+        backtest_run(future_id,workspace,data,ohlc,BacktestRules(1000,0,0,0,0,0),target_is_price=True)
+    except StoreError as exc:
+        assert 'future' in str(exc).lower()
+    else:
+        raise AssertionError('Future record entered financial accounting')
+Path(configuration.dataset['path']).rename(root/'future-input-unavailable.csv')
+paths = [workspace/'experiments'/identifier/name for identifier,names in ((historical_id,historical_names),(future_id,future_names)) for name in names]
+frozen = {path:path.read_bytes() for path in paths}
+with patch('tsfm_lab.future_application.build_model',forbidden), patch('tsfm_lab.application.build_model',forbidden), patch('tsfm_lab.future_application.load_dataset',forbidden), patch('tsfm_lab.application.load_dataset',forbidden):
+    records.load_result(historical_id)
+    records.load_future_result(future_id)
+    view = io.StringIO()
+    RecordCommands(Console(file=view,width=4096,color_system=None),workspace).show(future_id)
+    assert 'Accuracy unavailable' in view.getvalue() and 'Future forecast' in view.getvalue()
+    assert 'Actual' not in view.getvalue()
+    for format in ('csv','json','parquet'):
+        destination = root/('detached-future.'+format)
+        exported = export_predictions(future_id,workspace,destination)
+        assert exported['rows'] == 4 and exported['path'] == str(destination)
+        loaded = pd.read_csv(destination) if format == 'csv' else pd.read_json(destination) if format == 'json' else pd.read_parquet(destination)
+        assert len(loaded) == 4 and 'actual' not in loaded
+        assert list(loaded.prediction) == [float(data.values[-1])]*4
+        try:
+            export_predictions(future_id,workspace,destination)
+        except FileExistsError:
+            pass
+        else:
+            raise AssertionError('Future export overwrote existing file')
+assert all(path.read_bytes() == raw for path,raw in frozen.items())
+assert store.path.read_bytes() == before_preferences
+assert not blocked.intersection(sys.modules)
+print(json.dumps({'preferences_roundtrip':True,'historical_cases':16,'historical_artifacts':7,'future_rows':4,'future_artifacts':8,'future_accuracy':'unavailable','detached_exports':3,'optional_loaded':[]}))
+"""
+        require(
+            strict_json(self.command("-c", probe, python=True).stdout)
+            == {
+                "preferences_roundtrip": True,
+                "historical_cases": 16,
+                "historical_artifacts": 7,
+                "future_rows": 4,
+                "future_artifacts": 8,
+                "future_accuracy": "unavailable",
+                "detached_exports": 3,
+                "optional_loaded": [],
+            },
+            "Installed onboarding, managed guided baselines, or detached future contracts failed",
+        )
+        self.done(
+            "onboarding_preferences_guided_historical_and_future_baselines_detached_exports"
         )
 
     def managed_worker(self, dataset):
@@ -1405,11 +1759,14 @@ print(json.dumps({'optional_loaded': sorted(blocked.intersection(sys.modules))})
         )
         runtime_probe = _BLOCK_OPTIONAL + """
 from importlib import import_module
-for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos'), ('tirex2', 'tirex2'), ('ttm', 'ttm')]:
+for module, extra in [('chronos_bolt', 'chronos'), ('timesfm', 'timesfm'), ('chronos2', 'chronos'), ('tirex2', 'tirex2'), ('ttm', 'ttm'), ('toto2', 'toto2')]:
     try:
         import_module('tsfm_lab.models.' + module)._runtime()
     except ImportError as exc:
-        assert '[' + extra + ']' in str(exc)
+        if module == 'toto2' and sys.version_info[:2] not in {(3, 12), (3, 13)}:
+            assert 'Python 3.12' in str(exc) and '3.13' in str(exc)
+        else:
+            assert '[' + extra + ']' in str(exc)
     else:
         raise AssertionError('Optional runtime unexpectedly loaded')
 print(json.dumps({'missing_runtime': 'actionable_error'}))

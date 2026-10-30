@@ -2,12 +2,25 @@
 
 from dataclasses import dataclass, field
 from numbers import Integral
-from typing import Literal
+from typing import Literal, Protocol
 
 import numpy as np
 import pandas as pd
 
 from tsfm_lab.point_tasks import output_statistics
+
+
+class ForecastSettings(Protocol):
+    """Adapter requirements shared by historical and future numerical tasks."""
+
+    @property
+    def context_length(self) -> int: ...
+
+    @property
+    def horizon(self) -> int: ...
+
+    @property
+    def point_statistic(self) -> str: ...
 
 
 def positive_int(value: int, name: str) -> int:

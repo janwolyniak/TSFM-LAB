@@ -212,6 +212,11 @@ identities, original-data and OHLC fingerprints, explicit rules, implementation
 and environment provenance, raw selected cases, diagnostics, and capital paths.
 The source experiment remains unchanged.
 
+Report schema 1 embeds the five original parent-artifact identities. Creation
+also accepts historical guided schema-2 experiments, validating all seven parent
+artifacts before selecting those five identities. The guided chart and provenance
+remain in the source experiment; their corruption prevents report creation.
+
 Saving validates and recalculates the report, adds its SHA-256 content fingerprint,
 and atomically publishes it without replacing an existing destination. Reload
 rejects duplicate JSON keys, nonfinite values, unsupported schemas/policies,

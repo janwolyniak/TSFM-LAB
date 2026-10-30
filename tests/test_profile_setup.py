@@ -115,7 +115,7 @@ def test_all_usage_profiles_accept_each_exact_ttm_context_without_runtime_loadin
     timestamps = pd.to_datetime(frame.timestamp, utc=True)
     assert (timestamps < first_target).sum() >= context
     assert (timestamps >= first_target).sum() >= config.evaluation.horizon
-    assert "Checkpoint profile" not in calls
+    assert "Context/horizon profile" not in calls
     assert not (tmp_path / "runs").exists()
 
 
@@ -128,6 +128,7 @@ class Questions:
 
     def __call__(self, label, default="", choices=()):
         self.calls.append((label, default, choices))
+        assert len(self.calls) < 100, f"Unexpected repeated question: {label}"
         return self.answers[label].popleft() if self.answers[label] else ""
 
 
@@ -340,12 +341,12 @@ def test_profile_back_navigation_retains_explicit_numeric_choices(examples, tmp_
         {
             "Usage profile": ["energy", "temperature"],
             "Experiment name": ["first", "/back", "final"],
-            "Context length": "9",
+            "Context length": ["9", "/back", ""],
             "Forecast horizon": "2",
             "Evaluation stride": "1",
             "MASE seasonal lag": "2",
             "Dataset path": ["", "/back", ""],
-            "Model adapter": ["", "/back", ""],
+            "Model family": ["", "/back", ""],
             "Run experiment?": ["back", "yes"],
         }
     )

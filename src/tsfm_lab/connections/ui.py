@@ -27,6 +27,7 @@ class ConnectionMenu:
         for number, item in enumerate(items, 1):
             active = " · active" if item["selected"] else ""
             self.emit(f"{number}. {item['label']} · {item['provider']}{active}")
+            self.emit(f"   Destination {item.get('destination', item['provider'])}")
             self.emit(
                 f"   {item['usage']} · {item['storage']} · model {item['model'] or 'not selected'}"
             )
@@ -69,6 +70,15 @@ class ConnectionMenu:
             self.emit(f"{kind}: {name} · {usage}")
         kind = self._choice("Connection type", tuple(KINDS))
         label = self.editor.ask("Nonsecret connection name")
+        endpoint = self._endpoint(kind)
+        if kind == "ollama_local":
+            self.manager.add_key(
+                kind, label, None, storage="session", endpoint=endpoint
+            )
+            self.emit(
+                "Local connection added. Only installed local models are offered; no pull or cloud fallback."
+            )
+            return
         self.emit(
             "Session keeps credentials only until this terminal closes. Vault uses the native OS credential store; failure never falls back to a file."
         )
@@ -81,11 +91,28 @@ class ConnectionMenu:
         else:
             workspace = self._workspace(kind)
             self.manager.add_key(
-                kind, label, self._secret(), storage=storage, workspace_id=workspace
+                kind,
+                label,
+                self._secret(),
+                storage=storage,
+                workspace_id=workspace,
+                **({"endpoint": endpoint} if endpoint else {}),
             )
             self.emit(
                 "Connection added. Select it, then discover and choose an assistant model."
             )
+
+    def _endpoint(self, kind, default=""):
+        if kind not in {"ollama_local", "compatible_api"}:
+            return None
+        return self.editor.ask(
+            (
+                "Local Ollama root (HTTP loopback only)"
+                if kind == "ollama_local"
+                else "API root (HTTPS, or HTTP loopback; e.g. https://host.example/v1)"
+            ),
+            default or ("http://127.0.0.1:11434" if kind == "ollama_local" else ""),
+        )
 
     def _replace(self):
         item = self._pick()
@@ -95,8 +122,12 @@ class ConnectionMenu:
             )
             return
         workspace = self._workspace(item["kind"])
+        endpoint = self._endpoint(item["kind"], item.get("destination", ""))
         result = self.manager.replace_key(
-            item["id"], self._secret(), workspace_id=workspace
+            item["id"],
+            None if item["kind"] == "ollama_local" else self._secret(),
+            workspace_id=workspace,
+            **({"endpoint": endpoint} if endpoint else {}),
         )
         self.emit("Key replaced. Discover and choose a model again.")
         if not result["previous_credentials_removed"]:
@@ -109,6 +140,7 @@ class ConnectionMenu:
         self.emit(
             f"Discovering models · {active['provider']} · {active['usage']}. No inference request."
         )
+        self.emit(f"Destination {active.get('destination', active['provider'])}")
         choices = self.manager.models()
         for item in choices:
             self.emit(f"{item.identifier}: {item.label}")
@@ -127,6 +159,7 @@ class ConnectionMenu:
             f"Connection {preview['connection_label']} · {preview['provider']} · {preview['usage']}"
         )
         self.emit(f"Assistant model {preview['model']}")
+        self.emit(f"Destination {preview.get('destination', preview['provider'])}")
         if preview["account"]:
             self.emit(
                 f"Account {preview['account'].get('email', preview['account']['subject'])}"

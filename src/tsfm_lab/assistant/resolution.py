@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tsfm_lab.config import ConfigError
+from tsfm_lab.contracts import EvaluationSpec
 from tsfm_lab.evaluation.windows import evaluation_bounds
 from tsfm_lab.models.catalog import (
     CHECKPOINT_REPOSITORIES,
     catalog_info,
     checkpoint_info,
 )
-from tsfm_lab.models.ttm_profile import validate_frequency
+from tsfm_lab.models.settings import model_settings, validate_settings
 from tsfm_lab.tui.forms import config_from_fields, default_fields, inspect_data
 from tsfm_lab.workflows import PROFILE_NAMES
 
@@ -114,44 +115,90 @@ def _model(fields, missing, errors):
         return entry
 
 
-def _capabilities(fields, entry, errors):
+def _capabilities(fields, entry, errors, *, mode="historical_evaluation"):
     if entry is None:
         return
-    if (
-        fields.get("point_statistic")
-        and fields["point_statistic"] not in entry["supported_tasks"]
-    ):
-        errors.append("The requested forecast task is unsupported by this model")
-    caps = entry["capabilities"]
-    for key, low, high in (
-        ("context_length", caps["min_context"], caps["max_context"]),
-        ("horizon", 1, caps["max_horizon"]),
-    ):
+    try:
+        settings = model_settings(
+            fields["adapter"],
+            repository=fields.get("repository") or None,
+            variant=fields.get("checkpoint_variant") or None,
+            revision=fields.get("revision") or None,
+        )
+    except ValueError as exc:
+        if str(exc) not in errors:
+            errors.append(str(exc))
+        return
+    numbers = {}
+    for key in ("context_length", "horizon", "seasonal_period"):
         value = fields.get(key, "")
         if value and (not value.isascii() or not value.isdecimal()):
             errors.append(f"{key} must be a positive whole number")
-        elif value:
-            number = int(value)
-            if number < low or (high is not None and number > high):
-                errors.append(f"{key} is outside the selected model's supported limits")
-    if entry["frequency_policy"] == "minutely_hourly" and fields.get("frequency"):
-        try:
-            validate_frequency(fields["frequency"])
-        except ValueError as exc:
-            errors.append(str(exc))
+            return
+        if value:
+            numbers[key] = int(value)
+    try:
+        task = fields.get("point_statistic") or settings.supported_tasks[0]
+        if task not in settings.supported_tasks:
+            raise ValueError("The requested forecast task is unsupported by this model")
+        if mode == "future_forecast":
+            from tsfm_lab.future_config import FutureForecastSpec
+
+            spec = FutureForecastSpec(
+                numbers.get("context_length", settings.default_context),
+                numbers.get("horizon", settings.default_horizon),
+                point_statistic=task,
+                origin=fields.get("forecast_origin") or "latest",
+            )
+        else:
+            spec = EvaluationSpec(
+                numbers.get("context_length", settings.default_context),
+                numbers.get("horizon", settings.default_horizon),
+                "2000-01-01T00:00:00Z",
+                "2000-01-02T00:00:00Z",
+                point_statistic=task,
+            )
+        validate_settings(
+            {
+                "adapter_id": fields["adapter"],
+                **{
+                    key: fields[key]
+                    for key in ("repository", "revision")
+                    if fields.get(key)
+                },
+                "options": {"seasonal_period": numbers.get("seasonal_period", 1)},
+            },
+            spec,
+            fields.get("frequency") or None,
+        )
+    except ValueError as exc:
+        errors.append(str(exc))
 
 
 def resolve_draft(
-    draft: ExperimentDraft, *, dataset_refs: Mapping[str, Path]
+    draft: ExperimentDraft, *, dataset_refs: Mapping[str, Path], mode: str | None = None
 ) -> DraftResolution:
     """Resolve local metadata only; guided preparation and confirmation remain required."""
     fields = dict(draft.fields)
+    mode = mode or (
+        "future_forecast" if draft.schema_version == 2 else "historical_evaluation"
+    )
+    if mode not in {"historical_evaluation", "future_forecast"}:
+        raise ConfigError("Choose a supported forecast mode")
+    if "origin" in fields:
+        fields["forecast_origin"] = fields.pop("origin")
+    fields["mode"] = mode
+    if mode == "future_forecast":
+        fields.setdefault("forecast_origin", "latest")
     # Every proposal is retained and protected, even when its provenance was omitted.
     protected = set(fields)
     missing, errors = set(), []
-    if draft.intent == "future_forecast":
+    incompatible = draft.intent not in {mode, "unclear"} or (
+        mode == "future_forecast" and draft.schema_version != 2
+    )
+    if incompatible:
         errors.append(
-            "Future forecasts without observed actuals are unsupported; choose a historical evaluation explicitly"
+            "Future forecasts without observed actuals require future draft schema 2 and explicit human-selected mode; no historical experiment was substituted"
         )
     elif draft.intent == "unclear":
         missing.add("intent")
@@ -165,13 +212,20 @@ def resolve_draft(
             Path(dataset_refs[reference]).expanduser().resolve()
         )
     required = _REQUIRED | _profile_required(fields)
+    if mode == "future_forecast":
+        required = required - {
+            "stride",
+            "mase_period",
+            "evaluation_start",
+            "evaluation_end",
+        }
     missing.update(key for key in required if not fields.get(key, "").strip())
     if fields.get("units", "").strip().casefold() == "unspecified":
         missing.add("units")
     if fields.get("usage_profile") and fields["usage_profile"] not in PROFILE_NAMES:
         errors.append("Choose a supported usage profile")
     entry = _model(fields, missing, errors)
-    _capabilities(fields, entry, errors)
+    _capabilities(fields, entry, errors, mode=mode)
     if not missing and not errors:
         try:
             complete = {
@@ -185,14 +239,19 @@ def resolve_draft(
             arguments = {"workspace": Path.cwd(), "base_directory": Path.cwd()}
             config = config_from_fields(complete, **arguments)
             dataset = inspect_data(complete, **arguments)
-            evaluation_bounds(dataset, config.evaluation)
+            if mode == "future_forecast":
+                from tsfm_lab.future import prepare_future_request
+
+                prepare_future_request(dataset, config.forecast, model=config.model)
+            else:
+                evaluation_bounds(dataset, config.evaluation)
         except (ConfigError, ValueError, OSError, ImportError) as exc:
             errors.append(str(exc))
     protected.update(fields)
     state = "ready"
     if missing or errors:
         state = "needs_input"
-    if draft.intent == "future_forecast":
+    if incompatible:
         state = "unsupported"
     return DraftResolution(
         state,

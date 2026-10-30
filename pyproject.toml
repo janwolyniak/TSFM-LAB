@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tsfm-lab"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local, domain-independent time-series forecast evaluation"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -46,6 +46,7 @@ tirex2 = [
     "mlstm-kernels==2.0.6",
     "ninja==1.13.2",
     "narwhals==2.13.0",
+    "triton-windows==3.4.0.post21; sys_platform == 'win32'",
 ]
 ttm = [
     "granite-tsfm==0.3.4",
@@ -57,6 +58,22 @@ ttm = [
     "huggingface-hub==0.35.3",
     "safetensors>=0.6,<0.7",
     "accelerate>=1.12,<1.13",
+]
+toto2 = [
+    "toto-2==2.0.0",
+    "torch>=2.8,<2.9",
+    "huggingface-hub==0.35.3",
+    "safetensors>=0.6,<0.7",
+    "numpy==2.1.3",
+    "gluonts[torch]==0.16.2",
+    "dd-unit-scaling==0.1.0",
+    "unit-scaling==0.3.5",
+    "einops==0.8.2",
+    "jaxtyping==0.3.11",
+    "lightning==2.4.0",
+    "pytorch-lightning==2.4.0",
+    "scipy>=1.14,<1.16",
+    "matplotlib==3.10.8",
 ]
 
 [project.scripts]

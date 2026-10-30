@@ -9,7 +9,9 @@ from typing import Any
 import yaml
 
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
-from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES, catalog_info
+from tsfm_lab.local_paths import active_path_text
+from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES
+from tsfm_lab.models.settings import validate_settings
 from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
 
 MAX_CONFIG_BYTES = 1024 * 1024
@@ -109,9 +111,8 @@ def _integer(value: Any, label: str, *, minimum=1) -> int:
 
 def _local_path(value: Any, label: str, directory: Path) -> Path:
     text = _text(value, label)
-    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", text) or text.startswith("//"):
-        raise ConfigError(f"{label} must be a local path, not a URL")
     try:
+        active_path_text(text)
         path = Path(text).expanduser()
         return (
             (directory / path).resolve() if not path.is_absolute() else path.resolve()
@@ -120,12 +121,14 @@ def _local_path(value: Any, label: str, directory: Path) -> Path:
         raise ConfigError(f"Invalid {label}: {exc}") from exc
 
 
-def _dataset(value: Any, directory: Path) -> dict[str, Any]:
+def _dataset(
+    value: Any, directory: Path, *, _path_resolver=_local_path
+) -> dict[str, Any]:
     required = {"path", "timestamp_column", "target_column", "frequency"}
     allowed = required | {"timezone", "units", "series_id", "format"}
     fields = _mapping(value, "dataset", allowed, required)
     result = {key: _text(item, f"dataset.{key}") for key, item in fields.items()}
-    path = _local_path(result["path"], "dataset.path", directory)
+    path = _path_resolver(result["path"], "dataset.path", directory)
     formats = {".csv": "csv", ".parquet": "parquet", ".pq": "parquet"}
     inferred = formats.get(path.suffix.lower())
     if inferred is None:
@@ -159,7 +162,9 @@ def _builtin_model(fields: dict[str, Any]) -> dict[str, Any]:
     return {"source": "builtin", "adapter_id": adapter, "options": dict(options)}
 
 
-def _checkpoint_model(fields: dict[str, Any], directory: Path) -> dict[str, Any]:
+def _checkpoint_model(
+    fields: dict[str, Any], directory: Path, *, _path_resolver=_local_path
+) -> dict[str, Any]:
     source = fields["source"]
     common = {"source", "adapter_id", "options"}
     if source == "huggingface":
@@ -175,7 +180,7 @@ def _checkpoint_model(fields: dict[str, Any], directory: Path) -> dict[str, Any]
     _mapping(fields.get("options", {}), "model.options", set())
     result = {"source": source, "adapter_id": adapter, "options": {}}
     if source == "local":
-        result["path"] = str(_local_path(fields["path"], "model.path", directory))
+        result["path"] = str(_path_resolver(fields["path"], "model.path", directory))
         return result
     repository = _text(fields["repository"], "model.repository")
     if repository not in CHECKPOINT_REPOSITORIES[adapter]:
@@ -191,12 +196,14 @@ def _checkpoint_model(fields: dict[str, Any], directory: Path) -> dict[str, Any]
     result.update(repository=repository, revision=revision, offline=offline)
     if "cache_dir" in fields:
         result["cache_dir"] = str(
-            _local_path(fields["cache_dir"], "model.cache_dir", directory)
+            _path_resolver(fields["cache_dir"], "model.cache_dir", directory)
         )
     return result
 
 
-def _model(value: Any, directory: Path) -> dict[str, Any]:
+def _model(
+    value: Any, directory: Path, *, _path_resolver=_local_path
+) -> dict[str, Any]:
     fields = _mapping(
         value,
         "model",
@@ -216,7 +223,7 @@ def _model(value: Any, directory: Path) -> dict[str, Any]:
     if source == "builtin":
         return _builtin_model(fields)
     if source in {"huggingface", "local"}:
-        return _checkpoint_model(fields, directory)
+        return _checkpoint_model(fields, directory, _path_resolver=_path_resolver)
     raise ConfigError("model.source must be builtin, huggingface, or local")
 
 
@@ -263,6 +270,12 @@ def _runtime(value: Any, model: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig:
+    if isinstance(raw, dict) and (
+        raw.get("schema_version") == 2 or raw.get("mode") == "future_forecast"
+    ):
+        raise ConfigError(
+            "Future forecasts require load_future_config or future_config_from_mapping; this API is historical-only"
+        )
     required = {"schema_version", "model", "dataset", "evaluation"}
     allowed = required | {"name", "runtime", "output", "workflow"}
     fields = _mapping(raw, "configuration", allowed, required)
@@ -270,22 +283,12 @@ def _validate(raw: Any, source_path: Path, source_yaml: str) -> ExperimentConfig
         raise ConfigError("Only schema_version 1 is supported")
     model = _model(fields["model"], source_path.parent)
     evaluation = _evaluation(fields["evaluation"])
-    if model["adapter_id"] in CHECKPOINT_REPOSITORIES:
-        entry = catalog_info(model["adapter_id"])
-        caps = entry["capabilities"]
-        if (
-            evaluation.context_length > caps["max_context"]
-            or evaluation.horizon > caps["max_horizon"]
-        ):
-            raise ConfigError(
-                f"{entry['display_name']} requires context_length <= "
-                f"{caps['max_context']} and horizon <= {caps['max_horizon']}"
-            )
-    if model["adapter_id"] == "seasonal_naive":
-        if evaluation.context_length < model["options"]["seasonal_period"]:
-            raise ConfigError("context_length must contain a complete baseline season")
     output = _mapping(fields.get("output", {}), "output", {"directory"})
     dataset = _dataset(fields["dataset"], source_path.parent)
+    try:
+        validate_settings(model, evaluation, dataset["frequency"])
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
     workflow = normalize_workflow(fields.get("workflow"))
     validate_workflow_units(workflow, dataset["units"])
     return ExperimentConfig(
@@ -355,3 +358,24 @@ def config_from_mapping(mapping: dict, *, base_directory: Path) -> ExperimentCon
         OverflowError,
     ) as exc:
         raise ConfigError(f"Invalid interactive configuration: {exc}") from exc
+
+
+def load_run_config(path: str | Path):
+    """Dispatch a saved configuration to its explicit historical or future type."""
+    try:
+        source_path = Path(path).expanduser().resolve()
+        with source_path.open("rb") as source:
+            payload = source.read(MAX_CONFIG_BYTES + 1)
+        if len(payload) > MAX_CONFIG_BYTES:
+            raise ConfigError("Configuration exceeds the 1 MiB limit")
+        text = payload.decode("utf-8")
+        raw = yaml.load(text, Loader=_ConfigLoader)
+        if isinstance(raw, dict) and raw.get("schema_version") == 2:
+            from tsfm_lab.future_config import _validate_future
+
+            return _validate_future(raw, source_path, text)
+        return _validate(raw, source_path, text)
+    except ConfigError:
+        raise
+    except (OSError, ValueError, TypeError, RuntimeError, yaml.YAMLError) as exc:
+        raise ConfigError(f"Invalid run configuration: {exc}") from exc

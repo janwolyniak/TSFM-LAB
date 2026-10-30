@@ -3,7 +3,17 @@
 import sys
 
 
+def _configure_windows_output():
+    # The Windows console already uses its Unicode API. Redirected CLI output
+    # uses explicit UTF-8 so non-ASCII paths survive pipes and saved diagnostics.
+    if sys.platform == "win32":
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, "reconfigure") and not stream.isatty():
+                stream.reconfigure(encoding="utf-8")
+
+
 def main() -> None:
+    _configure_windows_output()
     try:
         from tsfm_lab.cli import app
     except ModuleNotFoundError as exc:

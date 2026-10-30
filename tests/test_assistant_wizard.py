@@ -19,6 +19,7 @@ class Questions:
             self.answers[label].extend(values if isinstance(values, list) else [values])
 
     def __call__(self, label, default="", choices=()):
+        assert len(self.calls) < 200, "Setup did not reach a review or cancellation"
         self.calls.append((label, default, choices))
         return self.answers[label].popleft() if self.answers[label] else ""
 
@@ -179,7 +180,7 @@ def test_single_repository_variant_conflict_is_an_ordinary_question(
     monkeypatch.setattr(wizard, "build_model", lambda *_: Model())
     monkeypatch.setattr("tsfm_lab.tui.forms.build_model", lambda *_: Model())
     questions = Questions(
-        {"Checkpoint profile": ["", "main"], "Run experiment?": "yes"}
+        {"Training profile": ["", "Default training profile"], "Run experiment?": "yes"}
     )
     config = build(
         tmp_path,
@@ -192,7 +193,7 @@ def test_single_repository_variant_conflict_is_an_ordinary_question(
         ),
     )
     assert config.model["repository"] == "NX-AI/TiRex-2"
-    assert defaults(questions)["Checkpoint profile"] == "invented"
+    assert defaults(questions)["Training profile"] == "invented"
 
 
 def test_missing_units_require_input_and_final_confirmation_still_defaults_no(

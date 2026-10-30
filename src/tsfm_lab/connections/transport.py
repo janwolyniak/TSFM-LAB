@@ -19,13 +19,14 @@ class HTTPRequest:
     headers: dict[str, str] = field(default_factory=dict)
     json_body: dict | None = None
     form_body: dict[str, str] | None = None
+    endpoint: str | None = None
 
     def __post_init__(self):
         if self.method not in {"GET", "POST"} or (
             self.json_body is not None and self.form_body is not None
         ):
             raise ConnectionError("invalid")
-        validate_url(self.url)
+        validate_url(self.url, endpoint=self.endpoint)
 
     def __repr__(self):
         return "<HTTPRequest redacted>"
@@ -67,7 +68,12 @@ class Transport(Protocol):
     ) -> HTTPResponse: ...
 
 
-def validate_url(url):
+def validate_url(url, *, endpoint=None):
+    if endpoint is not None:
+        from tsfm_lab.connections.endpoints import validate_endpoint_request
+
+        validate_endpoint_request(url, endpoint)
+        return
     try:
         parts = urlsplit(url)
         prefixes = {
@@ -75,6 +81,7 @@ def validate_url(url):
             "auth.openai.com": ("/.well-known/", "/api/accounts/"),
             "api.anthropic.com": ("/v1/models", "/v1/messages"),
             "generativelanguage.googleapis.com": ("/v1beta/models",),
+            "api.deepseek.com": ("/models", "/chat/completions"),
         }
         if (
             parts.scheme != "https"
@@ -219,7 +226,7 @@ class HTTPXTransport:
         try:
             if not isinstance(request, HTTPRequest) or not isinstance(limits, Limits):
                 raise ConnectionError("invalid")
-            validate_url(request.url)
+            validate_url(request.url, endpoint=request.endpoint)
             if cancel and cancel():
                 raise ConnectionError("cancelled")
             try:

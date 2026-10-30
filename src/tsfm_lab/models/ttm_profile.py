@@ -1,4 +1,4 @@
-"""Reviewed R2 MSE profiles and point-only checkpoint semantics, without runtimes."""
+"""Reviewed TTM profiles and point-only checkpoint semantics, without runtimes."""
 
 import copy
 import json
@@ -70,12 +70,24 @@ def _canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
-def _configuration(context):
+_PROFILES = (
+    (512, 96),
+    (1024, 96),
+    (1536, 96),
+    (512, 192),
+    (512, 336),
+    (512, 720),
+    (52, 16),
+    (90, 30),
+)
+
+
+def _configuration(context, horizon=96):
     config = copy.deepcopy(_BASE)
-    if context not in (512, 1024, 1536):
-        raise ValueError("Unsupported TTM R2 context profile")
+    if (context, horizon) not in _PROFILES:
+        raise ValueError("Unsupported TTM context/horizon profile")
     config["context_length"] = context
-    if context != 512:
+    if context in (1024, 1536):
         config.update(
             d_model=384,
             decoder_d_model=256,
@@ -85,53 +97,120 @@ def _configuration(context):
         )
     if context == 1536:
         config["num_patches"] = 12
+    if horizon != 96:
+        config.update(
+            prediction_length=horizon,
+            fcm_prepend_past_offset=None,
+            mask_value=0,
+            masked_context_length=None,
+            transformers_version="4.38.0",
+        )
+    if context in (52, 90):
+        config.update(
+            adaptive_patching_levels=0,
+            decoder_num_layers=4,
+            dropout=0.3,
+            frequency_token_vocab_size=10,
+            head_dropout=0.3,
+            resolution_prefix_tuning=True,
+        )
+        if context == 52:
+            config.update(
+                d_model=20,
+                d_model_scale=5,
+                decoder_d_model=16,
+                decoder_d_model_scale=4,
+                expansion_factor=3,
+                num_layers=12,
+                num_patches=14,
+                patch_length=4,
+                patch_stride=4,
+            )
+        else:
+            config.update(
+                d_model=90,
+                d_model_scale=10,
+                decoder_d_model=18,
+                num_layers=20,
+                num_patches=11,
+                patch_length=9,
+                patch_stride=9,
+            )
     return config
 
 
-def point_metadata(context):
-    if type(context) is not int or context not in (512, 1024, 1536):
-        raise ValueError("Unsupported TTM R2 context profile")
-    return {
+def point_metadata(context, horizon=96):
+    if (
+        type(context) is not int
+        or type(horizon) is not int
+        or (context, horizon) not in _PROFILES
+    ):
+        raise ValueError("Unsupported TTM context/horizon profile")
+    prefix = context in (52, 90)
+    release = "r2.1" if prefix else "r2"
+    result = {
         "statistic": "native_point",
         "training_loss": "mse",
-        "release": "r2",
-        "profile": f"{context}-96-r2",
-        "frequency_policy": "minute_hour_fixed_v1",
+        "release": release,
+        "profile": f"{context}-{horizon}{'-ft' if prefix else ''}-{release}",
+        "frequency_policy": (
+            ("weekly_fixed_v1" if context == 52 else "daily_fixed_v1")
+            if prefix
+            else "minute_hour_fixed_v1"
+        ),
         "normalization": "external_context_zscore_population_v1_then_native_std",
         "inverse_transform": "native_then_external_v1",
         "horizon_policy": "native_prefix_v1",
     }
+    if prefix:
+        result["frequency_token"] = 9 if context == 52 else 8
+    return result
 
 
 def validated_profile(config):
     try:
         identity = _canonical(config)
-        for context in (512, 1024, 1536):
-            if identity == _canonical(_configuration(context)):
+        for context, horizon in _PROFILES:
+            if identity == _canonical(_configuration(context, horizon)):
                 return {
                     "context": context,
-                    "horizon": 96,
-                    "point_forecast": point_metadata(context),
+                    "horizon": horizon,
+                    "point_forecast": point_metadata(context, horizon),
                 }
     except (TypeError, ValueError, RecursionError) as exc:
         raise ValueError("Invalid TTM configuration") from exc
-    raise ValueError("Unsupported TTM R2 MSE configuration profile")
+    raise ValueError("Unsupported TTM MSE configuration profile")
 
 
 def validate_native(record):
     context = record["native_context_length"]
+    horizon = record["native_prediction_length"]
     if (
-        type(record["native_prediction_length"]) is not int
-        or record["native_prediction_length"] != 96
-        or type(record["quantiles"]) is not list
+        type(record["quantiles"]) is not list
         or record["quantiles"]
-        or _canonical(record["point_forecast"]) != _canonical(point_metadata(context))
+        or _canonical(record["point_forecast"])
+        != _canonical(point_metadata(context, horizon))
     ):
         raise ValueError("Unsupported TTM point checkpoint profile")
 
 
-def validate_frequency(frequency):
+def profile_frequency(profile):
+    if profile == "52-16-ft-r2.1":
+        return "weekly_fixed_v1"
+    if profile == "90-30-ft-r2.1":
+        return "daily_fixed_v1"
+    return "minute_hour_fixed_v1"
+
+
+def validate_frequency(frequency, policy="minute_hour_fixed_v1"):
     interval = fixed_interval(frequency)
+    if policy in ("daily_fixed_v1", "weekly_fixed_v1"):
+        days = 1 if policy == "daily_fixed_v1" else 7
+        if interval != pd.Timedelta(days=days):
+            raise ValueError(f"TTM {policy} requires exactly {days} fixed UTC day(s)")
+        return
+    if policy != "minute_hour_fixed_v1":
+        raise ValueError("Unsupported TTM frequency policy")
     if not pd.Timedelta(minutes=1) <= interval <= pd.Timedelta(hours=1):
         raise ValueError(
             "TTM R2 requires a regular frequency from one minute to one hour"
@@ -140,7 +219,7 @@ def validate_frequency(frequency):
 
 def forecast_options_for_record(record):
     validate_native(record)
-    return {
+    options = {
         "output": "prediction_outputs",
         "horizon_policy": "native_prefix_v1",
         "external_scaling": "context_zscore_population_v1",
@@ -148,6 +227,9 @@ def forecast_options_for_record(record):
         "native_scaling": "std",
         "native_inverse": True,
     }
+    if "frequency_token" in record["point_forecast"]:
+        options["frequency_token"] = record["point_forecast"]["frequency_token"]
+    return options
 
 
 def validate_runtime_options(options, record):

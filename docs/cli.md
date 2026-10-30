@@ -17,7 +17,7 @@ noninteractive.
 | `tsfm models pull REPOSITORY --revision REF` | Explicitly resolve and download a curated checkpoint; optional `--cache-dir` selects its Hub cache. |
 | `tsfm models cache --cache-dir PATH` | Inspect complete/incomplete curated snapshots without network access or deletion. |
 | `tsfm datasets inspect FILE --timestamp-column timestamp --target-column demand --frequency 1h` | Validate a single CSV/Parquet series and report its range, units, frequency, and fingerprints. Add `--timezone` for naive datetimes. |
-| `tsfm run CONFIG.yaml` | Validate configuration/data before creating a run, execute one experiment, and save its artifacts. |
+| `tsfm run CONFIG.yaml` | Dispatch strict historical schema 1 or future schema 2, validate before inference, and save mode-specific checked artifacts. |
 | `tsfm experiments list --workspace results` | Scan local manifests and show completed, active/incomplete, failed, cancelled, and corrupt records. |
 | `tsfm experiments show ID --workspace results` | Show a manifest; completed scores are displayed only after artifact validation. |
 | `tsfm compare ID1 ID2 --workspace results` | Refuse mismatched forecasting tasks and compare validated completed records. |
@@ -66,6 +66,20 @@ The application functions return Python values and emit optional stage callbacks
 they do not print or depend on terminal rendering.
 
 ## Configuration boundary
+
+The v0.3.0 development terminal adds [onboarding preferences](onboarding.md).
+Shell commands ignore those preferences and never enter onboarding. An explicit
+`tsfm ui --workspace` overrides the saved interactive results directory.
+
+S2 adds [shared model-specific validation](model-setup.md). Known curated
+revisions receive exact variant bounds during YAML/Python configuration validation;
+unsupported tasks, context/horizons, or cadence fail before preparation. Valid
+schema-version-1 configuration fields and resolved numerical identities are unchanged.
+
+S3 [guided preparation](guided-preparation.md) adds a separately confirmed
+download/run path in the interactive guide. `/run` and `tsfm run` do not opt into
+it. Guided runs use manifest schema 2 for atomically checked chart/provenance
+outputs; existing schema-1 records retain their strict original contract.
 
 The runnable examples are [last-value.yaml](../examples/configurations/last-value.yaml)
 and [seasonal-naive.yaml](../examples/configurations/seasonal-naive.yaml). Their

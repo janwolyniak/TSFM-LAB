@@ -58,7 +58,6 @@ _CASES = {
 }
 _QUESTIONS = {
     "Usage profile": "usage_profile",
-    "Model adapter": "adapter",
     "Forecast task": "point_statistic",
     "Baseline seasonal period": "seasonal_period",
     "Timestamp column": "timestamp_column",
@@ -166,6 +165,12 @@ def test_assisted_and_manual_guides_match_each_golden_profile_without_execution(
     }
     manual_answers.update(
         {
+            "Model family": "Baselines",
+            "Baseline": (
+                "Seasonal naive"
+                if fields["adapter"] == "seasonal_naive"
+                else "Last value"
+            ),
             "Dataset path": str(path),
             "Source timezone (optional; - leaves it unspecified)": "-",
             "Target units": fields["units"],

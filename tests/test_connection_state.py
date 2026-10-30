@@ -171,11 +171,11 @@ def test_world_readable_state_is_refused(state, target):
 
 
 @pytest.mark.parametrize("ancestor", [False, True])
-def test_symlinked_directory_or_ancestor_is_refused(tmp_path, ancestor):
+def test_symlinked_directory_or_ancestor_is_refused(tmp_path, ancestor, symlinks):
     real = tmp_path / "real"
     real.mkdir(mode=0o700)
     link = tmp_path / "link"
-    link.symlink_to(real, target_is_directory=True)
+    symlinks(link, real, target_is_directory=True)
     store = StateStore(link / "child" if ancestor else link)
     with pytest.raises(ConnectionError) as error:
         store.read()
@@ -185,12 +185,12 @@ def test_symlinked_directory_or_ancestor_is_refused(tmp_path, ancestor):
     assert list(real.iterdir()) == []
 
 
-def test_symlinked_metadata_is_neither_read_nor_overwritten(state, tmp_path):
+def test_symlinked_metadata_is_neither_read_nor_overwritten(state, tmp_path, symlinks):
     value = state.read()
     target = tmp_path / "unrelated"
     target.write_text(SECRET)
     state.path.unlink()
-    state.path.symlink_to(target)
+    symlinks(state.path, target)
     for operation in (state.read, lambda: state.write(value)):
         with pytest.raises(ConnectionError) as error:
             operation()
@@ -198,10 +198,10 @@ def test_symlinked_metadata_is_neither_read_nor_overwritten(state, tmp_path):
     assert target.read_text() == SECRET
 
 
-def test_symlinked_lock_is_refused_without_touching_target(state, tmp_path):
+def test_symlinked_lock_is_refused_without_touching_target(state, tmp_path, symlinks):
     target = tmp_path / "unrelated-lock"
     target.write_text(SECRET)
-    (state.directory / ".lock").symlink_to(target)
+    symlinks(state.directory / ".lock", target)
     with pytest.raises(ConnectionError) as error:
         with state.locked():
             pytest.fail("A symlinked lock must not be accepted")

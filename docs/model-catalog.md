@@ -1,5 +1,9 @@
 # Model catalog and project verification
 
+Platform availability is separate from adapter compatibility and checkpoint
+inference evidence. See the [native Windows candidate matrix](windows.md);
+all optional Windows runtimes still require native qualification.
+
 The catalog separates an adapter family from its curated checkpoint variants.
 An adapter defines the supported runtime, input/output contract, and limits;
 a variant identifies particular upstream weights. A larger variant can be
@@ -50,9 +54,23 @@ adapter's limits.
 | `ttm_r2` | `ibm-granite/granite-timeseries-ttm-r2`, `512-96-r2` | exactly 512 / 96 | 3,240,592 | Representative CPU check recorded. |
 | `ttm_r2` | Same repository, `1024-96-r2` | exactly 1,024 / 96 | 11,879,480 | Compatibility checked; individual inference not run. |
 | `ttm_r2` | Same repository, `1536-96-r2` | exactly 1,536 / 96 | 12,344,144 | Compatibility checked; individual inference not run. |
+| `ttm_r2` | Same repository, `512-192-r2` | exactly 512 / 192 | 3,634,200 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `512-336-r2` | exactly 512 / 336 | 4,224,600 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `512-720-r2` | exactly 512 / 720 | 5,799,000 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `52-16-ft-r2.1` | exactly 52 / 16; fixed weekly | 319,440 | Compatibility checked; real inference pending. |
+| `ttm_r2` | Same repository, `90-30-ft-r2.1` | exactly 90 / 30; fixed daily | 3,496,760 | Compatibility checked; real inference pending. |
+| `toto_2` | 2.0 4M: `Datadog/Toto-2.0-4m` | project bounds: 32–2,048 in multiples of 32 / 128 | 16,582,848 | Configuration/fake-runtime checks; real inference pending. |
 
-Weight-file size describes stored bytes, not required runtime memory. Catalog
-status applies to its listed reference revision. A different requested revision
+Weight-file size describes stored bytes, not required runtime memory.
+
+TOTO 2 requires Python 3.12/3.13. Its listed context/horizon are conservative
+project integration bounds, not upstream architecture limits. The existing
+schema-1 checkpoint bound fields carry these project limits for this adapter;
+catalog inspection and detached saved-result reload remain available on Python
+3.11. Installation/import, real inference and platform qualification remain
+pending; see the [TOTO guide](toto2.md) and [S6 record](s6-toto2-verification.md).
+
+Catalog status applies to its listed reference revision. A different requested revision
 or standalone local checkpoint is inspected separately before execution.
 `parameter_count` is the stored parameter total, including additional heads;
 TimesFM's 200M model name is retained even though its stored total is larger.
@@ -63,7 +81,11 @@ reserves room for its output patch and accepts at most 16,256 historical values.
 Its native quantile head does not expand the adapter's 128-step horizon.
 See the [Bolt guide](chronos.md), [Chronos-2 guide](chronos2.md),
 [TimesFM guide](timesfm.md), [TiRex-2 guide](tirex2.md), and [TTM guide](ttm.md).
-TTM uses a native-point task, exact context, and minute-to-hour declared cadence.
+TTM uses a native-point task and exact context. R2 requires minute-to-hour cadence;
+the selected R2.1 daily/weekly profile requires exactly `1D`/`7D`. Variant metadata
+and setup expose that profile's cadence; unresolved local/custom revisions are
+rechecked against their actual complete configuration before inference. See the
+[S6 TTM verification limits](s6-ttm-verification.md).
 Use `models info ibm-granite/granite-timeseries-ttm-r2 --variant 1024-96-r2`
 to inspect a nondefault branch. YAML records its repository and pinned SHA.
 

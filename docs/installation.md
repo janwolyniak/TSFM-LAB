@@ -1,29 +1,37 @@
 # Installing TSFM Lab
 
+For native Windows executable paths and the pending Windows 11 qualification
+matrix, see the [Windows guide](windows.md). Windows portability is implemented;
+native platform support has not been certified.
+
 Optional assistant connections have a separate `[connections]` extra; see the
 [connection guide](connections.md). Forecasting and saved-record operations do
 not require provider packages or credentials.
 
-Install **v0.2.0** from the wheel or source archive attached to the
-[GitHub Release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.2.0),
+Version 0.3.0 includes [first-launch setup](onboarding.md), saved preferences and
+guided historical/future forecasts. Core application support remains Python
+3.11–3.13; the optional TOTO 2 family requires Python 3.12 or 3.13.
+
+Install **v0.3.0** from the wheel or source archive attached to the
+[GitHub Release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0),
 or from its tagged source checkout, into a dedicated Python environment. The
-release assets are `tsfm_lab-0.2.0-py3-none-any.whl`, `tsfm_lab-0.2.0.tar.gz`,
+release assets are `tsfm_lab-0.3.0-py3-none-any.whl`, `tsfm_lab-0.3.0.tar.gz`,
 `verification.json`, and `SHA256SUMS`. Check downloaded files against `SHA256SUMS`
 before installing. The verification manifest records the exact source revision,
 artifact identities, local check results, and CI exception.
 This release uses GitHub distribution; it does not include a PyPI upload.
-`pip install tsfm-lab==0.2.0` from a package index is not the documented route.
+`pip install tsfm-lab==0.3.0` from a package index is not the documented route.
 
 Package metadata requires Python 3.11 or newer. The configured test matrix covers
-Python 3.11, 3.12, and 3.13 on Linux and macOS. On 27 October 2026, the owner
-waived hosted CI for the final v0.2.0 release because the account allowance was
-exhausted. The final release therefore relies on its recorded local checks;
-its full platform matrix was not verified. Earlier matrix results do not verify
-this release revision. See the [release notes](release-v0.2.0.md) and
-[final verification record](v0.2.0-verification.md) for evidence and limits.
-Representative model checks are documented in the individual model guides.
-Assistant checks use simulated providers and fake credentials; live provider
-compatibility and native OS credential-vault behavior remain unqualified.
+Python 3.11, 3.12 and 3.13 on Linux, macOS and Windows. Hosted jobs cannot start
+because of account billing limits. Release publication follows the owner's
+request using reviewed local source, artifact and installed-workflow evidence;
+its full platform matrix remains unverified. See the
+[release notes](release-v0.3.0.md) and
+[verification record](v0.3.0-verification.md) for evidence and limits.
+New TTM/TOTO real-inference checks remain deferred. Assistant checks use simulated
+providers and fake credentials; live-provider and native credential-vault behavior
+remain unqualified.
 
 ## Install from a checkout or source archive
 
@@ -34,10 +42,10 @@ For a published source revision, clone
 ```sh
 git clone https://github.com/janwolyniak/TSFM-LAB.git
 cd TSFM-LAB
-git checkout v0.2.0
+git checkout v0.3.0
 ```
 
-For `tsfm_lab-0.2.0.tar.gz`, unpack it and enter the directory containing
+For `tsfm_lab-0.3.0.tar.gz`, unpack it and enter the directory containing
 `pyproject.toml` instead. The GitHub-generated source snapshots are separate
 from the built source-distribution asset named above.
 
@@ -65,7 +73,7 @@ Create and activate an environment as above. Install the wheel using its actual
 local path; the example filename is the current package version:
 
 ```sh
-python -m pip install '/absolute/path/tsfm_lab-0.2.0-py3-none-any.whl[cli,parquet]'
+python -m pip install '/absolute/path/tsfm_lab-0.3.0-py3-none-any.whl[cli,parquet]'
 python -m pip check
 tsfm --version
 ```
@@ -87,6 +95,7 @@ The dependency groups let users choose a smaller installation:
 | `timesfm` | The pinned optional TimesFM 2.5 CPU inference runtime. |
 | `tirex2` | The pinned optional CPU TiRex-2 runtime and its kernel dependencies. |
 | `ttm` | The pinned optional CPU Granite TTM runtime and preprocessing dependencies. |
+| `toto2` | TOTO 2 4M runtime candidate on Python 3.12–3.13; real inference remains unqualified. |
 | `connections` | Optional assistant HTTP, identity, and OS credential-vault packages. |
 | `dev` | pytest, Black, and Ruff for contributors. |
 
@@ -96,10 +105,10 @@ for the current prompt-based interface. Adding `chronos`, `timesfm`, or `hub`
 does not pull model weights automatically.
 
 See the individual [Chronos-2](chronos2.md), [TiRex-2](tirex2.md), and
-[TTM](ttm.md) guides before installing additional runtimes. Use their maintained
+[TTM](ttm.md) and [TOTO 2](toto2.md) guides before installing additional runtimes. Use their maintained
 constraints and supported variant settings; model extras have distinct native
-requirements and are not interchangeable. The [P8 qualification record](p8-release-verification.md)
-and [release notes](release-v0.2.0.md) identify the release evidence and its limits.
+requirements and are not interchangeable. The [current verification record](v0.3.0-verification.md)
+and [release notes](release-v0.3.0.md) identify the release evidence and its limits.
 
 ## Find the installed command
 

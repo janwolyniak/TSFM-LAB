@@ -211,24 +211,24 @@ def test_existing_run_uuid_is_never_overwritten(store, monkeypatch):
     assert (store.root / run_id / "manifest.json").read_bytes() == before
 
 
-def test_symlinked_artifact_cannot_escape_workspace(store, payload, tmp_path):
+def test_symlinked_artifact_cannot_escape_workspace(store, payload, tmp_path, symlinks):
     run_id = create(store)
     store.complete(run_id, *payload)
     artifact = store.root / run_id / "predictions.csv"
     outside = tmp_path / "outside.csv"
     outside.write_bytes(artifact.read_bytes())
     artifact.unlink()
-    artifact.symlink_to(outside)
+    symlinks(artifact, outside)
     with pytest.raises(StoreError, match="regular file"):
         store.load_result(run_id)
     assert store.list_runs()[0]["status"] == "corrupt"
 
 
-def test_symlinked_run_or_experiments_directory_is_rejected(store, tmp_path):
+def test_symlinked_run_or_experiments_directory_is_rejected(store, tmp_path, symlinks):
     outside = tmp_path / "outside"
     outside.mkdir()
     store.workspace.mkdir()
-    store.root.symlink_to(outside, target_is_directory=True)
+    symlinks(store.root, outside, target_is_directory=True)
     with pytest.raises(StoreError, match="symbolic links"):
         create(store)
     assert list(outside.iterdir()) == []

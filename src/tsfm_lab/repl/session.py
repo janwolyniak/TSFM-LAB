@@ -1,6 +1,5 @@
 """A persistent local command prompt with inline results and guided setup."""
 
-import shlex
 from contextlib import ExitStack
 from difflib import get_close_matches
 from importlib.resources import as_file, files
@@ -10,8 +9,10 @@ from rich.console import Console
 from rich.text import Text
 
 from tsfm_lab import __version__
-from tsfm_lab.config import ConfigError, load_config
-from tsfm_lab.repl.progress import execute
+from tsfm_lab.config import ConfigError, load_run_config
+from tsfm_lab.local_paths import active_path_text
+from tsfm_lab.repl.arguments import split_arguments
+from tsfm_lab.repl.progress import execute, execute_guided
 from tsfm_lab.repl.prompt import COMMANDS, TerminalInput
 from tsfm_lab.repl.records import RecordCommands
 from tsfm_lab.repl.text import literal
@@ -22,17 +23,40 @@ from tsfm_lab.workflows import PROFILE_NAMES, workflow_summary
 class TerminalSession:
     def __init__(
         self,
-        workspace=Path("results"),
+        workspace=None,
         *,
         console=None,
         editor=None,
         runner=execute,
         connection_manager=None,
+        preference_store=None,
+        guided_runner=None,
     ):
-        self.workspace = Path(workspace).expanduser().resolve()
+        self.preference_store = preference_store
+        self.preferences = preference_store.load() if preference_store else None
+        if workspace is not None:
+            active_path_text(str(workspace))
+        self._workspace_override = (
+            Path(workspace).expanduser().resolve() if workspace is not None else None
+        )
+        selected = (
+            workspace
+            if workspace is not None
+            else (
+                self.preferences.results_directory
+                if self.preferences
+                else Path("results")
+            )
+        )
+        self.workspace = Path(selected).expanduser().resolve()
         self.console = console or Console(markup=False, highlight=False)
         self.editor = editor
         self.runner = runner
+        self.guided_runner = guided_runner or (
+            execute_guided
+            if runner is execute
+            else lambda plan, console: runner(plan.config, console)
+        )
         self.records = RecordCommands(self.console, self.workspace)
         self.demo_path = None
         self.ttm_demo_path = None
@@ -72,6 +96,8 @@ class TerminalSession:
                 if profile != "generic"
             }
             self._welcome()
+            if self.preferences and self.preferences.onboarding_status == "new":
+                self._configure_preferences(first_launch=True)
             while not self.closed:
                 try:
                     self.dispatch(self.editor.read())
@@ -85,13 +111,15 @@ class TerminalSession:
         if not line.strip():
             return
         try:
-            words = shlex.split(line)
+            words = split_arguments(line)
             command, arguments = words[0], words[1:]
             command = command if command.startswith("/") else f"/{command}"
             handlers = {
                 "/help": self._help,
                 "/demo": self._demo,
                 "/new": self._new,
+                "/setup": self._setup_preferences,
+                "/settings": self._settings,
                 "/run": self._run,
                 "/models": self._models,
                 "/connections": self._connections,
@@ -188,6 +216,8 @@ class TerminalSession:
             profile_demo_paths=self.profile_demo_paths,
             adapter=arguments[0] if arguments else None,
             demo=demo,
+            preferences=self.preferences,
+            guided_preparation=True,
         )
         if config is not None:
             self._execute(config)
@@ -196,22 +226,37 @@ class TerminalSession:
 
     def _run(self, arguments):
         self._count(arguments, 1, 1, "/run CONFIG.yaml")
-        self._execute(load_config(arguments[0]))
+        self._execute(load_run_config(arguments[0]))
 
     def _execute(self, config):
+        from tsfm_lab.guided import GuidedRunPlan
+        from tsfm_lab.preferences import validate_directory
+
+        plan = config if isinstance(config, GuidedRunPlan) else None
+        if plan is not None:
+            config = plan.config
+        validate_directory(config.output_directory)
         if self.workspace != config.output_directory:
             self.known_ids = []
             self.last_run = None
             self.emit(f"Workspace  {config.output_directory}", "dim")
         self.workspace = config.output_directory
         self.records.workspace = self.workspace
-        spec = config.evaluation
+        from tsfm_lab.run_modes import forecast_spec, is_future
+
+        spec = forecast_spec(config)
         self.emit(f"\n{config.name} · {config.model['adapter_id']}", "bold")
         self.emit(f"Usage  {workflow_summary(config.workflow)}")
         self.emit(
             f"Target {config.dataset['target_column']} · {config.dataset['units']} · {config.dataset['frequency']} · horizon {spec.horizon}"
         )
-        event = self.runner(config, self.console)
+        event = (
+            self.guided_runner(plan, self.console)
+            if plan is not None
+            else self.runner(config, self.console)
+        )
+        if event.get("preparation_path"):
+            self.emit(f"Preparation record: {event['preparation_path']}", "dim")
         run_id = event.get("run_id") or event.get("result", {}).get("run_id")
         if run_id:
             self.last_run = run_id
@@ -219,8 +264,14 @@ class TerminalSession:
         if event["type"] == "completed":
             self.emit(f"Completed · {run_id}", "green")
             self.records.show(run_id)
+            self._saved_paths(run_id)
             self.emit(
-                "Next: /compare latest OTHER_ID · /export latest forecasts.csv", "dim"
+                (
+                    "Next: /export latest forecasts.csv"
+                    if is_future(config)
+                    else "Next: /compare latest OTHER_ID · /export latest forecasts.csv"
+                ),
+                "dim",
             )
             self.emit("Optional: /explain run latest", "dim")
         else:
@@ -281,6 +332,8 @@ class TerminalSession:
                 demo_path=self.demo_path,
                 ttm_demo_path=self.ttm_demo_path,
                 profile_demo_paths=self.profile_demo_paths,
+                preferences=self.preferences,
+                guided_preparation=True,
                 **options,
             )
 
@@ -320,7 +373,11 @@ class TerminalSession:
             identifier = self.records.resolve_id(selected[0])
             context = experiment_evidence(ExperimentStore(self.workspace), identifier)
             question = (
-                "Explain the historical evaluation, its scores, units, and limitations."
+                "Explain this future forecast's origin, point semantics, units, and unavailable accuracy."
+                if context.get("kind") == "future_forecast"
+                else (
+                    "Explain the historical evaluation, its scores, units, and limitations."
+                )
             )
         elif kind == "finance" and len(selected) == 1:
             context = finance_evidence(Path(selected[0]))
@@ -346,7 +403,25 @@ class TerminalSession:
 
     def _show(self, arguments):
         self._count(arguments, 1, 1, "/show ID")
-        self.records.show(arguments[0])
+        saved = self.records.show(arguments[0])
+        if saved["manifest"]["status"] == "completed":
+            self._saved_paths(saved["manifest"]["run_id"])
+
+    def _saved_paths(self, run_id):
+        from tsfm_lab.experiments import ExperimentStore
+
+        paths = ExperimentStore(self.workspace).output_paths(run_id)
+        for filename, label in (
+            ("predictions.csv", "Forecast CSV"),
+            ("result.json", "Results JSON"),
+            ("metrics.json", "Evaluation JSON"),
+            ("evaluation.json", "Evaluation availability JSON"),
+            ("observations.csv", "Consumed observations CSV"),
+            ("provenance.json", "Provenance JSON"),
+            ("forecast.svg", "Forecast chart"),
+        ):
+            if filename in paths:
+                self.emit(f"{label}: {paths[filename]}", "dim")
 
     def _compare(self, arguments):
         self._count(arguments, 2, 100, "/compare ID ID [ID…]")
@@ -354,15 +429,78 @@ class TerminalSession:
 
     def _export(self, arguments):
         self._count(arguments, 2, 3, "/export ID PATH [csv|json|parquet]")
-        self.records.export(
-            arguments[0], arguments[1], arguments[2] if len(arguments) == 3 else None
-        )
+        path = Path(arguments[1]).expanduser()
+        selected = arguments[2] if len(arguments) == 3 else None
+        if self.preferences is not None:
+            if not path.is_absolute():
+                path = self.preferences.workspace / path
+            if selected is None and not path.suffix:
+                selected = self.preferences.export_format
+        self.records.export(arguments[0], path, selected)
+
+    def _setup_preferences(self, arguments):
+        self._count(arguments, 0, 0, "/setup")
+        self._configure_preferences()
+
+    def _settings(self, arguments):
+        self._count(arguments, 0, 0, "/settings")
+        from tsfm_lab.repl.onboarding import show_preferences
+
+        self._load_preferences()
+        show_preferences(self.emit, self.preferences, self.preference_store.path)
+        if self._setup_ask("Edit preferences?", "no", ("yes", "no")) in {"yes", "y"}:
+            self._configure_preferences(extras=False)
+
+    def _load_preferences(self):
+        if self.preference_store is None:
+            from tsfm_lab.preferences import PreferenceStore
+
+            self.preference_store = PreferenceStore()
+            self.preferences = self.preference_store.load()
+
+    def _configure_preferences(self, *, first_launch=False, extras=True):
+        from tsfm_lab.repl.onboarding import configure_preferences
+
+        self._load_preferences()
+        try:
+            saved = configure_preferences(
+                self.editor.ask,
+                self.emit,
+                self.preferences,
+                self.preference_store,
+                first_launch=first_launch,
+            )
+            if saved is None:
+                return
+            self.preferences = saved
+            self.workspace = self._workspace_override or saved.results_directory
+            self.records.workspace = self.workspace
+            self.last_run, self.known_ids = None, []
+            self.emit(f"Results directory  {self.workspace}")
+            if self._workspace_override:
+                self.emit(
+                    "This session uses the explicit --workspace directory.", "dim"
+                )
+            if extras and saved.onboarding_status == "completed":
+                if self._setup_ask(
+                    "Set up an optional assistant?", "no", ("yes", "no")
+                ) in {"yes", "y"}:
+                    self._connections([])
+                if self._setup_ask(
+                    "Try the offline baseline demo?", "no", ("yes", "no")
+                ) in {"yes", "y"}:
+                    self._demo([])
+        except (EOFError, KeyboardInterrupt):
+            self.emit("Setup finished. Use /setup to revisit preferences.", "dim")
+        except (OSError, ValueError, ImportError, RuntimeError) as exc:
+            self.emit(f"Setup needs attention: {exc}. Use /setup to retry.", "red")
 
     def _workspace(self, arguments):
         self._count(arguments, 0, 1, "/workspace [DIRECTORY]")
         if arguments:
             if not arguments[0].strip() or "://" in arguments[0]:
                 raise ConfigError("Enter a local workspace directory")
+            active_path_text(arguments[0])
             self.workspace = Path(arguments[0]).expanduser().resolve()
             self.records.workspace = self.workspace
             self.known_ids = []

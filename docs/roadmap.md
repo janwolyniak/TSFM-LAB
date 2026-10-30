@@ -78,6 +78,20 @@ runtime notices; qualification is recorded in the
 profiles with distinct context/horizon bounds, not model sizes. TTM still needs
 the runtime and output-semantic decisions in the [catalog guide](model-catalog.md).
 
+The agreed [v0.3.0 plan](release-v0.3.0-plan.md) covers onboarding, model-specific
+setup, integrated checkpoint preparation and outputs, future forecasting,
+additional assistant connections and bounded model expansion, public documentation
+and GEO, and native Windows 11 x64 support. S1 onboarding is locally verified;
+S2 adds [model-specific setup](model-setup.md). See the
+[S1 record](s1-onboarding-verification.md) and [S2 record](s2-model-setup-verification.md).
+S3 adds [guided preparation and outputs](guided-preparation.md); its
+[verification record](s3-preparation-verification.md) retains the pending real
+pretrained check. S4-S8 implementation and offline S9 qualification are now
+complete; the owner requested review, merge and release publication on 30 October
+2026. See the [0.3.0 verification record](v0.3.0-verification.md) for review fixes,
+local checks and still-unqualified model/platform/provider combinations.
+The v0.2.0 plan and release remain historical and unchanged.
+
 ## Milestone 0 Architecture review
 
 Deliver the bounded MVP, stack, contracts, methodology, checkpoint plan, repository

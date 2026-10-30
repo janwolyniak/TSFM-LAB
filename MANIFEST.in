@@ -1,6 +1,8 @@
 include CONTRIBUTING.md CHANGELOG.md NOTICE CITATION.cff
 include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt requirements-tirex2.txt requirements-ttm.txt
+include requirements-toto2.txt
 include docs/*.md
+recursive-include docs/public *.md *.css
 include examples/baseline.py examples/custom_adapter.py
 include examples/datasets/README.md examples/datasets/seasonal.csv examples/datasets/ohlc.csv examples/datasets/ttm-seasonal.csv
 include examples/datasets/*-demo.csv examples/datasets/finance-demo-ohlc.csv
@@ -8,6 +10,8 @@ include examples/configurations/*.yaml
 include scripts/*.py
 recursive-include tests *.py
 recursive-include tests/fixtures/release_legacy_v1 *.json *.csv *.yaml *.md
+recursive-include tests/fixtures/ttm_s6 *.json *.md
+recursive-include tests/fixtures/toto2 *.json *.md
 recursive-include research/fev_compatibility *.py *.md *.json *.txt
 exclude PLAN.md
 global-exclude *.py[cod]

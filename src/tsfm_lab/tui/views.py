@@ -23,6 +23,7 @@ from tsfm_lab.comparison import compare_runs
 from tsfm_lab.experiments import ExperimentStore
 from tsfm_lab.exports import export_predictions
 from tsfm_lab.models.catalog import catalog_entries
+from tsfm_lab.run_modes import read_completed
 from tsfm_lab.tui.view_data import (
     error_text,
     metric_text,
@@ -293,9 +294,15 @@ class ResultsScreen(_View):
             )
             yield Static("", id="result-status", classes="view-message", markup=False)
             with Vertical(id="completed-result", classes="view-section"):
-                yield Static("Overall metrics", classes="view-heading")
+                yield Static(
+                    "Overall metrics", classes="view-heading", id="overall-heading"
+                )
                 yield DataTable(id="overall-metrics", classes="view-table")
-                yield Static("Metrics by forecast lead", classes="view-heading")
+                yield Static(
+                    "Metrics by forecast lead",
+                    classes="view-heading",
+                    id="lead-heading",
+                )
                 yield DataTable(id="lead-metrics", classes="view-table")
                 yield Static(
                     "First 12 forecast cases · timestamps in UTC",
@@ -340,7 +347,7 @@ class ResultsScreen(_View):
         store = ExperimentStore(self.workspace)
         manifest = store.get_manifest(self.run_id)
         return (
-            (manifest, *store.load_result(self.run_id))
+            (manifest, *read_completed(store, self.run_id))
             if manifest["status"] == "completed"
             else (manifest, None, None)
         )
@@ -362,6 +369,9 @@ class ResultsScreen(_View):
                 )
                 return
             config = result["configuration"]
+            if result.get("mode") == "future_forecast":
+                self._show_future(manifest, result, frame)
+                return
             context = profile_context(config)
             self.query_one("#result-summary", Static).update(
                 Text(
@@ -409,6 +419,36 @@ class ResultsScreen(_View):
             self.query_one("#result-status", Static).update(
                 Text(f"Cannot show verified results: {exc}")
             )
+
+    def _show_future(self, manifest, result, frame):
+        from tsfm_lab.future_views import details, summary_lines
+
+        lines = profile_context(result["configuration"])[:1] + summary_lines(result)
+        self.query_one("#result-summary", Static).update(Text("\n".join(lines)))
+        self.query_one("#result-status", Static).update(
+            Text(f"{manifest['name']} · Completed · {len(frame)} future predictions")
+        )
+        for selector in (
+            "#overall-heading",
+            "#lead-heading",
+            "#overall-metrics",
+            "#lead-metrics",
+        ):
+            self.query_one(selector).display = False
+        preview = self.query_one("#forecast-preview", DataTable)
+        preview.add_columns("Target UTC", "Lead", "Forecast")
+        for row in frame.head(12).itertuples():
+            _row(
+                preview,
+                row.target_timestamp.isoformat(),
+                row.lead,
+                f"{row.prediction:.6g}",
+            )
+        self.query_one("#run-details", Static).update(Text(details(result)))
+        self.query_one("#workflow-followup").display = False
+        self.completed = True
+        self.query_one("#completed-result").display = True
+        self.query_one("#export-button", Button).disabled = False
 
     def action_export(self) -> None:
         if self.completed and not self.query_one("#export-button", Button).disabled:
