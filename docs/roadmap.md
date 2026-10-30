@@ -86,7 +86,11 @@ S2 adds [model-specific setup](model-setup.md). See the
 [S1 record](s1-onboarding-verification.md) and [S2 record](s2-model-setup-verification.md).
 S3 adds [guided preparation and outputs](guided-preparation.md); its
 [verification record](s3-preparation-verification.md) retains the pending real
-pretrained check. S4-S9 remain pending. The v0.2.0 plan and release remain unchanged.
+pretrained check. S4-S8 implementation and offline S9 qualification are now
+complete; the owner requested review, merge and release publication on 30 October
+2026. See the [0.3.0 verification record](v0.3.0-verification.md) for review fixes,
+local checks and still-unqualified model/platform/provider combinations.
+The v0.2.0 plan and release remain historical and unchanged.
 
 ## Milestone 0 Architecture review
 

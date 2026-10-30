@@ -158,6 +158,8 @@ SOURCE_FILES = {
     "tests/fixtures/release_legacy_v1/verify.py",
     "docs/p8-release-verification.md",
     "docs/release-v0.2.0.md",
+    "docs/release-v0.3.0.md",
+    "docs/v0.3.0-verification.md",
     "docs/v0.2.0-verification.md",
     "research/fev_compatibility/README.md",
     "research/fev_compatibility/run_study.py",

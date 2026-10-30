@@ -1,7 +1,7 @@
 # Curated static documentation
 
-S7 prepares an indexable static documentation artifact for the unreleased 0.3.0
-development checkout. This is **local preparation only**. The repository remains
+S7 prepares an indexable static documentation artifact for the 0.3.0
+release. This is **local preparation only**. The repository remains
 private; no host is registered, no visibility setting changes, and no deployment
 or public reachability/indexability claim is made.
 
@@ -61,9 +61,8 @@ scanner or permission to add private material to public inputs.
 Markdown raw HTML is disabled. Generated text/metadata is escaped; heading IDs
 are unique and deterministic, section links are checked, and image dependencies
 are refused. Catalog compatibility and selected-reference inference are shown
-separately. Source package/version/citation metadata remains 0.2.0 with 0.3.0
-explicitly unreleased; unpublished functionality and qualification limits are
-visible. No PyPI, model accuracy/ranking or native-platform qualification is invented.
+separately. Source package/version/citation metadata identifies 0.3.0; release publication
+is distinct from documentation deployment and qualification limits remain visible. No PyPI, model accuracy/ranking or native-platform qualification is invented.
 
 ## Publication remains separate
 

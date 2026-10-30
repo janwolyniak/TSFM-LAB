@@ -1,11 +1,12 @@
 # v0.3.0 release plan
 
-Status: **S1-S6 implemented and S7 prepared and locally verified through 29 October 2026;
-S3 real pretrained qualification remains pending**. S4 closes S2 mode-switching
-acceptance. S8 portability is implemented with local evidence; native acceptance
-and S9 remain open. S7 public deployment/reachability and S6 real-runtime/inference qualification remain
-pending under the owner's offline-only instruction. Additional connection evidence is retained in the
-[S5 verification record](s5-connections-verification.md).
+Status on 30 October 2026: **implementation and local review complete; release
+publication requested by the owner**. The prior offline-only instruction remains
+in force. Native Windows, new real-model inference, live-provider/vault, hosted CI
+and public documentation deployment checks remain unperformed; their boxes below
+remain open. Publication does not certify those combinations. The
+[release verification record](v0.3.0-verification.md) and
+[release notes](release-v0.3.0.md) record the delivered scope and limits.
 Scope was agreed with the owner on 26 October 2026. Acceptance items remain open
 until verified; see the [S1 verification record](s1-onboarding-verification.md)
 and [S2 verification record](s2-model-setup-verification.md), followed by the
@@ -34,10 +35,11 @@ alongside Linux and macOS. Windows support is a release target, not a claim abou
 the current implementation.
 
 This document records scope and implementation gates. The owner authorized
-starting implementation on 27 October 2026. This does not change the package
-version or authorize installations,
-downloads, paid requests, publication, or changes to account settings. Follow
-the [contribution workflow](../CONTRIBUTING.md) for those actions.
+starting implementation on 27 October 2026, and review/fixes, merge to main, push
+and release publication on 30 October 2026. The latter instruction authorizes the
+GitHub Release under the existing workflow. Dependency installs, model downloads,
+paid requests, account settings and documentation hosting remain outside this
+publication scope. Follow the [contribution workflow](../CONTRIBUTING.md).
 
 ## Intended user journey
 

@@ -9,11 +9,11 @@ Start with a baseline. Add a curated pretrained checkpoint when its runtime and
 weights are available. A model appearing in the catalog does not establish its
 accuracy, resource requirements or native platform support.
 
-This guide describes the current development checkout, including **0.3.0
-unreleased features**. The source package version remains **{{SOURCE_VERSION}}**. The source
-repository is currently private; installation and repository links require
-authorized access. Public documentation preparation does not change access to
-the repository, datasets or experiment outputs. No PyPI publication is claimed.
+This guide describes **TSFM Lab {{SOURCE_VERSION}}**, distributed through the
+repository's GitHub Release. The source repository is currently private;
+installation and repository links require authorized access. Public documentation
+preparation does not change access to the repository, datasets or experiment
+outputs. This static artifact has not been deployed. No PyPI publication is claimed.
 
 ## Quickstart
 
@@ -185,7 +185,7 @@ Python 3.11. No unperformed platform or real-model check is represented as a pas
 
 ## Release notes
 
-**0.3.0 is unreleased.** S1 adds onboarding and persistent nonsecret preferences.
+**0.3.0 is released on 30 October 2026.** S1 adds onboarding and persistent nonsecret preferences.
 S2 adds model-specific setup; S3 adds reviewed preparation, progress and saved
 outputs; S4 adds separate future forecasting. S5 adds DeepSeek, local Ollama and
 compatible endpoints. S6 adds TTM daily/weekly/native-horizon profiles and TOTO 2
@@ -195,10 +195,11 @@ Windows CI configuration. S9 adds exact installed-wheel checks of onboarding,
 historical/future baselines, saved exports and fake assistant routes.
 
 Real pretrained qualification for new behavior, live assistant and native-vault
-checks, native Windows verification and final release qualification remain open.
-Current source package metadata remains {{SOURCE_VERSION}}; this development content is not
-claimed to ship in the published 0.2.0 artifacts. Versioning, package/repository
-publication and documentation deployment are separate actions.
+checks, native Windows verification and the hosted CI matrix remain unverified.
+The owner requested release publication with those limits documented.
+The source package version is {{SOURCE_VERSION}}. GitHub Release assets include the checked
+source archive, wheel, verification manifest and checksums. PyPI publication and
+public documentation deployment have not been performed.
 
 ## Citation
 

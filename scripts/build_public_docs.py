@@ -337,9 +337,9 @@ def _page(content, headings, meta, base):
 <meta property="og:title" content="{title}"><meta property="og:description" content="{description}"><meta property="og:url" content="{escape(base, quote=True)}"><meta property="og:type" content="website">
 <script type="application/ld+json">{encoded}</script></head><body>
 <a class="skip" href="#main">Skip to documentation</a>
-<header class="masthead"><a class="wordmark" href="#main" aria-label="TSFM Lab documentation">TSFM / LAB</a><div class="status"><span>Source package {escape(meta["version"])}</span><span class="development">{PLANNED_RELEASE} unreleased</span><span>Candidate docs · not deployed</span></div></header>
+<header class="masthead"><a class="wordmark" href="#main" aria-label="TSFM Lab documentation">TSFM / LAB</a><div class="status"><span>Source package {escape(meta["version"])}</span><span class="development">{PLANNED_RELEASE} release</span><span>Candidate docs · not deployed</span></div></header>
 <div class="layout"><aside class="sidebar"><nav aria-label="Documentation sections"><h2>In this guide</h2><ul>{nav}</ul></nav><p class="note">Local forecasting.<br>Explicit assumptions.<br>Inspectable outputs.<br><br>Source access remains private.</p></aside>
-<main class="content" id="main"><section class="hero" aria-labelledby="title"><p class="eyebrow">Local time-series forecasting</p><h1 id="title">TSFM Lab</h1><p class="lead">{description}</p><div class="actions"><a class="button primary" href="#quickstart">Start with an offline baseline</a><a class="button" href="#model-matrix">Inspect supported models</a></div><p class="publication">Development documentation, prepared locally. New behavior is unreleased; qualification limits are visible throughout this guide.</p></section>{content}</main></div>
+<main class="content" id="main"><section class="hero" aria-labelledby="title"><p class="eyebrow">Local time-series forecasting</p><h1 id="title">TSFM Lab</h1><p class="lead">{description}</p><div class="actions"><a class="button primary" href="#quickstart">Start with an offline baseline</a><a class="button" href="#model-matrix">Inspect supported models</a></div><p class="publication">Release documentation, prepared locally. Qualification limits are visible throughout this guide.</p></section>{content}</main></div>
 <footer class="footer"><p>Candidate documentation URL: <code>{escape(base)}</code>. Host/URL confirmation, deployment and public reachability checks remain separate.</p><p>Source repository access is private: <a href="{REPOSITORY}">authorized checkout</a>. TSFM Lab code is Apache-2.0; optional runtime and weight licenses remain separate.</p></footer></body></html>"""
 
 
@@ -373,7 +373,7 @@ def build_docs(out_dir, base_url, *, root=ROOT):
         "llms.txt": (
             "# TSFM Lab\n\nLocal forecasting and reproducible evaluation.\nSource package "
             + meta["version"]
-            + "; 0.3.0 unreleased. Candidate documentation; not deployed.\n\n"
+            + "; 0.3.0 release. Candidate documentation; not deployed.\n\n"
             + "\n".join(f"- [{name}]({base}#{identity})" for identity, name in headings)
             + "\n"
         ).encode(),
@@ -386,7 +386,7 @@ def build_docs(out_dir, base_url, *, root=ROOT):
         "repository_access": "private",
         "source_package_version": meta["version"],
         "planned_release": PLANNED_RELEASE,
-        "release_status": "unreleased",
+        "release_status": "released",
         "privacy_policy": "curated_inputs_only_v1",
         "inputs": {name: _hash(raw) for name, raw in inputs.items()},
         "catalog_sha256": _hash(_json(rows).encode()),

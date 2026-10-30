@@ -109,7 +109,7 @@ def test_reproducible_complete_artifact_links_crawl_and_public_manifest(tmp_path
     assert page.meta["robots"] == "index,follow"
     structured = json.loads(page.scripts[0]["text"])
     assert structured["@type"] == "SoftwareApplication"
-    assert structured["softwareVersion"] == first["source_package_version"] == "0.2.0"
+    assert structured["softwareVersion"] == first["source_package_version"] == "0.3.0"
     assert structured["description"] == page.meta["description"]
     assert structured["description"] in "".join(page.text)
     citation = yaml.safe_load((ROOT / "CITATION.cff").read_text())
@@ -126,6 +126,7 @@ def test_reproducible_complete_artifact_links_crawl_and_public_manifest(tmp_path
         and first["repository_access"] == "private"
     )
     assert first["url_status"] == "candidate_requires_host_confirmation"
+    assert first["release_status"] == "released"
     assert set(first["inputs"]) == set(builder.PUBLIC_INPUTS)
     for name, identity in first["outputs"].items():
         raw = (one / name).read_bytes()
@@ -176,7 +177,8 @@ def test_catalog_matrix_matches_variants_without_transplanting_machine_provenanc
     assert (
         "Python 3.12 or 3.13" in joined and "Future accuracy is unavailable" in joined
     )
-    assert "Current source package metadata remains 0.2.0" in joined
+    assert "The source package version is 0.3.0" in joined
+    assert "0.3.0 unreleased" not in joined
 
 
 @pytest.mark.parametrize(

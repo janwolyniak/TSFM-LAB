@@ -1,6 +1,6 @@
 # Native Windows candidate
 
-The v0.3.0 development checkout targets **Windows 11 x64, Python 3.11–3.13,
+The v0.3.0 release targets **Windows 11 x64, Python 3.11–3.13,
 PowerShell and Windows Terminal**, without WSL. Portability code and native CI
 jobs are implemented. **Native Windows qualification is still pending**: no
 Windows 11 machine, hosted Windows job, model inference or native credential
@@ -45,6 +45,8 @@ requires its separately installed runtime and explicit reviewed download consent
 The forecasting workflow requires no assistant key.
 
 Drive-qualified local paths work in YAML, Python configuration and slash commands.
+Unavailable drive roots are rejected during directory validation without creating
+paths or looping while searching for an existing ancestor.
 Use single-quoted YAML strings for backslashes, or forward slashes in native execution
 configuration. Quote paths containing spaces in the terminal:
 
