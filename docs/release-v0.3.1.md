@@ -1,6 +1,7 @@
 # TSFM-LAB 0.3.1
 
-Qualification and repair patch, 2 November 2026. The owner authorized bounded
+Qualification and repair patch, 3 November 2026, prepared from checks begun on
+2 November. The owner authorized bounded
 isolated real-model checks, private-source GitHub Pages publication, review,
 merge and patch publication. The original **v0.3.0 tag, assets and checksums are
 preserved**. This release does not include a PyPI upload.

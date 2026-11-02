@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.1 — 2026-11-02
+## 0.3.1 — 2026-11-03
 
 - Repair Windows export durability, reject invented named-user homes, and retain
   byte-pinned text fixtures across native checkouts. Bound oversized pytest IDs
