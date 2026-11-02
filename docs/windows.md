@@ -2,16 +2,18 @@
 
 The v0.3.0 release targets **Windows 11 x64, Python 3.11–3.13,
 PowerShell and Windows Terminal**, without WSL. Portability code and native CI
-jobs are implemented. **Native Windows qualification is still pending**: no
-Windows 11 machine, hosted Windows job, model inference or native credential
-vault was exercised in this implementation session. See the
-[S8 verification record](s8-windows-verification.md).
+jobs are implemented. **Windows 11/Windows Terminal qualification remains
+pending by owner decision.** Automated Windows Server probes have executed real
+locking, binary transport and export checks; source/installed-wheel results and
+repairs belong to the [patch record](v0.3.1-verification.md) and
+[native worksheet](v0.3.0-native-qualification.md). The original
+[S8 record](s8-windows-verification.md) retains its historical scope.
 
 ## Platform evidence
 
 | Workflow | macOS | Linux | Native Windows |
 | --- | --- | --- | --- |
-| Core, baseline workers, historical/future records and exports | Local Python 3.13.6 checks recorded in S8 | Python 3.11–3.13 CI configured; current candidate not exercised here | Python 3.11–3.13 CI configured; execution pending |
+| Core, baseline workers, historical/future records and exports | Local Python 3.13.6 checks plus hosted matrix | Python 3.11–3.13 CI; exact outcomes in patch verification | Windows Server Python 3.11–3.13 CI; exact outcomes in patch verification |
 | Interactive keyboard, completion, scrollback and Ctrl+C | Existing POSIX terminal tests retained | POSIX terminal tests configured | Private console-event test implemented; Windows Terminal keyboard checks pending |
 | Optional pretrained runtimes | Individual family evidence and limits remain in their guides | Per-family native qualification pending for this candidate | Every family remains unqualified; metadata alone is insufficient |
 | Assistant protocols | Offline fake-provider coverage | Same tests configured | Same tests configured; native vault/browser checks pending |
@@ -23,9 +25,9 @@ target. CPU is the first qualification path.
 
 ## Candidate PowerShell setup
 
-These commands are prepared and reviewed for PowerShell; execution on native
-Windows remains pending. Use the development source checkout for these features,
-not the older v0.2.0 artifacts. A Python 3.12 environment also accommodates the
+These commands use native PowerShell paths. Automated CI does not qualify the
+keyboard-driven Windows Terminal journey. Use the v0.3.1 source for the repaired
+workflows. A Python 3.12 environment also accommodates the
 optional TOTO family. No activation or execution-policy change is required.
 
 ```powershell

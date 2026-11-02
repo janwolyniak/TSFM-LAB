@@ -1,0 +1,67 @@
+name: Public documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/public/**'
+      - 'scripts/build_public_docs.py'
+      - 'src/tsfm_lab/models/**'
+      - 'pyproject.toml'
+      - 'CITATION.cff'
+      - '.github/workflows/public-docs.yml'
+  pull_request:
+    paths:
+      - 'docs/public/**'
+      - 'scripts/build_public_docs.py'
+      - 'src/tsfm_lab/models/**'
+      - 'pyproject.toml'
+      - 'CITATION.cff'
+      - '.github/workflows/public-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-documentation
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -c requirements-dev.txt '.[cli]'
+      - name: Build curated files for the approved public URL
+        run: python scripts/build_public_docs.py --base-url https://janwolyniak.github.io/TSFM-LAB/ --out-dir build/public-docs --publication-approved
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/public-docs
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+        id: pages
+      - name: Require the owner-approved URL
+        env:
+          ACTUAL_BASE: ${{ steps.pages.outputs.base_url }}
+          APPROVED_BASE: https://janwolyniak.github.io/TSFM-LAB/
+        run: test "${ACTUAL_BASE%/}/" = "$APPROVED_BASE"
+      - uses: actions/deploy-pages@v4
+        id: deployment

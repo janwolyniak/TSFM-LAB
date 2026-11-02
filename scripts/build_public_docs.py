@@ -28,7 +28,7 @@ PUBLIC_INPUTS = (
     "CITATION.cff",
 )
 REPOSITORY = "https://github.com/janwolyniak/TSFM-LAB"
-PLANNED_RELEASE = "0.3.0"
+PLANNED_RELEASE = "0.3.1"
 _PRIVATE = re.compile(
     r"/Users/|/home/|[A-Za-z]:[\\/]Users[\\/]|\bsk-[A-Za-z0-9_-]{16,}|(?i:api[_-]?key|access[_-]?token|password)\s*[:=]\s*\S+"
 )
@@ -304,7 +304,7 @@ def render_guide(markdown, rows, meta):
     return rendered, headings
 
 
-def _page(content, headings, meta, base):
+def _page(content, headings, meta, base, *, publication_approved=False):
     escape = html.escape
     title = "TSFM Lab — local forecasting guide"
     description = escape(meta["description"], quote=True)
@@ -330,6 +330,24 @@ def _page(content, headings, meta, base):
         f'<li><a href="#{identity}">{escape(name)}</a></li>'
         for identity, name in headings
     )
+    status = (
+        "Documentation site"
+        if publication_approved
+        else "Candidate docs · not deployed"
+    )
+    url_label = (
+        "Documentation URL" if publication_approved else "Candidate documentation URL"
+    )
+    publication = (
+        "Release documentation. Qualification limits are visible throughout this guide."
+        if publication_approved
+        else "Release documentation, prepared locally. Qualification limits are visible throughout this guide."
+    )
+    footer = (
+        "Source identities are retained in build-manifest.json; deployment evidence is recorded separately."
+        if publication_approved
+        else "Host/URL confirmation, deployment and public reachability checks remain separate."
+    )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><meta name="description" content="{description}"><meta name="robots" content="index,follow"><meta name="referrer" content="no-referrer">
@@ -337,15 +355,17 @@ def _page(content, headings, meta, base):
 <meta property="og:title" content="{title}"><meta property="og:description" content="{description}"><meta property="og:url" content="{escape(base, quote=True)}"><meta property="og:type" content="website">
 <script type="application/ld+json">{encoded}</script></head><body>
 <a class="skip" href="#main">Skip to documentation</a>
-<header class="masthead"><a class="wordmark" href="#main" aria-label="TSFM Lab documentation">TSFM / LAB</a><div class="status"><span>Source package {escape(meta["version"])}</span><span class="development">{PLANNED_RELEASE} release</span><span>Candidate docs · not deployed</span></div></header>
+<header class="masthead"><a class="wordmark" href="#main" aria-label="TSFM Lab documentation">TSFM / LAB</a><div class="status"><span>Source package {escape(meta["version"])}</span><span class="development">{PLANNED_RELEASE} release</span><span>{status}</span></div></header>
 <div class="layout"><aside class="sidebar"><nav aria-label="Documentation sections"><h2>In this guide</h2><ul>{nav}</ul></nav><p class="note">Local forecasting.<br>Explicit assumptions.<br>Inspectable outputs.<br><br>Source access remains private.</p></aside>
-<main class="content" id="main"><section class="hero" aria-labelledby="title"><p class="eyebrow">Local time-series forecasting</p><h1 id="title">TSFM Lab</h1><p class="lead">{description}</p><div class="actions"><a class="button primary" href="#quickstart">Start with an offline baseline</a><a class="button" href="#model-matrix">Inspect supported models</a></div><p class="publication">Release documentation, prepared locally. Qualification limits are visible throughout this guide.</p></section>{content}</main></div>
-<footer class="footer"><p>Candidate documentation URL: <code>{escape(base)}</code>. Host/URL confirmation, deployment and public reachability checks remain separate.</p><p>Source repository access is private: <a href="{REPOSITORY}">authorized checkout</a>. TSFM Lab code is Apache-2.0; optional runtime and weight licenses remain separate.</p></footer></body></html>"""
+<main class="content" id="main"><section class="hero" aria-labelledby="title"><p class="eyebrow">Local time-series forecasting</p><h1 id="title">TSFM Lab</h1><p class="lead">{description}</p><div class="actions"><a class="button primary" href="#quickstart">Start with an offline baseline</a><a class="button" href="#model-matrix">Inspect supported models</a></div><p class="publication">{publication}</p></section>{content}</main></div>
+<footer class="footer"><p>{url_label}: <code>{escape(base)}</code>. {footer}</p><p>Source repository access is private: <a href="{REPOSITORY}">authorized checkout</a>. TSFM Lab code is Apache-2.0; optional runtime and weight licenses remain separate.</p></footer></body></html>"""
 
 
-def build_docs(out_dir, base_url, *, root=ROOT):
+def build_docs(out_dir, base_url, *, root=ROOT, publication_approved=False):
     """Build a new directory from curated inputs; no existing directory is reused."""
     base = validate_base_url(base_url)
+    if type(publication_approved) is not bool:
+        raise ValueError("Publication approval must be an explicit boolean")
     output, root = Path(out_dir).absolute(), Path(root).resolve()
     if output.exists() or output.is_symlink():
         raise FileExistsError(
@@ -366,23 +386,36 @@ def build_docs(out_dir, base_url, *, root=ROOT):
             "Public guide must retain the quickstart and model-matrix sections"
         )
     payloads = {
-        "index.html": _page(content, headings, meta, base).encode(),
+        "index.html": _page(
+            content, headings, meta, base, publication_approved=publication_approved
+        ).encode(),
         "style.css": inputs["docs/public/style.css"],
         "robots.txt": f"User-agent: *\nAllow: /\nSitemap: {base}sitemap.xml\n".encode(),
         "sitemap.xml": f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>{xml_escape(base)}</loc></url></urlset>\n'.encode(),
         "llms.txt": (
             "# TSFM Lab\n\nLocal forecasting and reproducible evaluation.\nSource package "
             + meta["version"]
-            + "; 0.3.0 release. Candidate documentation; not deployed.\n\n"
+            + (
+                f"; {PLANNED_RELEASE} release. Approved documentation URL.\n\n"
+                if publication_approved
+                else f"; {PLANNED_RELEASE} release. Candidate documentation; not deployed.\n\n"
+            )
             + "\n".join(f"- [{name}]({base}#{identity})" for identity, name in headings)
             + "\n"
         ).encode(),
     }
     manifest = {
         "schema_version": 1,
-        "status": "built_not_deployed",
+        "status": (
+            "built_for_deployment" if publication_approved else "built_not_deployed"
+        ),
         "base_url": base,
-        "url_status": "candidate_requires_host_confirmation",
+        "url_status": (
+            "owner_confirmed_for_publication"
+            if publication_approved
+            else "candidate_requires_host_confirmation"
+        ),
+        "publication_approved": publication_approved,
         "repository_access": "private",
         "source_package_version": meta["version"],
         "planned_release": PLANNED_RELEASE,
@@ -413,9 +446,16 @@ def main():
         help="Explicit candidate HTTPS documentation directory URL",
     )
     parser.add_argument("--out-dir", type=Path, default=ROOT / "build" / "public-docs")
+    parser.add_argument(
+        "--publication-approved",
+        action="store_true",
+        help="Build for an owner-approved public URL; does not perform deployment",
+    )
     args = parser.parse_args()
     try:
-        manifest = build_docs(args.out_dir, args.base_url)
+        manifest = build_docs(
+            args.out_dir, args.base_url, publication_approved=args.publication_approved
+        )
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.error(str(exc))
     print(

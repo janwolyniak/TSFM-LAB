@@ -1,5 +1,9 @@
 # S6 TOTO 2 decision and offline verification
 
+Post-release follow-up: see [2 November model qualification](v0.3.0-model-qualification.md)
+and the [0.3.1 repair record](v0.3.1-verification.md). The original evidence below
+retains its date and scope; later checks do not rewrite the 0.3.0 artifacts.
+
 On 29 October 2026 the owner approved TOTO 2 as the one additional family,
 restricted to Python 3.12/3.13 and offline implementation/tests. No installation,
 weight download, native-runtime import, real inference or platform qualification

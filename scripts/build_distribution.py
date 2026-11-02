@@ -260,6 +260,19 @@ SOURCE_FILES |= {
 }
 SOURCE_FILES |= {"docs/language-assistance.md", "docs/p7-language-verification.md"}
 SOURCE_FILES |= {
+    "docs/release-v0.3.1.md",
+    "docs/v0.3.1-verification.md",
+    "docs/v0.3.0-model-qualification.json",
+    "docs/v0.3.0-model-qualification.md",
+    "docs/v0.3.0-native-qualification.md",
+    "docs/v0.3.0-connection-qualification.md",
+    "scripts/qualify_v030_models.py",
+    "tests/test_worker_portability.py",
+    "tests/test_native_lock_contention.py",
+    "tests/test_export_portability.py",
+    "tests/test_home_path_portability.py",
+}
+SOURCE_FILES |= {
     f"tests/fixtures/release_legacy_v1/{name}"
     for name in (
         "identity.json",

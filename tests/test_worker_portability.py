@@ -56,7 +56,7 @@ def _diagnostic(process, log):
     return f"\nPrivate worker state: {json.dumps(state)}\nChild log tail:\n{tail}"
 
 
-def _transport_roundtrip(tmp_path, monkeypatch, *, wait):
+def _transport_roundtrip(tmp_path, monkeypatch, *, wait, controller_eof=False):
     from tsfm_lab import worker_entry
 
     _enable_child_trace(monkeypatch)
@@ -78,7 +78,10 @@ def _transport_roundtrip(tmp_path, monkeypatch, *, wait):
                     break
                 received.append(event)
                 if wait and event["type"] == "probe":
-                    control.set()
+                    if controller_eof:
+                        control.close()
+                    else:
+                        control.set()
             if not process.is_alive() and events.finished.is_set():
                 break
             time.sleep(0.005)
@@ -111,6 +114,12 @@ def test_binary_stdio_roundtrip_exits_with_event_pipe_eof(tmp_path, monkeypatch)
 
 def test_binary_stdio_roundtrip_receives_cancellation(tmp_path, monkeypatch):
     _transport_roundtrip(tmp_path, monkeypatch, wait=True)
+
+
+def test_binary_stdio_roundtrip_treats_controller_eof_as_cancellation(
+    tmp_path, monkeypatch
+):
+    _transport_roundtrip(tmp_path, monkeypatch, wait=True, controller_eof=True)
 
 
 def test_baseline_startup_reaches_application_after_private_handshake(

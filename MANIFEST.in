@@ -2,6 +2,7 @@ include CONTRIBUTING.md CHANGELOG.md NOTICE CITATION.cff
 include requirements-dev.txt requirements-tui.txt requirements-chronos.txt requirements-timesfm.txt requirements-tirex2.txt requirements-ttm.txt
 include requirements-toto2.txt
 include docs/*.md
+include docs/v0.3.0-model-qualification.json
 recursive-include docs/public *.md *.css
 include examples/baseline.py examples/custom_adapter.py
 include examples/datasets/README.md examples/datasets/seasonal.csv examples/datasets/ohlc.csv examples/datasets/ttm-seasonal.csv

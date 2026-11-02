@@ -2,8 +2,8 @@
 
 **Local time-series forecast evaluation with reproducible experiments.**
 
-[![Source version: 0.3.0](https://img.shields.io/badge/source-v0.3.0-2563eb)](pyproject.toml)
-[![GitHub release: v0.3.0](https://img.shields.io/badge/GitHub_release-v0.3.0-15803d)](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0)
+[![Source version: 0.3.1](https://img.shields.io/badge/source-v0.3.1-2563eb)](pyproject.toml)
+[![GitHub release: v0.3.1](https://img.shields.io/badge/GitHub_release-v0.3.1-15803d)](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.1)
 [![Python checks](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml/badge.svg?branch=main&event=push)](https://github.com/janwolyniak/TSFM-LAB/actions/workflows/checks.yml)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?logo=python&logoColor=white)](docs/installation.md)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-15803d)](LICENSE)
@@ -19,14 +19,16 @@
 [Usage profiles](docs/usage-profiles.md) ·
 [Windows target](docs/windows.md) ·
 [OHLC backtests](docs/finance-extension.md) ·
-[Release notes](docs/release-v0.3.0.md) ·
+[Release notes](docs/release-v0.3.1.md) ·
+[Public guide](https://janwolyniak.github.io/TSFM-LAB/) ·
 [Research origin and citation](#research-origin-and-citation) ·
 [Contributing](CONTRIBUTING.md)
 
 TSFM Lab is a local forecasting evaluation project with a domain-independent
 Python core, scriptable commands, an interactive terminal, and optional
 Chronos-Bolt, Chronos-2, TimesFM 2.5, TiRex-2, Granite TTM R2/R2.1 and TOTO 2 adapters.
-The TTM additions and TOTO 2 remain subject to real inference qualification.
+The TTM additions and TOTO 2 have bounded macOS CPU evidence; optional runtimes
+on other platforms remain subject to qualification.
 A separate finance extension evaluates
 hypothetical OHLC strategies from saved price forecasts.
 
@@ -75,19 +77,23 @@ Version **0.3.0** adds onboarding/preferences, model-specific setup, guided
 preparation and saved outputs, future forecasting, additional connections and
 model profiles, Windows portability, and
 [static documentation preparation](docs/public-documentation.md).
-The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0)
+The **0.3.1 qualification patch** repairs the setup, offline assistant protocol
+and Windows defects found during follow-up checks. The original 0.3.0 tag and
+assets remain unchanged. The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.1)
 provides a source archive, installable wheel, verification manifest and checksums.
-PyPI publication and documentation hosting remain separate and have not been
-performed. The repository's visibility remains unchanged.
+The curated guide uses the owner-approved GitHub Pages URL. Source remains
+private; PyPI publication remains separate.
 
 The release follows local review, offline tests and exact installed-package
-verification. **New real-model inference, native Windows/Windows Terminal,
-live-provider and native-vault checks remain unqualified.** TOTO 2 supports
-Python 3.12–3.13 only. The nine-job Linux/macOS/Windows Python 3.11–3.13 CI matrix
-is configured, but account billing prevents hosted jobs from starting; those
-failures are not test results. Publication follows the owner's request with
-these limits retained. See the [release notes](docs/release-v0.3.0.md),
-[release verification record](docs/v0.3.0-verification.md), and
+verification. The five new TTM profiles passed real CPU checks on macOS ARM64
+Python 3.12; TOTO passed on Python 3.12 and 3.13 using SciPy 1.14.1. See the
+[model evidence](docs/v0.3.0-model-qualification.md) for exact wheel identities,
+native output agreement, causal replay, recovery and detached-export limits.
+**Windows 11/Windows Terminal, live providers, native vaults and browser sign-in
+remain unqualified by owner decision.** TOTO 2 supports Python 3.12–3.13 only.
+Hosted core CI is separate from those deferred interactive and optional-runtime
+checks. See the [release notes](docs/release-v0.3.1.md),
+[patch verification record](docs/v0.3.1-verification.md), and
 [release procedure](docs/releasing.md). The CI badge tracks `main` and does not
 certify a release whose jobs could not start.
 
@@ -362,11 +368,12 @@ See the [Milestone 1 record](docs/verification.md) and
 [prompt rework record](docs/terminal-rework.md), for evidence and limits.
 
 The [release guide](docs/releasing.md) describes artifact verification and
-publication. The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.0)
+publication. The [GitHub release](https://github.com/janwolyniak/TSFM-LAB/releases/tag/v0.3.1)
 provides packages; PyPI publication remains separate.
 The [P8 preparation record](docs/p8-release-verification.md) preserves the earlier
-qualification evidence. The [v0.3.0 verification record](docs/v0.3.0-verification.md)
-describes current release checks and remaining verification limits. Earlier
+qualification evidence. The [v0.3.1 verification record](docs/v0.3.1-verification.md)
+describes patch checks and remaining limits. The
+[v0.3.0 record](docs/v0.3.0-verification.md) retains its original release evidence. Earlier
 [v0.2.0 evidence](docs/v0.2.0-verification.md) remains historical.
 
 ## Design and implementation plan

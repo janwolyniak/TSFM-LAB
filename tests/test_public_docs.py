@@ -109,7 +109,7 @@ def test_reproducible_complete_artifact_links_crawl_and_public_manifest(tmp_path
     assert page.meta["robots"] == "index,follow"
     structured = json.loads(page.scripts[0]["text"])
     assert structured["@type"] == "SoftwareApplication"
-    assert structured["softwareVersion"] == first["source_package_version"] == "0.3.0"
+    assert structured["softwareVersion"] == first["source_package_version"] == "0.3.1"
     assert structured["description"] == page.meta["description"]
     assert structured["description"] in "".join(page.text)
     citation = yaml.safe_load((ROOT / "CITATION.cff").read_text())
@@ -139,6 +139,35 @@ def test_reproducible_complete_artifact_links_crawl_and_public_manifest(tmp_path
     )
 
 
+def test_approved_publication_preserves_identity_without_claiming_deployment(tmp_path):
+    output = tmp_path / "approved"
+    manifest = builder.build_docs(output, BASE, publication_approved=True)
+    assert manifest["status"] == "built_for_deployment"
+    assert manifest["url_status"] == "owner_confirmed_for_publication"
+    assert manifest["publication_approved"] is True
+    assert manifest["repository_access"] == "private"
+    page = Page((output / "index.html").read_text())
+    assert page.canonical == page.meta["og:url"] == BASE
+    assert json.loads(page.scripts[0]["text"])["url"] == BASE
+    visible = " ".join(page.text)
+    assert "Documentation site" in visible and "Candidate docs" not in visible
+    assert "not deployed" not in visible and "build-manifest.json" in visible
+    assert manifest["status"] != "deployed"
+    for name, identity in manifest["outputs"].items():
+        assert (
+            hashlib.sha256((output / name).read_bytes()).hexdigest()
+            == identity["sha256"]
+        )
+
+
+@pytest.mark.parametrize("value", [1, "yes", None])
+def test_publication_flag_is_not_an_implicit_truthy_value(tmp_path, value):
+    output = tmp_path / "unapproved"
+    with pytest.raises(ValueError, match="explicit boolean"):
+        builder.build_docs(output, BASE, publication_approved=value)
+    assert not output.exists()
+
+
 def test_catalog_matrix_matches_variants_without_transplanting_machine_provenance(
     tmp_path, curated_root, monkeypatch
 ):
@@ -160,7 +189,7 @@ def test_catalog_matrix_matches_variants_without_transplanting_machine_provenanc
     rows = builder.public_catalog()
     assert (
         next(row for row in rows if row["adapter_id"] == "toto_2")["inference"]
-        == "Not recorded"
+        == "Reference check recorded"
     )
     joined = "\n".join(p.read_text() for p in out.iterdir())
     assert not any(
@@ -177,8 +206,8 @@ def test_catalog_matrix_matches_variants_without_transplanting_machine_provenanc
     assert (
         "Python 3.12 or 3.13" in joined and "Future accuracy is unavailable" in joined
     )
-    assert "The source package version is 0.3.0" in joined
-    assert "0.3.0 unreleased" not in joined
+    assert "The source package version is 0.3.1" in joined
+    assert "0.3.1 unreleased" not in joined
 
 
 @pytest.mark.parametrize(
