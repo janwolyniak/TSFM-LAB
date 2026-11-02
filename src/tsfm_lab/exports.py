@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from tsfm_lab.experiments import ExperimentStore
+from tsfm_lab.local_paths import expand_local_user
 from tsfm_lab.run_modes import read_completed
 
 
@@ -21,7 +22,10 @@ def export_predictions(
     *,
     format: str | None = None,
 ) -> dict:
-    target = Path(destination).expanduser().absolute()
+    try:
+        target = expand_local_user(destination).absolute()
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise ExportError(f"Invalid export destination: {exc}") from exc
     selected = format or target.suffix.lower().lstrip(".")
     if selected not in {"csv", "parquet", "json"}:
         raise ExportError("Export format must be csv, parquet, or json")

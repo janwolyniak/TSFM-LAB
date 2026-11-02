@@ -3,12 +3,13 @@
 import hashlib
 import importlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
-from tsfm_lab.local_paths import checkpoint_record_path
+from tsfm_lab.local_paths import checkpoint_record_path, expand_local_user
 from tsfm_lab.models.catalog import CURATED_REPOSITORIES
 from tsfm_lab.models.checkpoint_profiles import (
     checkpoint_adapter,
@@ -31,6 +32,29 @@ _LOADING_DIRECTIVES = {
 
 class CheckpointError(ValueError):
     """Checkpoint identity, contents, or supported loading policy is invalid."""
+
+
+def _write_cache_directory(cache_dir):
+    """Resolve a write destination before a guessed named home loses its spelling."""
+    try:
+        if cache_dir is None:
+            # Hub constants can expand these before returning their cache path.
+            # Validate only the active setting; unused lower-priority values do
+            # not change the SDK's selected destination.
+            for name in (
+                "HF_HUB_CACHE",
+                "HUGGINGFACE_HUB_CACHE",
+                "HF_HOME",
+                "XDG_CACHE_HOME",
+            ):
+                value = os.environ.get(name)
+                if value is not None:
+                    expand_local_user(value)
+                    break
+            cache_dir = _hub().cache_dir
+        return expand_local_user(cache_dir).resolve()
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise CheckpointError(f"Invalid checkpoint cache directory: {exc}") from exc
 
 
 def _json(value) -> bytes:
@@ -458,6 +482,7 @@ def pull_checkpoint(
         from tsfm_lab.models.toto2_profile import ensure_supported_python
 
         ensure_supported_python()
+    cache_dir = _write_cache_directory(cache_dir)
     hub = _hub()
     info = hub.HfApi(token=False).model_info(
         repository, revision=revision, files_metadata=True, token=False

@@ -307,11 +307,7 @@ def plan_checkpoint(
     if type(offline) is not bool:
         raise cp.CheckpointError("offline must be a boolean")
     _cancel(should_cancel)
-    root = (
-        Path(cache_dir if cache_dir is not None else cp._hub().cache_dir)
-        .expanduser()
-        .resolve()
-    )
+    root = cp._write_cache_directory(cache_dir)
     _emit(progress, type="stage", stage="cache")
     local = _local_revision(root, repository, revision)
     if local is not None:
