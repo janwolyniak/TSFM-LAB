@@ -1,0 +1,891 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-02",
+  "status": "recorded_cases_passed_original_scipy_candidate_failed",
+  "frozen_release": {
+    "version": "0.3.0",
+    "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+    "source_archive_sha256": "65a75503a36071250f0db3b417d85c125bb8650211b6cfb74edec6baf48a27d7",
+    "wheel_sha256": "04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+    "installed_runtime_files": 118
+  },
+  "original_harness": {
+    "path": "scripts/qualify_v030_models.py",
+    "sha256": "4230f2b08cbd029d26636f4155155e60b39f9f7a4fd1ee731ae2c71df791729a",
+    "scope": "Before explicit --expected-version option; original0.3.0 runs only."
+  },
+  "cases": [
+    {
+      "project_check_id": "v030-52-16-ft-r2.1-macos-py12",
+      "profile": "52-16-ft-r2.1",
+      "context": 52,
+      "horizon": 16,
+      "frequency": "7D",
+      "shared_runtime": false,
+      "elapsed_seconds": 20.907200791989453,
+      "qualification_report_sha256": "4ae0cdc10873bcabdc74be4c8744d0a93e91a60219bc8d5f20138f13f807b2bf"
+    },
+    {
+      "project_check_id": "v030-90-30-ft-r2.1-macos-py12",
+      "profile": "90-30-ft-r2.1",
+      "context": 90,
+      "horizon": 30,
+      "frequency": "1D",
+      "shared_runtime": false,
+      "elapsed_seconds": 19.53144304198213,
+      "qualification_report_sha256": "02fd7b1a9a8f0a333abf141625f76f8d748dce8b0034c6b2585f3991ac480065"
+    },
+    {
+      "project_check_id": "v030-512-192-r2-macos-py12",
+      "profile": "512-192-r2",
+      "context": 512,
+      "horizon": 192,
+      "frequency": "1h",
+      "shared_runtime": false,
+      "elapsed_seconds": 19.438999666948803,
+      "qualification_report_sha256": "a6ea6b6e574587fd61f5cd51a7ef3dd3d13864db47e524f038989c1d7244c6a3"
+    },
+    {
+      "project_check_id": "v030-512-336-r2-macos-py12",
+      "profile": "512-336-r2",
+      "context": 512,
+      "horizon": 336,
+      "frequency": "1h",
+      "shared_runtime": false,
+      "elapsed_seconds": 19.741542208008468,
+      "qualification_report_sha256": "9e2b80e63c5aa9bb4720b4af05e48e299445a4c0ec0f46f793b84609a8bc9274"
+    },
+    {
+      "project_check_id": "v030-512-720-r2-macos-py12",
+      "profile": "512-720-r2",
+      "context": 512,
+      "horizon": 720,
+      "frequency": "1h",
+      "shared_runtime": false,
+      "elapsed_seconds": 20.08964112494141,
+      "qualification_report_sha256": "5239dac93d75d0f20f8ca71631162d7e93e26ab56e1e5e42a42a15c5c9620e9a"
+    },
+    {
+      "project_check_id": "v030-512-96-r2-macos-py12",
+      "profile": "512-96-r2",
+      "context": 512,
+      "horizon": 96,
+      "frequency": "1h",
+      "shared_runtime": false,
+      "elapsed_seconds": null,
+      "qualification_report_sha256": "13897879dc4d6f9f742df9e502a77ad6ff0b1603dc79d75008523c6ac58532be"
+    },
+    {
+      "project_check_id": "v030-toto-4m-macos-py12",
+      "profile": "toto-4m",
+      "context": 64,
+      "horizon": 65,
+      "frequency": "1h",
+      "shared_runtime": false,
+      "elapsed_seconds": 86.05423391703516,
+      "qualification_report_sha256": "bffc80a717968f031b5c37f64e19053ea83173f536970c3bbd6c7361d83afe64"
+    },
+    {
+      "project_check_id": "v030-toto-4m-macos-py13",
+      "profile": "toto-4m",
+      "context": 64,
+      "horizon": 65,
+      "frequency": "1h",
+      "shared_runtime": false,
+      "elapsed_seconds": 84.29095516703092,
+      "qualification_report_sha256": "c6babd9de352499ae4697e4b3ff29b02e2490d39689a963fbfc3dfd62f8e9226"
+    },
+    {
+      "project_check_id": "v030-52-16-ft-r2.1-macos-py12-shared",
+      "profile": "52-16-ft-r2.1",
+      "context": 52,
+      "horizon": 16,
+      "frequency": "7D",
+      "shared_runtime": true,
+      "elapsed_seconds": 19.162902708980255,
+      "qualification_report_sha256": "2a8439170bbbd5ae81e508db74ef884d56750aea72a4c5eccb473bb0ae611715"
+    },
+    {
+      "project_check_id": "v030-toto-4m-macos-py12-shared",
+      "profile": "toto-4m",
+      "context": 64,
+      "horizon": 65,
+      "frequency": "1h",
+      "shared_runtime": true,
+      "elapsed_seconds": 89.6766659161076,
+      "qualification_report_sha256": "3791aeaec0f4099fd1bf189774a951d22d73887bb56c49597968d44cbcd0f6da"
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "v030-52-16-ft-r2.1-macos-py12",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "8c9c1d742ec5893d6419e3aa2ab21ed23e28df85",
+      "files": {
+        "config.json": {
+          "sha256": "2276979b72771bf1c460356b9211fa24479a0546d5c03ddf52cccdb0f86c2b44",
+          "size": 1647
+        },
+        "model.safetensors": {
+          "sha256": "5a017bde4dd785b7d366ac200c46bceea356cbf68f7c2b719f73d5b7370d7168",
+          "size": 319440
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=16",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,16,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-90-30-ft-r2.1-macos-py12",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "6e5cb8ee51e0634a45637490f5db43148b2fa6be",
+      "files": {
+        "config.json": {
+          "sha256": "abf1b5a26903f1d6b8eb62e66a72bf85bb0ced591b5ffaa655ec031b4d1ec326",
+          "size": 1648
+        },
+        "model.safetensors": {
+          "sha256": "17cdd864fa419e5aad8665789a92b6347e97f137ac2ff3c605887225f503f491",
+          "size": 3496760
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=30",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,30,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-512-192-r2-macos-py12",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "25f4a00a25e1d0b67c40a10b06645d72e2266929",
+      "files": {
+        "config.json": {
+          "sha256": "012025d3a082d44c593f5f23a0b623be427e628d19094e58e22121941d42f1c8",
+          "size": 1651
+        },
+        "model.safetensors": {
+          "sha256": "748437cbdbe19030679445aa12737bd14a983ee8d8aa9e8610e317275e0547d5",
+          "size": 3634200
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=192",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,192,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-512-336-r2-macos-py12",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "0009f51f52c87473e60ff3a03cd8633ee85d61e8",
+      "files": {
+        "config.json": {
+          "sha256": "1c25e5da9d2151047511fd6062ab93ee323a05774a879bbdda856bda406058f6",
+          "size": 1651
+        },
+        "model.safetensors": {
+          "sha256": "05e55d45980ad904de5fd2ff5c41b401234073e450acf09fc6152bb99016ced8",
+          "size": 4224600
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=336",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,336,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-512-720-r2-macos-py12",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "bcfc4a497430a228afcbaf378f18f316642ece2a",
+      "files": {
+        "config.json": {
+          "sha256": "2b3f031ae0c7a33fb32621feea6381ae63c9c26d170621c3a765fc9d483835c2",
+          "size": 1651
+        },
+        "model.safetensors": {
+          "sha256": "db3c51b1321c8f87cd0cfb10a48f896741a314349519e1a14714160bbabe574b",
+          "size": 5799000
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=720",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,720,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-512-96-r2-macos-py12",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "d6a79570cac0f33d526601cd3a0fc7c80a8f9a2f",
+      "files": {
+        "config.json": {
+          "sha256": "5e2367547c103e92cb8ebc63cbd5ad4d7bf83facad5a2a2ec261fa770ed659d5",
+          "size": 1563
+        },
+        "model.safetensors": {
+          "sha256": "a706726a7eb01bbcb42994b7dcb3c06ea9557898dbae8d480eb04fe8ccb89710",
+          "size": 3240592
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=96",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,96,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse",
+        "preexisting_checkpoint_cache_no_weight_download"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-toto-4m-macos-py12",
+      "adapter_id": "toto_2",
+      "repository": "Datadog/Toto-2.0-4m",
+      "revision": "8306a9801cf98c0f5ffe4b2dcc8f496e616d84d9",
+      "files": {
+        "config.json": {
+          "sha256": "7a926d130e401ab0c5fdb3564f46c8d917bd05c7b3ae26b9c22d2da2ef01d2d8",
+          "size": 592
+        },
+        "model.safetensors": {
+          "sha256": "316660d5afb47943e531f39242e0b02ca0b8bb73be5709dfe07ca80dfce9805e",
+          "size": 16582848
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "dd-unit-scaling": "0.1.0",
+        "einops": "0.8.2",
+        "gluonts": "0.16.2",
+        "huggingface-hub": "0.35.3",
+        "jaxtyping": "0.3.11",
+        "lightning": "2.4.0",
+        "machine": "arm64",
+        "matplotlib": "3.10.8",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "pytorch-lightning": "2.4.0",
+        "safetensors": "0.6.2",
+        "scipy": "1.14.1",
+        "torch": "2.8.0",
+        "toto-2": "2.0.0",
+        "unit-scaling": "0.3.5"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=65",
+        "point_statistic=median",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_quantile_shape=[9,1,1,65]",
+        "native_median_index=4",
+        "scipy1.14.1_allowed_runtime_original1.15.3_failed_macos27"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-toto-4m-macos-py13",
+      "adapter_id": "toto_2",
+      "repository": "Datadog/Toto-2.0-4m",
+      "revision": "8306a9801cf98c0f5ffe4b2dcc8f496e616d84d9",
+      "files": {
+        "config.json": {
+          "sha256": "7a926d130e401ab0c5fdb3564f46c8d917bd05c7b3ae26b9c22d2da2ef01d2d8",
+          "size": 592
+        },
+        "model.safetensors": {
+          "sha256": "316660d5afb47943e531f39242e0b02ca0b8bb73be5709dfe07ca80dfce9805e",
+          "size": 16582848
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "dd-unit-scaling": "0.1.0",
+        "einops": "0.8.2",
+        "gluonts": "0.16.2",
+        "huggingface-hub": "0.35.3",
+        "jaxtyping": "0.3.11",
+        "lightning": "2.4.0",
+        "machine": "arm64",
+        "matplotlib": "3.10.8",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "pandas": "2.3.3",
+        "python": "3.13.6",
+        "pytorch-lightning": "2.4.0",
+        "safetensors": "0.6.2",
+        "scipy": "1.14.1",
+        "torch": "2.8.0",
+        "toto-2": "2.0.0",
+        "unit-scaling": "0.3.5"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=65",
+        "point_statistic=median",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_quantile_shape=[9,1,1,65]",
+        "native_median_index=4",
+        "scipy1.14.1_allowed_runtime_original1.15.3_failed_macos27"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-52-16-ft-r2.1-macos-py12-shared",
+      "adapter_id": "ttm_r2",
+      "repository": "ibm-granite/granite-timeseries-ttm-r2",
+      "revision": "8c9c1d742ec5893d6419e3aa2ab21ed23e28df85",
+      "files": {
+        "config.json": {
+          "sha256": "2276979b72771bf1c460356b9211fa24479a0546d5c03ddf52cccdb0f86c2b44",
+          "size": 1647
+        },
+        "model.safetensors": {
+          "sha256": "5a017bde4dd785b7d366ac200c46bceea356cbf68f7c2b719f73d5b7370d7168",
+          "size": 319440
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "huggingface-hub": "0.35.3",
+        "machine": "arm64",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "safetensors": "0.6.2",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "torch": "2.8.0",
+        "transformers": "4.56.0",
+        "dd-unit-scaling": "0.1.0",
+        "einops": "0.8.2",
+        "gluonts": "0.16.2",
+        "jaxtyping": "0.3.11",
+        "lightning": "2.4.0",
+        "matplotlib": "3.10.8",
+        "pytorch-lightning": "2.4.0",
+        "scipy": "1.14.1",
+        "toto-2": "2.0.0",
+        "unit-scaling": "0.3.5"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=16",
+        "point_statistic=native_point",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_prediction_outputs_shape=[1,16,1]",
+        "causal_external_population_zscore_native_std_single_external_inverse",
+        "coinstalled_ttm_toto_native_imports_and_pip_check"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    },
+    {
+      "id": "v030-toto-4m-macos-py12-shared",
+      "adapter_id": "toto_2",
+      "repository": "Datadog/Toto-2.0-4m",
+      "revision": "8306a9801cf98c0f5ffe4b2dcc8f496e616d84d9",
+      "files": {
+        "config.json": {
+          "sha256": "7a926d130e401ab0c5fdb3564f46c8d917bd05c7b3ae26b9c22d2da2ef01d2d8",
+          "size": 592
+        },
+        "model.safetensors": {
+          "sha256": "316660d5afb47943e531f39242e0b02ca0b8bb73be5709dfe07ca80dfce9805e",
+          "size": 16582848
+        }
+      },
+      "source": {
+        "package_version": "0.3.0",
+        "git_revision": "9ad508c580243d58df18d29119641e92e2b46e81",
+        "git_dirty": null
+      },
+      "runtime": {
+        "PyYAML": "6.0.2",
+        "dd-unit-scaling": "0.1.0",
+        "einops": "0.8.2",
+        "gluonts": "0.16.2",
+        "huggingface-hub": "0.35.3",
+        "jaxtyping": "0.3.11",
+        "lightning": "2.4.0",
+        "machine": "arm64",
+        "matplotlib": "3.10.8",
+        "numpy": "2.1.3",
+        "os": "macOS-27.0.1-arm64-arm-64bit",
+        "pandas": "2.3.3",
+        "python": "3.12.11",
+        "pytorch-lightning": "2.4.0",
+        "safetensors": "0.6.2",
+        "scipy": "1.14.1",
+        "torch": "2.8.0",
+        "toto-2": "2.0.0",
+        "unit-scaling": "0.3.5",
+        "accelerate": "1.12.0",
+        "filelock": "3.20.3",
+        "granite-tsfm": "0.3.4",
+        "scikit-learn": "1.7.2",
+        "tokenizers": "0.22.0",
+        "transformers": "4.56.0"
+      },
+      "device": "cpu",
+      "dtype": "float32",
+      "checks": [
+        "frozen_wheel_sha256=04eef833eb1113254485975c916c5ae61f44f18a72c9ad12998bce869f5b867a",
+        "exact_installed_package_bytes",
+        "cpu_float32_batch1_eager",
+        "native_original_units_projection_exact",
+        "native_horizon_rows=65",
+        "point_statistic=median",
+        "cache_replay_exact",
+        "target_only_perturbation_causality_exact",
+        "same_context_historical_future_exact",
+        "future_actuals_absent_accuracy_unavailable",
+        "post_native_forecast_callback_pause_cancellation",
+        "separate_injected_post_forecast_failure",
+        "new_run_recovery_exact",
+        "managed_children_reaped=7",
+        "detached_csv_json_parquet_saved_bytes_unchanged",
+        "native_network_and_compilation_attempts=0",
+        "macos_only_no_accuracy_superiority_claim",
+        "native_quantile_shape=[9,1,1,65]",
+        "native_median_index=4",
+        "scipy1.14.1_allowed_runtime_original1.15.3_failed_macos27",
+        "coinstalled_ttm_toto_native_imports_and_pip_check"
+      ],
+      "reference": "docs/v0.3.0-model-qualification.md"
+    }
+  ],
+  "runtime_diagnosis": {
+    "schema_version": 1,
+    "platform": "macOS 27.0.1 ARM64",
+    "published_wheel_scipy_guard": ">=1.14,<1.16",
+    "original_documented_candidate_pin": "scipy==1.15.3",
+    "checks": [
+      {
+        "python": "3.12.11",
+        "scipy": "1.15.3",
+        "result": "failed",
+        "wheel_sha256": "05dc6abcd105e1a29f95eada46d4a3f251743cfd7d3ae8ddb4088047f24ea477",
+        "native_import_log_sha256": "bed055b3b93ad7e4992508d2cb4378b96bbebad48e6539f6d0ef085b2a82bf98",
+        "failure": "macOS dyld rejected scipy PROPACK _spropack: __DATA/__thread_bss zero-fill section has nonzero offset"
+      },
+      {
+        "python": "3.12.11",
+        "scipy": "1.15.2",
+        "result": "failed",
+        "wheel_sha256": "bad78d580270a4d32470563ea86c6590b465cb98f83d760ff5b0990cb5518a93",
+        "native_import_log_sha256": "bed055b3b93ad7e4992508d2cb4378b96bbebad48e6539f6d0ef085b2a82bf98",
+        "failure": "macOS dyld rejected scipy PROPACK _spropack: __DATA/__thread_bss zero-fill section has nonzero offset"
+      },
+      {
+        "python": "3.12.11",
+        "scipy": "1.14.1",
+        "result": "passed",
+        "wheel_sha256": "2843f2d527d9eebec9a43e6b406fb7266f3af25a751aa91d62ff416f54170bc5",
+        "native_import_log_sha256": "d76f56a73395fdd64d8ac86889de250f3c1039891679f6020566b37d12717e3b"
+      }
+    ],
+    "scipy_1_14_1_python_3_13_sparse_import": {
+      "status": "passed",
+      "python": "3.13.6 (v3.13.6:4e665351082, Aug  6 2025, 11:22:35) [Clang 16.0.0 (clang-1600.0.26.6)]",
+      "scipy": "1.14.1",
+      "numpy": "2.1.3",
+      "probe": "scipy.sparse.linalg import"
+    },
+    "upstream_reference": "https://github.com/scipy/scipy/issues/25635",
+    "qualification_scope": "A successful allowed-runtime check does not qualify the failed original candidate constraints. No native binary was patched and no wheel guard was changed.",
+    "development_constraints_note": "The first extra-constrained attempt also imposed requirements-dev packaging==25.0, incompatible with Lightning2.4 packaging<25; the published model guide does not impose that dev constraint."
+  },
+  "ordinary_real_loading_cancellation": {
+    "terminal_status": "cancelled",
+    "phase": "ordinary real model loading stage; no injected pause",
+    "child_exitcode": -15,
+    "termination_escalated": true,
+    "child_reaped": true,
+    "report_sha256": "84e6efb7dc33c65c490d2aa09929d29bda1aa787eff093bc11cc8c121fe87ab5"
+  },
+  "ordinary_loading_cancel_recovery": {
+    "terminal_status": "completed",
+    "child_exitcode": 0,
+    "child_reaped": true,
+    "report_sha256": "d3a427ddd43143dae77bbae953e1ec75a187f91596d42289e043719f41ad9613"
+  },
+  "clean_cli_exports": {
+    "groups": 17,
+    "records": 57,
+    "exports": 171,
+    "reports": [
+      {
+        "report": "detached-core.json",
+        "groups": 10,
+        "records": 30,
+        "exports": 90,
+        "sha256": "6794a890bd4ee1f2afa1f49bb500276edd3775b181766c9206d23396219ebf8f",
+        "optional_model_provider_imports": []
+      },
+      {
+        "report": "detached-core-additional.json",
+        "groups": 5,
+        "records": 21,
+        "exports": 63,
+        "sha256": "1ee4cbf19aea295bab126c70bb53b2d2325f0b537468c70cbcb64f793237c6cf",
+        "optional_model_provider_imports": []
+      },
+      {
+        "report": "detached-core-final.json",
+        "groups": 2,
+        "records": 6,
+        "exports": 18,
+        "sha256": "eed97ebf796667585ca032187af550ad463939047a412e52efc29a6bc4dccf7c",
+        "optional_model_provider_imports": []
+      }
+    ]
+  },
+  "runtime_closure_freezes": {
+    "ttm": {
+      "sha256": "4a70851965b5bb8079f842d00562e5a7fbdacd5a04781c79d8caebe083a60f83",
+      "packages": 69
+    },
+    "toto": {
+      "sha256": "286fea6f4ec1a2e5784d12a452e835b6e60a37f80e778d0d15b87b5fa8963512",
+      "packages": 74
+    },
+    "scipy313": {
+      "sha256": "7f65cac3177e37a51eca0322b4f9a876dd55c4e09e958df5c0bb4bcd4fee52b6",
+      "packages": 74
+    },
+    "shared": {
+      "sha256": "b9a9cb7b9519a374b47f1fa9e35d651dc687b19e0c51bf5bf544ff71b16b7281",
+      "packages": 94
+    }
+  },
+  "approved_six_new_weight_files_total_bytes": 34056848,
+  "weight_downloads_outside_selected_six": false,
+  "canonical_source_report_sha256": {
+    "ttm": "cc3a8e7b8a2ba2b2a100fb3682bcc137276bcb776106f1173eb7c76769984644",
+    "toto_and_shared": "e3aa1e0c99b7d9a83fac8e1ff563eebdd7f2b18ca81ff3fa640f0a7739e9ec49"
+  },
+  "claim_limits": [
+    "Synthetic software integration qualification only; no accuracy or trading advantage claim.",
+    "Recorded native cases are macOS ARM64; native Windows interactive/live-provider checks are separate owner-deferred work.",
+    "Only the stated cancellation phases were observed; the callback-pause tests do not imply interruption inside native tensor computation.",
+    "A working permitted SciPy1.14.1 runtime does not retroactively qualify the failed original SciPy1.15.3 constraint."
+  ]
+}

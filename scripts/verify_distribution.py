@@ -611,8 +611,7 @@ class Verifier:
             and toto["selected_checkpoint"]["reference_revision"]
             == "8306a9801cf98c0f5ffe4b2dcc8f496e616d84d9"
             and toto["selected_checkpoint"]["weight_bytes"] == 16582848
-            and toto["selected_checkpoint"]["project_inference_status"]
-            == "not_recorded"
+            and toto["selected_checkpoint"]["project_inference_status"] == "recorded"
             and toto["runtime_requirements"]["toto-2"] == "==2.0.0"
             and toto["runtime_requirements"]["gluonts"] == "==0.16.2"
             and toto["runtime_requirements"]["numpy"] == "==2.1.3"
@@ -706,7 +705,11 @@ class Verifier:
                 and selected["reference_revision"] == revision
                 and selected["weight_bytes"] == weight_bytes
                 and selected["project_inference_status"]
-                == ("recorded" if variant == "512-96-r2" else "not_recorded")
+                == (
+                    "not_recorded"
+                    if variant in {"1024-96-r2", "1536-96-r2"}
+                    else "recorded"
+                )
                 and value["runtime_requirements"]["granite-tsfm"] == "==0.3.4",
                 "Installed TTM variant, native semantics, or pinned metadata is incorrect",
                 variant=variant,
