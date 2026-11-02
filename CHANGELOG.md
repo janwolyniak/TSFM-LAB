@@ -7,6 +7,9 @@
   so Windows can run the unchanged malformed-input checks.
 - Poll Windows cancellation pipes before reading, avoiding a blocked CRT read
   during NumPy DLL loading while preserving control-byte and EOF cancellation.
+- Preserve the two nonsecret Windows architecture fields required by Python
+  3.11's platform metadata. Validate raw named-home aliases before onboarding,
+  workspace, export or model-cache expansion can erase their spelling.
 - Send ChatGPT-plan inputs as Responses message items. This repair is verified
   offline; live providers and native credential storage remain pending.
 - Pin the admitted SciPy 1.14.1 runtime after real TOTO CPU checks on Python

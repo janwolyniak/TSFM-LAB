@@ -24,6 +24,9 @@ ENVIRONMENT = frozenset(
         "WINDIR",
         "COMSPEC",
         "PATHEXT",
+        # CPython 3.11 needs these for native/WOW64 Windows machine metadata.
+        "PROCESSOR_ARCHITECTURE",
+        "PROCESSOR_ARCHITEW6432",
         "HOME",
         "USERPROFILE",
         "LOCALAPPDATA",

@@ -12,6 +12,9 @@ preserved**. This release does not include a PyPI upload.
 - Windows worker cancellation watches for an available control byte before
   reading, avoiding the native startup hang observed during NumPy DLL loading.
   Closing the controller pipe still cancels the child.
+- Clean workers preserve the two nonsecret Windows architecture fields needed
+  by Python 3.11's platform metadata. Credentials remain excluded. Onboarding,
+  workspace, export and cache inputs validate raw named homes before expansion.
 - LF checkout rules preserve byte-pinned checkpoint metadata; cross-platform
   fixtures retain exact CSV/YAML bytes. Oversized malformed-input tests use short
   case names that fit Windows environment limits without reducing their payloads.

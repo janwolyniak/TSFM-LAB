@@ -271,6 +271,8 @@ SOURCE_FILES |= {
     "tests/test_native_lock_contention.py",
     "tests/test_export_portability.py",
     "tests/test_home_path_portability.py",
+    "tests/test_interactive_home_paths.py",
+    "tests/test_write_path_boundaries.py",
 }
 SOURCE_FILES |= {
     f"tests/fixtures/release_legacy_v1/{name}"
