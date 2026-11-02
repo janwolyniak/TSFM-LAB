@@ -419,7 +419,8 @@ def test_pull_json_preserves_exact_checkpoint_record_and_human_status(
     assert json.loads(raw.stdout) == checkpoint.record()
     human = runner.invoke(app, ["models", "pull", REPOSITORY])
     assert human.exit_code == 0, human.output
-    assert "Selected checkpoint:" in human.stdout and "not recorded" in human.stdout
+    text = " ".join(human.stdout.split())
+    assert "Selected checkpoint:" in text and "not recorded" in text
 
 
 def test_saved_checkpoint_status_is_used_without_reopening_its_files(
