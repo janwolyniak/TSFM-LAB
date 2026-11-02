@@ -385,7 +385,11 @@ def _generation_request(kind, model, instructions, text, output_tokens):
             "store": False,
             "stream": kind == "chatgpt_plan",
         }
-        if kind == "openai_api":
+        if kind == "chatgpt_plan":
+            body["input"] = [
+                {"role": "user", "content": [{"type": "input_text", "text": text}]}
+            ]
+        else:
             body["max_output_tokens"] = output_tokens
         return "https://api.openai.com/v1/responses", body
     if kind == "anthropic_api":
