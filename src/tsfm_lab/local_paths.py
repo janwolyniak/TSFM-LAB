@@ -2,7 +2,7 @@
 
 import os
 import re
-from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 def _text(value):
@@ -13,6 +13,18 @@ def _text(value):
     ):
         raise ValueError("Choose a local path without control characters")
     return value
+
+
+def expand_local_user(value, *, windows=None):
+    """Reject Windows' invented homes for unknown named users before any write."""
+    path = Path(value)
+    windows = os.name == "nt" if windows is None else windows
+    prefix = re.split(r"[/\\]", str(path), maxsplit=1)[0]
+    if windows and prefix.startswith("~") and prefix != "~":
+        home = Path(prefix).expanduser()
+        if not home.is_dir():
+            raise ValueError("Cannot resolve the named user's home directory")
+    return path.expanduser()
 
 
 def active_path_text(value, *, windows=None):

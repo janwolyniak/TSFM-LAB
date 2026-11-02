@@ -38,13 +38,15 @@ CARD = "---\nlicense: apache-2.0\n---\n# Disposable test checkpoint\n"
 
 def write_checkpoint(path, *, config=None, weights=True, card=True):
     path.mkdir(parents=True, exist_ok=True)
-    (path / "config.json").write_text(json.dumps(CONFIG if config is None else config))
+    (path / "config.json").write_bytes(
+        json.dumps(CONFIG if config is None else config).encode("utf-8")
+    )
     if weights:
         (path / "model.safetensors").write_bytes(
             b"disposable test bytes, not model weights"
         )
     if card:
-        (path / "README.md").write_text(CARD)
+        (path / "README.md").write_bytes(CARD.encode("utf-8"))
     return path
 
 
@@ -85,7 +87,7 @@ class FakeHub:
         self.events.append(("config", kwargs))
         path = self.path(OTHER_SHA if self.wrong_config else kwargs["revision"])
         path.mkdir(parents=True, exist_ok=True)
-        (path / filename).write_text(json.dumps(self.config))
+        (path / filename).write_bytes(json.dumps(self.config).encode("utf-8"))
         return str(path / filename)
 
     def snapshot(self, repository, **kwargs):
@@ -101,11 +103,11 @@ class FakeHub:
             path.mkdir(parents=True, exist_ok=True)
             for name in kwargs["allow_patterns"]:
                 if name == "config.json":
-                    (path / name).write_text(json.dumps(self.config))
+                    (path / name).write_bytes(json.dumps(self.config).encode("utf-8"))
                 elif name == "model.safetensors":
                     (path / name).write_bytes(b"explicitly downloaded test bytes")
                 elif name == "README.md":
-                    (path / name).write_text(CARD)
+                    (path / name).write_bytes(CARD.encode("utf-8"))
                 else:
                     raise AssertionError("Unexpected download")
         return str(path)

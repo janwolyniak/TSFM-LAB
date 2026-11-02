@@ -31,16 +31,20 @@ def valid_config():
 
 def write_config(tmp_path, data, *, name="experiment.yaml"):
     path = tmp_path / name
-    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    path.write_bytes(yaml.safe_dump(data, sort_keys=False).encode("utf-8"))
     return path
 
 
-def test_resolved_paths_defaults_and_exact_snapshot(tmp_path, valid_config):
+@pytest.mark.parametrize("line_ending", [b"\n", b"\r\n"])
+def test_resolved_paths_defaults_and_exact_snapshot(
+    tmp_path, valid_config, line_ending
+):
     path = write_config(tmp_path, valid_config)
+    path.write_bytes(path.read_bytes().replace(b"\n", line_ending))
     config = load_config(path)
     assert config.name == "experiment"
     assert config.source_path == path
-    assert config.source_yaml == path.read_text()
+    assert config.source_yaml == path.read_bytes().decode("utf-8")
     assert config.dataset == {
         **valid_config["dataset"],
         "path": str((tmp_path.parent / "datasets/input.csv").resolve()),

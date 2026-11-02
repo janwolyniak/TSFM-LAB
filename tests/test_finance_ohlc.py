@@ -52,7 +52,7 @@ def csv_file(tmp_path, *, name="ohlc.csv", transform=lambda rows: rows):
     output = io.StringIO(newline="")
     csv.writer(output).writerows(transform([_COLUMNS, *rows]))
     path = tmp_path / name
-    path.write_text(output.getvalue())
+    path.write_bytes(output.getvalue().encode("utf-8"))
     return path
 
 

@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from tsfm_lab.config import ConfigError
-from tsfm_lab.local_paths import active_path_text
+from tsfm_lab.local_paths import active_path_text, expand_local_user
 from tsfm_lab.workflows import PROFILE_NAMES
 
 _PATH_FIELDS = ("workspace", "results_directory", "cache_directory")
@@ -26,7 +26,7 @@ def _local_path(value) -> Path:
         raise ConfigError("Choose a local directory without control characters")
     try:
         active_path_text(text)
-        return Path(value).expanduser().resolve()
+        return expand_local_user(value).resolve()
     except (OSError, ValueError, RuntimeError) as exc:
         raise ConfigError("Cannot resolve the local directory") from exc
 

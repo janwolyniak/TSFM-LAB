@@ -1,0 +1,37 @@
+name: Windows portability probes
+
+on:
+  push:
+    paths:
+      - .github/workflows/windows-probe.yml
+      - src/tsfm_lab/worker_entry.py
+      - tests/test_worker_portability.py
+      - tests/test_native_lock_contention.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      PYTHONUTF8: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -c requirements-dev.txt setuptools
+      - run: python -m pip install --no-build-isolation -c requirements-dev.txt -c requirements-tui.txt -e '.[dev,cli,parquet,tui,connections]'
+      - run: python -m pytest -q tests/test_worker_portability.py tests/test_native_lock_contention.py tests/test_export_portability.py tests/test_home_path_portability.py -o faulthandler_timeout=30 --junitxml=windows-probes.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-portability-probes
+          path: windows-probes.xml
+          retention-days: 14

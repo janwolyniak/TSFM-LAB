@@ -49,7 +49,8 @@ def export_predictions(
                 + "\n",
                 encoding="utf-8",
             )
-        with temporary.open("rb") as file:
+        # Windows' durability operation requires a writable file descriptor.
+        with temporary.open("r+b") as file:
             os.fsync(file.fileno())
         # Publishing a hard link is atomic and refuses a concurrent existing path.
         os.link(temporary, target)

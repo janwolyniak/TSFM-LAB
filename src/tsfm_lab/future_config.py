@@ -22,6 +22,7 @@ from tsfm_lab.config import (
     _text,
 )
 from tsfm_lab.contracts import positive_int, utc_timestamp
+from tsfm_lab.local_paths import expand_local_user
 from tsfm_lab.models.settings import model_settings, validate_settings
 from tsfm_lab.point_tasks import output_statistics
 from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
@@ -166,7 +167,7 @@ def _validate_future(
 def load_future_config(path: str | Path) -> FutureForecastConfig:
     """Read strict schema 2 without reading datasets, models, or preferences."""
     try:
-        source_path = Path(path).expanduser().resolve()
+        source_path = expand_local_user(path).resolve()
         with source_path.open("rb") as source:
             raw = source.read(MAX_CONFIG_BYTES + 1)
         if len(raw) > MAX_CONFIG_BYTES:
@@ -186,7 +187,7 @@ def future_config_from_mapping(
 ) -> FutureForecastConfig:
     """Validate future Python/manual choices through the same strict YAML boundary."""
     try:
-        directory = Path(base_directory).expanduser().resolve()
+        directory = expand_local_user(base_directory).resolve()
         text = yaml.safe_dump(mapping, sort_keys=False, allow_unicode=True)
         if len(text.encode("utf-8")) > MAX_CONFIG_BYTES:
             raise ConfigError("Configuration exceeds the 1 MiB limit")
