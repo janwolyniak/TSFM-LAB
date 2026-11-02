@@ -300,10 +300,28 @@ def run_child(header, source):
     """Never expose this trusted-pickle protocol as a user file or public socket."""
     events = EventWriter(os.fdopen(os.dup(sys.stdout.fileno()), "wb", buffering=0))
     cancellation = threading.Event()
+    reader_stop = threading.Event()
+    reader = None
 
     def cancel_reader():
         try:
-            source.read(1)
+            if os.name == "nt":
+                import _winapi
+                import msvcrt
+
+                handle = msvcrt.get_osfhandle(source.fileno())
+                # A pending CRT pipe read can block native DLL initialization
+                # (observed during NumPy import). Only read an available byte.
+                while not reader_stop.is_set():
+                    if _winapi.PeekNamedPipe(handle)[0]:
+                        source.read(1)
+                        break
+                    reader_stop.wait(0.01)
+            else:
+                source.read(1)
+        except OSError:
+            # A closed controller pipe has the same cancellation meaning as EOF.
+            pass
         finally:
             cancellation.set()
 
@@ -319,9 +337,10 @@ def run_child(header, source):
             if not 0 < size <= MAX_STARTUP:
                 raise ValueError("Invalid private worker startup size")
             payload = exact(source, size)
-            threading.Thread(
+            reader = threading.Thread(
                 target=cancel_reader, daemon=True, name="tsfm-worker-cancel"
-            ).start()
+            )
+            reader.start()
             config, target = pickle.loads(payload)
             if cancellation.is_set():
                 events.send({"type": "cancelled", "run_id": None})
@@ -339,4 +358,7 @@ def run_child(header, source):
         except (OSError, ValueError):
             pass
     finally:
+        reader_stop.set()
+        if os.name == "nt" and reader is not None and reader.ident is not None:
+            reader.join(timeout=0.25)
         events.close()
