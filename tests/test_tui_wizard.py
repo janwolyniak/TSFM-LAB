@@ -2,6 +2,7 @@
 
 import asyncio
 import threading
+import time
 
 import pandas as pd
 import pytest
@@ -53,6 +54,15 @@ async def settle(pilot, screen):
         await asyncio.sleep(0.01)
         await pilot.pause()
     raise AssertionError("Wizard validation did not finish")
+
+
+async def settle_choice(pilot, control, expected):
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        await pilot.pause(0.01)
+        if control.value == expected:
+            return
+    raise AssertionError(f"Selection did not settle: {control.value!r} != {expected!r}")
 
 
 async def go_to_evaluation(app, pilot):
@@ -231,14 +241,14 @@ def test_switching_checkpoint_family_filters_repositories_and_clears_old_revisio
             assert repository.value == "google/timesfm-2.5-200m-pytorch"
             revision.value = "1d952420fba87f3c6dee4f240de0f1a0fbc790e3"
             screen.query_one("#wizard-adapter", Select).value = "chronos_bolt"
-            await pilot.pause()
+            await settle_choice(pilot, repository, "amazon/chronos-bolt-tiny")
             assert repository.value == "amazon/chronos-bolt-tiny"
             assert revision.value == ""
             repository.value = "amazon/chronos-bolt-small"
             await pilot.pause()
             assert repository.value == "amazon/chronos-bolt-small"
             screen.query_one("#wizard-adapter", Select).value = "timesfm_2p5"
-            await pilot.pause()
+            await settle_choice(pilot, repository, "google/timesfm-2.5-200m-pytorch")
             assert repository.value == "google/timesfm-2.5-200m-pytorch"
             with pytest.raises(InvalidSelectValueError):
                 repository.value = "amazon/chronos-bolt-tiny"
