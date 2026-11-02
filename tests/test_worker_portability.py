@@ -43,14 +43,17 @@ def _enable_child_trace(monkeypatch):
 
 
 def _diagnostic(process, log):
-    return {
+    state = {
         "exitcode": process.exitcode,
         "event_error": process.events.error,
         "event_reader_finished": process.events.finished.is_set(),
         "control_error": process.control.error,
         "startup_bytes_pending": bool(process.control.startup),
-        "log_tail": log.read_bytes()[-8192:].decode("utf-8", errors="replace"),
     }
+    tail = log.read_bytes()[-8192:].decode("utf-8", errors="replace")
+    # Pytest abbreviates dictionaries in assertion messages, which hid the first
+    # native traceback. A bounded multiline message keeps the actual stack visible.
+    return f"\nPrivate worker state: {json.dumps(state)}\nChild log tail:\n{tail}"
 
 
 def _transport_roundtrip(tmp_path, monkeypatch, *, wait):
