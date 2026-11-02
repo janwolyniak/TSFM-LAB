@@ -12,6 +12,7 @@ from rich.text import Text
 from tsfm_lab.comparison import compare_runs
 from tsfm_lab.experiments import ExperimentStore, StoreError
 from tsfm_lab.exports import ExportError, export_predictions
+from tsfm_lab.local_paths import expand_local_user
 from tsfm_lab.models.catalog import catalog_entries
 from tsfm_lab.models.verification import verification_label
 from tsfm_lab.repl.text import literal
@@ -42,10 +43,10 @@ class RecordCommands:
 
     def __init__(self, console: Console, workspace: Path):
         self.console = console
-        self.workspace = Path(workspace).expanduser().resolve()
+        self.workspace = expand_local_user(workspace).resolve()
 
     def _store(self) -> ExperimentStore:
-        return ExperimentStore(Path(self.workspace).expanduser())
+        return ExperimentStore(expand_local_user(self.workspace))
 
     def _print(self, value: str) -> None:
         self.console.print(Text(literal(value)), soft_wrap=True)

@@ -10,7 +10,7 @@ from rich.text import Text
 
 from tsfm_lab import __version__
 from tsfm_lab.config import ConfigError, load_run_config
-from tsfm_lab.local_paths import active_path_text
+from tsfm_lab.local_paths import active_path_text, expand_local_user
 from tsfm_lab.repl.arguments import split_arguments
 from tsfm_lab.repl.progress import execute, execute_guided
 from tsfm_lab.repl.prompt import COMMANDS, TerminalInput
@@ -37,7 +37,7 @@ class TerminalSession:
         if workspace is not None:
             active_path_text(str(workspace))
         self._workspace_override = (
-            Path(workspace).expanduser().resolve() if workspace is not None else None
+            expand_local_user(workspace).resolve() if workspace is not None else None
         )
         selected = (
             workspace
@@ -48,7 +48,7 @@ class TerminalSession:
                 else Path("results")
             )
         )
-        self.workspace = Path(selected).expanduser().resolve()
+        self.workspace = expand_local_user(selected).resolve()
         self.console = console or Console(markup=False, highlight=False)
         self.editor = editor
         self.runner = runner
@@ -429,7 +429,7 @@ class TerminalSession:
 
     def _export(self, arguments):
         self._count(arguments, 2, 3, "/export ID PATH [csv|json|parquet]")
-        path = Path(arguments[1]).expanduser()
+        path = expand_local_user(arguments[1])
         selected = arguments[2] if len(arguments) == 3 else None
         if self.preferences is not None:
             if not path.is_absolute():
@@ -501,7 +501,7 @@ class TerminalSession:
             if not arguments[0].strip() or "://" in arguments[0]:
                 raise ConfigError("Enter a local workspace directory")
             active_path_text(arguments[0])
-            self.workspace = Path(arguments[0]).expanduser().resolve()
+            self.workspace = expand_local_user(arguments[0]).resolve()
             self.records.workspace = self.workspace
             self.known_ids = []
             self.last_run = None
