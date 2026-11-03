@@ -1,6 +1,7 @@
 """Whole keyboard workflow and UI stop semantics, using disposable local runs."""
 
 import asyncio
+import time
 from dataclasses import replace
 
 import pandas as pd
@@ -20,11 +21,27 @@ from tsfm_lab.tui.wizard import WizardScreen  # noqa: E402
 
 
 async def wait_for(pilot, condition):
-    for _ in range(300):
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
         await pilot.pause(0.01)
         if condition():
             return
-    raise AssertionError("Interactive operation did not finish")
+    app = pilot.app
+    worker = getattr(app, "active_run", None)
+    state = {
+        "screen": type(app.screen).__name__,
+        "worker_running": worker is not None and worker.is_running,
+        "stage": [
+            str(label.render()) for label in app.screen.query("#execution-stage")
+        ],
+    }
+    log = getattr(worker, "log_path", None)
+    tail = (
+        log.read_bytes()[-2048:].decode("utf-8", errors="replace")
+        if log is not None and log.exists()
+        else ""
+    )
+    raise AssertionError(f"Interactive operation did not finish: {state}\n{tail}")
 
 
 async def activate(pilot, app, widget_id):

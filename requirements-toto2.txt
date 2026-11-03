@@ -1,5 +1,5 @@
 # Optional TOTO 2 runtime, Python 3.12–3.13 only; metadata compatibility reviewed.
-# Installation/import and real inference qualification remain pending.
+# Real macOS ARM64 Python 3.12/3.13 checks recorded; other platforms remain separate.
 toto-2==2.0.0
 torch==2.8.0
 huggingface-hub==0.35.3
@@ -12,5 +12,5 @@ einops==0.8.2
 jaxtyping==0.3.11
 lightning==2.4.0
 pytorch-lightning==2.4.0
-scipy==1.15.3
+scipy==1.14.1
 matplotlib==3.10.8

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.1 — 2026-11-03
+
+- Repair Windows export durability, reject invented named-user homes, and retain
+  byte-pinned text fixtures across native checkouts. Bound oversized pytest IDs
+  so Windows can run the unchanged malformed-input checks.
+- Poll Windows cancellation pipes before reading, avoiding a blocked CRT read
+  during NumPy DLL loading while preserving control-byte and EOF cancellation.
+- Preserve the two nonsecret Windows architecture fields required by Python
+  3.11's platform metadata. Validate raw named-home aliases before onboarding,
+  workspace, export or model-cache expansion can erase their spelling.
+- Send ChatGPT-plan inputs as Responses message items. This repair is verified
+  offline; live providers and native credential storage remain pending.
+- Pin the admitted SciPy 1.14.1 runtime after real TOTO CPU checks on Python
+  3.12/3.13. Retain bounded installed-wheel evidence for all five new TTM profiles,
+  TOTO, shared runtimes, causal replay, recovery and detached exports.
+- Add bounded Windows worker/lock diagnostics and retained CI reports. Prepare
+  curated GitHub Pages publication at the owner-approved URL with private source.
+  See the [patch verification](docs/v0.3.1-verification.md) for executed checks
+  and the remaining owner-deferred qualification.
+
 ## 0.3.0 — 2026-10-30
 
 - Reject unavailable directory roots during onboarding and settings validation

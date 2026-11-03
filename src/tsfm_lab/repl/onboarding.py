@@ -1,9 +1,9 @@
 """Transactional, optional first-launch questions over nonsecret preferences."""
 
 from dataclasses import replace
-from pathlib import Path
 
 from tsfm_lab.config import ConfigError
+from tsfm_lab.local_paths import expand_local_user
 from tsfm_lab.preferences import validate_directory
 from tsfm_lab.repl.wizard import _Back, _Cancel, _question
 from tsfm_lab.runtime_diagnostics import runtime_diagnostics
@@ -75,7 +75,7 @@ def _edit(ask, emit, preferences, store):
                     raise ConfigError(
                         "Choose a local directory without control characters"
                     )
-                path = Path(value).expanduser()
+                path = expand_local_user(value)
                 if not path.is_absolute():
                     path = base / path
                 return validate_directory(path)

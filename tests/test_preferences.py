@@ -105,6 +105,14 @@ def test_invalid_preference_choices_are_rejected(preferences, change):
         b" " * (64 * 1024 + 1),
         b"[" * 2000 + b"]" * 2000,
     ],
+    ids=(
+        "not_json",
+        "unknown_secret",
+        "duplicate_keys",
+        "non_utf8",
+        "oversized",
+        "deep",
+    ),
 )
 def test_invalid_file_is_preserved_without_echoing_its_content(tmp_path, payload):
     store = PreferenceStore(tmp_path)

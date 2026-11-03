@@ -21,7 +21,8 @@ Eight branches of `ibm-granite/granite-timeseries-ttm-r2` are selectable:
 | `90-30-ft-r2.1` (daily) | 90 | 30 | `6e5cb8ee51e0634a45637490f5db43148b2fa6be` | 3,496,760 |
 
 The five S6 additions have configuration, fake-runtime and workflow evidence;
-their **real inference qualification remains pending**. See the
+their bounded real CPU checks passed on macOS ARM64/Python 3.12; other platform
+combinations remain unqualified. See [model qualification](v0.3.0-model-qualification.md). See the
 [S6 TTM record](s6-ttm-verification.md). R2.1 changes the patching architecture and
 requires a frequency-prefix tensor; its daily/weekly profiles are not model sizes.
 
@@ -118,9 +119,11 @@ chronological evaluation rules remain unchanged.
 OHLC reports continue to require a median-task parent, including when a
 native-point run happened to use a median-producing adapter or baseline.
 
-Only the original `512-96-r2` profile has a bounded real CPU check. Other profiles receive
-complete configuration/API checks and fake-runtime workflow tests, with no
-individual inference claim. See the [approved contract](ttm-contract.md) and
+The original `512-96-r2` profile and all five S6 additions have bounded macOS
+CPU checks. The `1024-96-r2` and `1536-96-r2` variants retain configuration/API
+compatibility status without individual real inference claims. See the
+[post-release model checks](v0.3.0-model-qualification.md),
+[approved contract](ttm-contract.md) and
 [P4 evidence](p4-ttm-verification.md), followed by the
 [S6 TTM evidence](s6-ttm-verification.md). Synthetic checks establish integration,
 not forecasting quality, model rankings, or financial usefulness.

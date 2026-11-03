@@ -17,6 +17,7 @@ from tsfm_lab.evaluation.metrics import METRIC_VERSION, score_with_scale
 from tsfm_lab.experiments import _json as _core_json
 from tsfm_lab.finance.analysis import EXECUTION_POLICY, evaluate_cases
 from tsfm_lab.finance.contracts import POLICY, BacktestRules, FinanceReportError
+from tsfm_lab.local_paths import expand_local_user
 
 MAX_REPORT_BYTES = 64 * 1024 * 1024
 _FIELDS = {
@@ -343,7 +344,10 @@ def _publish_bytes(raw: bytes, destination: str | Path) -> dict:
     """Atomically publish bounded bytes without replacing a destination."""
     if not isinstance(raw, bytes) or len(raw) > MAX_REPORT_BYTES:
         raise FinanceReportError("Finance output must be bytes within the 64 MiB limit")
-    target = Path(destination).expanduser().absolute()
+    try:
+        target = expand_local_user(destination).absolute()
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise FinanceReportError(f"Invalid finance destination: {exc}") from exc
     if target.exists() or target.is_symlink():
         raise FileExistsError(f"Finance destination already exists: {target}")
     target.parent.mkdir(parents=True, exist_ok=True)

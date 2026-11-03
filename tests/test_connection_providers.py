@@ -165,8 +165,17 @@ def test_one_generation_uses_selected_route_and_accepts_completed_text(kind):
             assert request.json_body["store"] is False
             assert request.json_body["stream"] is (kind == "chatgpt_plan")
             if kind == "chatgpt_plan":
+                assert request.json_body["input"] == [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "input_text", "text": "Explain this experiment."}
+                        ],
+                    }
+                ]
                 assert "max_output_tokens" not in request.json_body
             else:
+                assert request.json_body["input"] == "Explain this experiment."
                 assert request.json_body["max_output_tokens"] == 32
 
 

@@ -1,5 +1,9 @@
 # S6 TTM profile expansion verification
 
+Post-release follow-up: see [2 November model qualification](v0.3.0-model-qualification.md)
+and the [0.3.1 repair record](v0.3.1-verification.md). The original evidence below
+retains its date and scope; later checks do not rewrite the 0.3.0 artifacts.
+
 Status on 29 October 2026: five additional TTM profiles implemented and checked
 with official configuration fixtures, inert local weights and fake native tensor
 responses. **Real inference, installed-runtime checks and platform qualification

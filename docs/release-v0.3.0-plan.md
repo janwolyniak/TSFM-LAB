@@ -1,6 +1,14 @@
 # v0.3.0 release plan
 
-Status on 30 October 2026: **implementation and local review complete; release
+Follow-up on 2 November 2026: the owner authorized bounded real CPU model
+checks, private-source GitHub Pages publication and a **0.3.1 repair release**.
+The original 0.3.0 artifacts remain frozen. Real model gates below now link to
+[executed evidence](v0.3.0-model-qualification.md); exact patch and deployment
+checks are retained in [patch qualification](v0.3.1-verification.md).
+Windows 11/Windows Terminal, live providers, native vaults and browser sign-in
+remain pending by owner decision. The paragraph below records the earlier scope.
+
+Historical status on 30 October 2026: **implementation and local review complete; release
 publication requested by the owner**. The prior offline-only instruction remains
 in force. Native Windows, new real-model inference, live-provider/vault, hosted CI
 and public documentation deployment checks remain unperformed; their boxes below
@@ -182,7 +190,7 @@ the standalone pull command and the existing scriptable no-download default.
 
 Acceptance:
 
-- [ ] A supported model with an installed runtime and empty cache completes the
+- [x] A supported model with an installed runtime and empty cache completes the
   guided path after download/run confirmation. Declining makes no weight download
   or inference request; missing runtimes are reported before weight transfer.
 - [x] A second run reuses verified cached files. Offline cached execution works
@@ -202,9 +210,11 @@ Acceptance:
   evaluation boundaries; missing metrics include reasons. Saved outputs reload
   without model weights, assistant packages, or rerunning inference.
 
-Checked S3 items are verified with local fixtures, fake transports, and real
-offline baseline workers. The first item remains open for an authorized real
-pretrained download/runtime/inference check; see the S3 verification record.
+S3 has local fixtures, fake transports and real baseline-worker evidence, plus
+fresh-cache acquisition and bounded real inference for the five new TTM profiles
+and TOTO on the recorded macOS CPU runtimes. See the
+[model qualification](v0.3.0-model-qualification.md) for exact artifact identities,
+post-forecast cancellation limits and ordinary loading cancellation/recovery.
 
 ### S4: Future forecasting
 
@@ -280,9 +290,11 @@ Acceptance:
 - [x] A retained decision record selects exact existing-family additions and one
   new family, with official model/config/runtime/license references and explicit
   supported frequency/context/horizon and output semantics.
-- [ ] Runtime compatibility is settled before implementation. Dependency changes
-  include existing-family regression checks and optional-import isolation.
-- [ ] Each new integration/profile behavior has contract tests and representative
+- [x] Runtime compatibility, existing-family regression and optional-import
+  isolation are recorded. **Timing deviation:** real runtime resolution occurred
+  after 0.3.0 publication, not before implementation. SciPy 1.15.3 failed; admitted
+  1.14.1 passed TOTO on both supported Python versions. The repair is in 0.3.1.
+- [x] Each new integration/profile behavior has contract tests and representative
   bounded real inference evidence; materially different architectures/behaviors
   are not treated as untested larger sizes of an unchanged adapter.
 - [x] Compatible larger variants retain separate compatibility and real-inference
@@ -381,7 +393,7 @@ Acceptance:
 
 - [x] A fresh installed application completes onboarding, a manual baseline,
   historical evaluation, and future forecasting with clearly located outputs.
-- [ ] An authorized representative pretrained run covers missing-weight download,
+- [x] An authorized representative pretrained run covers missing-weight download,
   cached repeat, live stages, cancellation/failure recovery, and artifact reload.
 - [x] Offline fixtures cover every category, supported option boundary, new
   connection, and mode; old configuration/result/finance regressions pass.

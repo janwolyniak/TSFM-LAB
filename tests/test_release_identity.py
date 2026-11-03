@@ -60,6 +60,10 @@ def candidate(tmp_path):
         path.write_bytes(raw)
     for arguments in (
         ["init", "-q"],
+        # This isolated repository has no project attributes. Keep its commit
+        # and archive bytes independent of the caller's Windows EOL defaults.
+        ["config", "core.autocrlf", "false"],
+        ["config", "core.eol", "lf"],
         ["add", "."],
         [
             "-c",
@@ -151,6 +155,22 @@ def test_same_version_changed_runtime_cannot_claim_commit_identity(candidate, ar
     else:
         wheel_files["tsfm_lab/__init__.py"] += b"\n# drift\n"
         write_wheel(wheel, wheel_files)
+    with pytest.raises(ValueError, match="mismatch.*changed"):
+        verify(candidate)
+
+
+@pytest.mark.parametrize("archive", ["source", "wheel"])
+def test_line_ending_changes_do_not_preserve_byte_identity(candidate, archive):
+    _, _, source, wheel, source_files, wheel_files = candidate
+    files, name, writer, target = (
+        (source_files, "src/tsfm_lab/__init__.py", write_source, source)
+        if archive == "source"
+        else (wheel_files, "tsfm_lab/__init__.py", write_wheel, wheel)
+    )
+    original = files[name]
+    files[name] = original.replace(b"\n", b"\r\n")
+    assert files[name] != original
+    writer(target, files)
     with pytest.raises(ValueError, match="mismatch.*changed"):
         verify(candidate)
 

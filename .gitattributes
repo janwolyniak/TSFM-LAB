@@ -1,0 +1,2 @@
+# Preserve maintained text and byte-pinned fixtures across platform checkouts.
+* text=auto eol=lf

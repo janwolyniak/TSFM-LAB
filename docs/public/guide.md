@@ -13,7 +13,8 @@ This guide describes **TSFM Lab {{SOURCE_VERSION}}**, distributed through the
 repository's GitHub Release. The source repository is currently private;
 installation and repository links require authorized access. Public documentation
 preparation does not change access to the repository, datasets or experiment
-outputs. This static artifact has not been deployed. No PyPI publication is claimed.
+outputs. Documentation hosting is separate from package publication. No PyPI
+publication is claimed.
 
 ## Quickstart
 
@@ -88,7 +89,9 @@ exactly `1D`/`7D` fixed UTC intervals and exact context. They are distinct
 architecture/frequency profiles, not model sizes. TOTO 2 requires **Python
 3.12 or 3.13**, context multiples of 32, and project integration bounds of
 32–2,048 context / 1–128 horizon. These are not upstream architecture limits.
-Its installed-runtime and real inference qualification remain pending.
+Its bounded installed-runtime and real CPU checks passed on macOS ARM64 with
+Python 3.12 and 3.13 using the maintained SciPy 1.14.1 constraints. Other native
+platform combinations remain unqualified.
 
 Runtime installation and checkpoint acquisition are explicit separate actions.
 Safe loading keeps exact revisions, strict parameters, verified local
@@ -177,11 +180,15 @@ fine-tuning, optimization, hosted inference and GPU/MPS certification are outsid
 this release. Optional runtime and model-weight licenses are separate from the
 project's Apache-2.0 code license; TiRex retains its NXAI runtime notices.
 
-Retained baseline and earlier model checks are platform-specific; current local
-checks use macOS. Linux/macOS and native Windows 11 x64 on Python 3.11–3.13 are
-targets, with the full current CI matrix and platform, terminal, worker,
-credential and optional-runtime qualification still pending. TOTO 2 excludes
-Python 3.11. No unperformed platform or real-model check is represented as a pass.
+Retained model checks are platform-specific. The five new TTM profiles passed
+bounded real CPU checks on macOS ARM64/Python 3.12. TOTO 2 passed on Python
+3.12 and 3.13 with SciPy 1.14.1; use the maintained runtime constraints.
+These checks cover native output agreement, causal contexts, cache replay,
+recovery and saved exports. They do not establish forecast superiority or
+qualify optional models on other platforms. TOTO 2 excludes Python 3.11.
+Windows 11/Windows Terminal, live assistant providers, native credential vaults
+and browser sign-in remain pending by owner decision. Hosted core CI and
+interactive terminal qualification are separate checks.
 
 ## Release notes
 
@@ -194,12 +201,15 @@ S8 adds Windows path/quoting support, portable workers and locking, and a native
 Windows CI configuration. S9 adds exact installed-wheel checks of onboarding,
 historical/future baselines, saved exports and fake assistant routes.
 
-Real pretrained qualification for new behavior, live assistant and native-vault
-checks, native Windows verification and the hosted CI matrix remain unverified.
-The owner requested release publication with those limits documented.
+**0.3.1 is the qualification and repair patch prepared on 2 November 2026.**
+It fixes Windows export durability and path validation, preserves pinned text
+bytes across checkouts, corrects the plan-connected assistant request shape,
+and pins the tested TOTO runtime. The original 0.3.0 tag and assets are preserved.
+Live assistant and native-vault checks, browser sign-in and Windows 11/Terminal
+remain unverified. A fake protocol check does not establish live compatibility.
 The source package version is {{SOURCE_VERSION}}. GitHub Release assets include the checked
 source archive, wheel, verification manifest and checksums. PyPI publication and
-public documentation deployment have not been performed.
+documentation hosting are separate actions; qualification limits remain explicit.
 
 ## Citation
 
@@ -212,10 +222,11 @@ study's decision policy or findings.
 
 ## Documentation publication
 
-This is a locally prepared publication artifact. Its HTTPS base URL is an
-explicit **candidate**, not a registered host or verified deployment. Confirm the
-chosen host and URL before deployment, then check public reachability and crawl
-behavior separately. Source access remains private.
+The owner selected GitHub Pages at
+[janwolyniak.github.io/TSFM-LAB/](https://janwolyniak.github.io/TSFM-LAB/)
+for this curated guide. The publication workflow uploads only the generated
+documentation files. Deployment and public reachability are checked separately
+from generation. Source access remains private.
 
 The artifact provides text-accessible content, stable section links, consistent
 metadata, a sitemap and crawl rules without running the forecasting application.

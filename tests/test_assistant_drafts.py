@@ -117,6 +117,7 @@ def test_invalid_structure_and_unbounded_text_reject(update):
         '{"schema_version":NaN}',
         " " * 32769,
     ],
+    ids=("duplicate_keys", "markdown_fence", "trailing_text", "nonfinite", "oversized"),
 )
 def test_malformed_duplicate_or_oversized_json_rejects(text):
     with pytest.raises(DraftError):

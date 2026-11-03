@@ -1,15 +1,16 @@
-# Building, verifying, and publishing v0.3.0
+# Building, verifying, and publishing v0.3.1
 
-On 30 October 2026 the owner requested review/fixes, merge into main, push and
-release publication. This authorizes the existing GitHub Release workflow for
-v0.3.0: a tag, source archive, wheel, `verification.json` and `SHA256SUMS`.
-The [release notes](release-v0.3.0.md) and
-[verification record](v0.3.0-verification.md) retain local evidence and the pending
-native-platform/model/provider/hosted-CI checks. Publication does not certify
-those combinations. The earlier offline-only instruction remains active.
-PyPI upload, repository visibility, public documentation hosting, dependency or
-model downloads, paid services, billing and protection settings are separate.
-The historical v0.2.0 authorization and evidence remain specific to that release.
+On 2 November 2026 the owner authorized a **0.3.1 patch release after the
+approved checks pass**, preserving the original v0.3.0 tag, assets and checksums.
+Scope includes isolated optional-runtime installs, pinned checkpoint downloads,
+bounded local CPU checks, and curated GitHub Pages publication at
+`https://janwolyniak.github.io/TSFM-LAB/` while keeping source private.
+No paid APIs, cloud/GPU inference, training or PyPI upload is included.
+Windows 11/Windows Terminal, live providers, native vaults and browser sign-in
+remain pending by owner decision. See the [patch notes](release-v0.3.1.md),
+[verification record](v0.3.1-verification.md) and
+[model evidence](v0.3.0-model-qualification.md). Older release records retain
+their original dates, artifacts and verification limits.
 
 ## Review and freeze
 
@@ -21,7 +22,7 @@ or treat an unavailable CI check as passed.
 
 Keep package metadata in `pyproject.toml` and `src/tsfm_lab/__init__.py`, the
 CITATION version/date/URL, README badges, current installation/release guides and
-the curated public artifact consistent with **0.3.0**. Retain older release and
+the curated public artifact consistent with **0.3.1**. Retain older release and
 stage records as historical evidence. Open plan criteria requiring unperformed
 qualification stay open with the release scope explained.
 
@@ -45,13 +46,13 @@ choose a new output directory:
 
 ```sh
 TSFM_RELEASE_REVISION="$(git rev-parse HEAD)"
-python scripts/build_distribution.py --out-dir /tmp/tsfm-v0.3.0-dist
+python scripts/build_distribution.py --out-dir /tmp/tsfm-v0.3.1-dist
 ```
 
 The helper builds the source archive and then its wheel using `--no-index`,
 `--no-deps` and `--no-build-isolation`. Building from the archive exposes missing
 source files. Retain the JSON artifact/content report and hashes. The expected
-files are `tsfm_lab-0.3.0.tar.gz` and `tsfm_lab-0.3.0-py3-none-any.whl`.
+files are `tsfm_lab-0.3.1.tar.gz` and `tsfm_lab-0.3.1-py3-none-any.whl`.
 Do not claim byte-reproducible rebuilds without comparing repeated build bytes.
 
 Inspect metadata, Python requirement, license/notices, explicit extras, entry
@@ -79,10 +80,10 @@ For an approved fresh install, the ordinary procedure is:
 TSFM_SOURCE_ROOT="$PWD"
 TSFM_SMOKE_ROOT="$(mktemp -d)"
 python3 -m venv "$TSFM_SMOKE_ROOT/environment"
-"$TSFM_SMOKE_ROOT/environment/bin/python" -m pip install -c "$TSFM_SOURCE_ROOT/requirements-dev.txt" '/absolute/path/tsfm_lab-0.3.0-py3-none-any.whl[cli,parquet]'
+"$TSFM_SMOKE_ROOT/environment/bin/python" -m pip install -c "$TSFM_SOURCE_ROOT/requirements-dev.txt" '/absolute/path/tsfm_lab-0.3.1-py3-none-any.whl[cli,parquet]'
 "$TSFM_SMOKE_ROOT/environment/bin/python" -m pip check
 cd "$TSFM_SMOKE_ROOT"
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PATH="$TSFM_SMOKE_ROOT/environment/bin:$PATH" "$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/scripts/verify_distribution.py" --wheel /absolute/path/tsfm_lab-0.3.0-py3-none-any.whl
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PATH="$TSFM_SMOKE_ROOT/environment/bin:$PATH" "$TSFM_SMOKE_ROOT/environment/bin/python" -I "$TSFM_SOURCE_ROOT/scripts/verify_distribution.py" --wheel /absolute/path/tsfm_lab-0.3.1-py3-none-any.whl
 ```
 
 The exact `--wheel` argument is mandatory. `-I` and the verifier reject source or
@@ -104,7 +105,7 @@ live provider/vault compatibility, predictive superiority or trading profit.
 From the source root, bind the source and wheel to the merged revision:
 
 ```sh
-python scripts/verify_release_identity.py --revision "$TSFM_RELEASE_REVISION" --source /absolute/path/tsfm_lab-0.3.0.tar.gz --wheel /absolute/path/tsfm_lab-0.3.0-py3-none-any.whl
+python scripts/verify_release_identity.py --revision "$TSFM_RELEASE_REVISION" --source /absolute/path/tsfm_lab-0.3.1.tar.gz --wheel /absolute/path/tsfm_lab-0.3.1-py3-none-any.whl
 ```
 
 This compares packaged source bytes with Git and wheel runtime bytes with the
@@ -114,19 +115,18 @@ The installed verifier also executes the sealed pre-profile compatibility fixtur
 without rewriting it; its [provenance](../tests/fixtures/release_legacy_v1/README.md)
 remains historical.
 
-## Record unavailable qualification
+## Record qualification limits
 
-The nine-job Python 3.11–3.13 Linux/macOS/Windows matrix stays enabled. Account
-billing/spending limits prevent hosted jobs from starting. Retain annotations and
-record that exception; no pre-start failure is a test result. The owner's current
-publication request follows disclosure of these limits. Do not change billing,
-spending limits, CI protections or claim native results to complete publication.
+The nine-job Python 3.11–3.13 Linux/macOS/Windows core matrix stays enabled.
+Retain actual current-candidate job results and installed-wheel reports. Earlier
+pre-start billing failures and the frozen 0.3.0 Windows failures are historical;
+neither qualifies a repaired candidate. Do not change billing or protections.
 
-New TTM/TOTO real-runtime/inference, native Windows/Windows Terminal and console/
-locking, live providers, native vault/browser and public documentation hosting
-remain unqualified. Existing bounded model evidence is not a new-wheel/platform
-certification. Keep the [release verification ceiling](v0.3.0-verification.md)
-visible in the release body and manifest, with the owner's offline-only scope.
+Real-model evidence is specific to its exact package, checkpoints, runtime and
+macOS CPU host. Keep frozen-wheel checks separate from patch-wheel replays.
+Windows Server automated execution does not certify Windows 11/Terminal,
+optional Windows model runtimes, live providers, native vaults or browser flows.
+Carry all owner-deferred checks explicitly in the release manifest and body.
 
 ## Publish and verify the GitHub Release
 
@@ -136,10 +136,11 @@ artifact hashes, local results, review/fix record, commands/environment and the
 unperformed checks. Hash the final source, wheel and verification manifest into
 `SHA256SUMS`; do not include a self-referential hash of the sums file.
 
-Create tag `v0.3.0` at `TSFM_RELEASE_REVISION` and publish those four exact assets
-using the [release notes](release-v0.3.0.md), completed with revision, check counts,
-qualification limits and artifact hashes. Keep the repository private; publishing
-a GitHub Release is distinct from a PyPI upload or deploying documentation.
+Create tag `v0.3.1` at `TSFM_RELEASE_REVISION` and publish those four exact assets
+using the [release notes](release-v0.3.1.md), completed with revision, check counts,
+qualification limits and artifact hashes. Keep the repository private. The separately authorized Pages workflow publishes
+only curated documentation; verify its anonymous HTTP results and file identities.
+Publishing a GitHub Release remains distinct from a PyPI upload.
 
 Verify the remote tag resolves to the frozen merged revision and download the
 uploaded assets into a new disposable directory. All downloaded hashes must match

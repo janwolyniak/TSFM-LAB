@@ -3,9 +3,10 @@
 The optional `toto_2` adapter selects `Datadog/Toto-2.0-4m` and produces
 univariate median forecasts. It requires Python **3.12 or 3.13**. Python 3.11 can
 inspect the catalog and reload/export valid saved results, but cannot resolve,
-prepare or run this model. Configuration, loading and workflows have offline
-fixture/fake-runtime checks; installed imports, real inference and native
-platform qualification remain pending. See the [S6 record](s6-toto2-verification.md).
+prepare or run this model. Configuration/loading contracts have offline tests and bounded real CPU evidence
+on macOS ARM64/Python 3.12 and 3.13 using SciPy 1.14.1. Other native platforms
+remain unqualified. See [model qualification](v0.3.0-model-qualification.md) and
+the historical [S6 record](s6-toto2-verification.md).
 
 ## Checkpoint and bounds
 
@@ -27,9 +28,8 @@ TOTO generations are not curated.
 
 ## Optional setup
 
-These commands describe the integration interface. Real-runtime installation
-and inference qualification remain pending; installation and weight acquisition
-are separate explicit actions:
+These commands describe the tested model-specific installation route.
+Installation and weight acquisition remain separate explicit actions:
 
 ```sh
 python -m pip install -c requirements-toto2.txt '.[cli,toto2]'
@@ -45,12 +45,14 @@ observations beyond the context. Use `/new toto_2` in the terminal, choose
 the reviewed configuration. Invalid patch lengths are reprompted. Assistant
 drafting uses the same validation and cannot authorize preparation or inference.
 
-The candidate [constraints](../requirements-toto2.txt) coordinate TOTO 2.0.0,
+The maintained [constraints](../requirements-toto2.txt) coordinate TOTO 2.0.0,
 Torch 2.8, Hub 0.35.3, Safetensors 0.6, NumPy 2.1.3, GluonTS 0.16.2,
 dd-unit-scaling 0.1.0, unit-scaling 0.3.5, Einops 0.8.2, Jaxtyping 0.3.11,
-Lightning/pytorch-lightning 2.4.0, SciPy 1.15.3 and Matplotlib 3.10.8.
+Lightning/pytorch-lightning 2.4.0, SciPy 1.14.1 and Matplotlib 3.10.8.
 GluonTS 0.17 requires a newer Torch stack and is excluded. Package-metadata
-compatibility does not establish successful installation/imports.
+compatibility alone does not establish successful imports; the recorded macOS
+checks execute imports and inference. The prior SciPy 1.15.3 wheel failed on the
+qualification host; it is not silently reported as passing.
 
 ## Numerical and loading behavior
 

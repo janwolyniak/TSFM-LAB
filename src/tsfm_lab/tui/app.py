@@ -14,6 +14,7 @@ from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, R
 
 from tsfm_lab.config import ExperimentConfig
 from tsfm_lab.execution import ManagedRun
+from tsfm_lab.local_paths import expand_local_user
 from tsfm_lab.repl.text import literal
 from tsfm_lab.run_modes import forecast_spec, is_future
 from tsfm_lab.tui.views import HistoryScreen, ModelScreen, ResultsScreen
@@ -152,7 +153,7 @@ class LabApp(App):
         self, workspace=Path("results"), *, demo_path=None, worker_factory=ManagedRun
     ):
         super().__init__()
-        self.workspace = Path(workspace).expanduser().resolve()
+        self.workspace = expand_local_user(workspace).resolve()
         self.demo_path = Path(demo_path) if demo_path else None
         self.profile_demo_paths = {}
         self.worker_factory = worker_factory
@@ -191,7 +192,7 @@ class LabApp(App):
             value = self.screen.query_one("#workspace-path", Input).value.strip()
             if not value or "://" in value:
                 raise ValueError("Enter a local workspace directory")
-            self.workspace = Path(value).expanduser().resolve()
+            self.workspace = expand_local_user(value).resolve()
             return True
         except (OSError, RuntimeError, ValueError) as exc:
             self.screen.query_one("#home-status", Label).update(Text(str(exc)))

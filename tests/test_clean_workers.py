@@ -2,10 +2,12 @@
 
 import json
 import os
+import platform
 import struct
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
@@ -84,6 +86,45 @@ def test_allowlist_preserves_nonsecret_runtime_flags_without_mutating_input():
     }
 
 
+@pytest.mark.parametrize(
+    "architecture,native,expected",
+    [
+        ("AMD64", None, "AMD64"),
+        ("ARM64", None, "ARM64"),
+        ("x86", "AMD64", "AMD64"),
+        ("x86", "ARM64", "ARM64"),
+    ],
+)
+def test_windows_machine_fallback_survives_secret_redaction_without_parent_mutation(
+    monkeypatch, architecture, native, expected
+):
+    values = {
+        "PROCESSOR_ARCHITECTURE": architecture,
+        "PROCESSOR_IDENTIFIER": "unneeded CPU description",
+        "NUMBER_OF_PROCESSORS": "8",
+        **{name: "fake-private-value" for name in CREDENTIAL_NAMES},
+    }
+    if native is not None:
+        values["PROCESSOR_ARCHITEW6432"] = native
+    original = dict(values)
+    selected = worker_entry.worker_environment(values)
+
+    def no_wmi(*args):
+        raise OSError("WMI is unavailable")
+
+    # CPython 3.11 uses only this environment fallback. Newer Pythons use it
+    # when WMI cannot determine the host architecture.
+    monkeypatch.setattr(platform, "_wmi_query", no_wmi, raising=False)
+    monkeypatch.setattr(platform, "os", SimpleNamespace(environ=selected))
+    assert platform._get_machine_win32() == expected
+    assert values == original
+    assert set(selected) == {
+        "PROCESSOR_ARCHITECTURE",
+        "HF_HUB_DISABLE_IMPLICIT_TOKEN",
+    } | ({"PROCESSOR_ARCHITEW6432"} if native is not None else set())
+    assert not set(CREDENTIAL_NAMES).intersection(selected)
+
+
 def test_credentials_absent_at_startup_before_project_imports(
     config_factory, tmp_path, monkeypatch, capfd
 ):
@@ -97,9 +138,9 @@ def test_credentials_absent_at_startup_before_project_imports(
     monkeypatch.setenv("TRANSFORMERS_OFFLINE", "0")
     marker = tmp_path / "startup-environment.json"
     prefix = (
-        "import json, os, sys\n"
+        "import json, os, platform, sys\n"
         f"with open({str(marker)!r}, 'w') as stream:\n"
-        "    json.dump({'names': sorted(os.environ), 'isolated': sys.flags.isolated, "
+        "    json.dump({'names': sorted(os.environ), 'machine': platform.machine(), 'isolated': sys.flags.isolated, "
         "'hub_offline': os.environ.get('HF_HUB_OFFLINE'), "
         "'transformers_offline': os.environ.get('TRANSFORMERS_OFFLINE')}, stream)\n"
     )
@@ -125,6 +166,13 @@ def test_credentials_absent_at_startup_before_project_imports(
         startup = json.loads(marker.read_text())
         assert not set(CREDENTIAL_NAMES).intersection(startup["names"])
         assert startup["isolated"] == 1
+        assert startup["machine"] == platform.machine() and startup["machine"]
+        from tsfm_lab.experiments import ExperimentStore
+
+        saved, _ = ExperimentStore(config.output_directory).load_result(
+            events[-1]["run_id"]
+        )
+        assert saved["provenance"]["environment"]["machine"] == startup["machine"]
         assert startup["hub_offline"] == startup["transformers_offline"] == "0"
         assert all(os.environ.get(name) == value for name, value in fake.items())
         public = json.dumps(events) + worker.log_path.read_text()

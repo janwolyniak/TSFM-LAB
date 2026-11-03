@@ -9,7 +9,7 @@ from typing import Any
 import yaml
 
 from tsfm_lab.contracts import EvaluationSpec, fixed_interval
-from tsfm_lab.local_paths import active_path_text
+from tsfm_lab.local_paths import active_path_text, expand_local_user
 from tsfm_lab.models.catalog import CHECKPOINT_REPOSITORIES
 from tsfm_lab.models.settings import validate_settings
 from tsfm_lab.workflows import normalize_workflow, validate_workflow_units
@@ -113,7 +113,7 @@ def _local_path(value: Any, label: str, directory: Path) -> Path:
     text = _text(value, label)
     try:
         active_path_text(text)
-        path = Path(text).expanduser()
+        path = expand_local_user(text)
         return (
             (directory / path).resolve() if not path.is_absolute() else path.resolve()
         )
@@ -310,7 +310,7 @@ def load_config(path: str | Path) -> ExperimentConfig:
     """Read and validate YAML without reading datasets or creating output files."""
     source_name = str(path)
     try:
-        source_path = Path(path).expanduser().resolve()
+        source_path = expand_local_user(path).resolve()
         source_name = source_path.name
         with source_path.open("rb") as stream:
             contents = stream.read(MAX_CONFIG_BYTES + 1)
@@ -340,7 +340,7 @@ def config_from_mapping(mapping: dict, *, base_directory: Path) -> ExperimentCon
     the persisted input snapshot. This function never reads or writes that file.
     """
     try:
-        directory = Path(base_directory).expanduser().resolve()
+        directory = expand_local_user(base_directory).resolve()
         source_yaml = yaml.safe_dump(mapping, sort_keys=False, allow_unicode=True)
         if len(source_yaml.encode("utf-8")) > MAX_CONFIG_BYTES:
             raise ConfigError("Configuration exceeds the 1 MiB limit")
@@ -363,7 +363,7 @@ def config_from_mapping(mapping: dict, *, base_directory: Path) -> ExperimentCon
 def load_run_config(path: str | Path):
     """Dispatch a saved configuration to its explicit historical or future type."""
     try:
-        source_path = Path(path).expanduser().resolve()
+        source_path = expand_local_user(path).resolve()
         with source_path.open("rb") as source:
             payload = source.read(MAX_CONFIG_BYTES + 1)
         if len(payload) > MAX_CONFIG_BYTES:

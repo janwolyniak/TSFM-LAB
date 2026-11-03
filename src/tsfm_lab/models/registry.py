@@ -384,7 +384,7 @@ ADAPTER_PROFILES = (
         (
             "Requires Python 3.12 or 3.13; Python 3.11 is unsupported for this optional family.",
             "Project integration bounds: context 32–2048 in multiples of 32, horizon 1–128; these are not upstream architectural limits.",
-            "Runtime metadata compatibility and offline fixtures checked; installed imports, real inference and native platform qualification pending.",
+            "Real CPU integration checks recorded on macOS ARM64 Python 3.12/3.13 with SciPy 1.14.1; other native-platform qualification remains separate.",
         ),
         min_context=32,
     ),

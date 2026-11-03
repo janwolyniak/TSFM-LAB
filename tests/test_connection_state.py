@@ -76,6 +76,7 @@ def test_unused_store_does_not_create_files_and_host_binding_survives_write(tmp_
         b'{"nested":' * 35 + b"null" + b"}" * 35,
         b"x" * 262145,
     ],
+    ids=("malformed", "duplicate_keys", "nonfinite", "wrong_root", "deep", "oversized"),
 )
 def test_corrupt_or_oversized_state_returns_only_canned_error(state, raw):
     overwrite(state, raw)

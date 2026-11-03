@@ -1,10 +1,11 @@
-import shlex
+from pathlib import Path
 
 import pytest
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
+from tsfm_lab.repl.arguments import split_arguments
 from tsfm_lab.repl.prompt import CommandCompleter
 
 
@@ -45,7 +46,9 @@ def test_path_completion_completes_only_argument_and_preserves_spaces(
     buffer = Buffer(document=Document(text))
     buffer.apply_completion(completion)
     result = buffer.text
-    assert shlex.split(result)[-1] == str(tmp_path / "experiment file.yaml")
+    words = split_arguments(result)
+    assert words[:-1] == split_arguments(command)
+    assert Path(words[-1]).samefile(tmp_path / "experiment file.yaml")
 
 
 def test_quoted_path_completion_handles_unclosed_quote(tmp_path):
@@ -55,7 +58,9 @@ def test_quoted_path_completion_handles_unclosed_quote(tmp_path):
     buffer = Buffer(document=Document(text))
     buffer.apply_completion(completion)
     result = buffer.text
-    assert shlex.split(result)[-1] == str(tmp_path / "experiment file.yaml")
+    words = split_arguments(result)
+    assert words[:-1] == ["/run"]
+    assert Path(words[-1]).samefile(tmp_path / "experiment file.yaml")
 
 
 @pytest.mark.parametrize("quote,closing", [('"', '"'), ("'", "")])
@@ -66,4 +71,6 @@ def test_completion_replaces_quote_context_safely(tmp_path, quote, closing):
     completion = complete(text)[0]
     buffer = Buffer(document=Document(text))
     buffer.apply_completion(completion)
-    assert shlex.split(buffer.text)[-1] == str(target)
+    words = split_arguments(buffer.text)
+    assert words[:-1] == ["/run"]
+    assert Path(words[-1]).samefile(target)

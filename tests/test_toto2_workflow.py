@@ -46,7 +46,7 @@ fake_toto = shared_toto
 def test_catalog_has_explicit_support_limits_and_no_inherited_inference():
     entry = catalog_info(REPOSITORY)
     assert entry["reference_revision"] == REVISION
-    assert entry["project_inference_status"] == "not_recorded"
+    assert entry["project_inference_status"] == "recorded"
     assert entry["capabilities"]["min_context"] == 32
     assert entry["capabilities"]["max_context"] == 2048
     assert entry["capabilities"]["max_horizon"] == 128

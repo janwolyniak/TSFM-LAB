@@ -1,9 +1,11 @@
 # Curated static documentation
 
-S7 prepares an indexable static documentation artifact for the 0.3.0
-release. This is **local preparation only**. The repository remains
-private; no host is registered, no visibility setting changes, and no deployment
-or public reachability/indexability claim is made.
+S7 prepares a curated static documentation artifact. On 2 November 2026 the
+owner approved GitHub Pages at `https://janwolyniak.github.io/TSFM-LAB/` while
+keeping the source repository private. Pages is configured for workflow-based
+publication. A successful build alone does not establish deployment or public
+reachability; the [patch verification record](v0.3.1-verification.md) records those
+checks separately.
 
 ## Build and inspect
 
@@ -19,8 +21,9 @@ python scripts/build_public_docs.py \
   --out-dir build/public-docs
 ```
 
-That URL is an illustrative candidate, not a selected/verified host. Confirm the
-host and public URL before deployment. The base URL must have no credentials,
+Without `--publication-approved` the generator retains preview/candidate status.
+The approved deployment build adds that flag and uses the selected URL above.
+The base URL must have no credentials,
 port, query, fragment, private/loopback host or unsafe path. A missing base URL is
 an error. The output defaults to `build/public-docs` and must not already exist,
 even as an empty directory or symlink. Choose a new output directory for another
@@ -34,8 +37,10 @@ The directory contains only:
   reduced-motion and print behavior; no external fonts or executable JavaScript.
 - `robots.txt` and `sitemap.xml`: crawl settings for the supplied candidate URL.
 - `llms.txt`: optional navigation, with no special indexing claim.
-- `build-manifest.json`: safe input/output hashes and explicit
-  `built_not_deployed`, candidate-URL and private-repository status.
+- `build-manifest.json`: safe input/output hashes and private-repository status.
+  Preview builds say `built_not_deployed`; approved builds say
+  `built_for_deployment` and `owner_confirmed_for_publication`. Neither status
+  claims that a deployment or public HTTP check has succeeded.
 
 The manifest is written last as the completion marker. Builds use no timestamps,
 random identities, local absolute paths or runtime-machine provenance; identical
@@ -61,17 +66,22 @@ scanner or permission to add private material to public inputs.
 Markdown raw HTML is disabled. Generated text/metadata is escaped; heading IDs
 are unique and deterministic, section links are checked, and image dependencies
 are refused. Catalog compatibility and selected-reference inference are shown
-separately. Source package/version/citation metadata identifies 0.3.0; release publication
+separately. Source package/version/citation metadata identifies 0.3.1; release publication
 is distinct from documentation deployment and qualification limits remain visible. No PyPI, model accuracy/ranking or native-platform qualification is invented.
 
-## Publication remains separate
+## Approved publication workflow
 
-Before deployment, confirm the selected host/public URL and public audience,
-review the generated directory and manifest, rebuild for that URL, then use an
-authorized hosting workflow. Do not make the source repository public merely to
-host documentation. Verify reachability, canonical URLs, links, crawl/index rules
-and any infrastructure access controls after deployment; local checks alone
-cannot establish them. No such deployment is authorized by this local build.
+The [public documentation workflow](https://github.com/janwolyniak/TSFM-LAB/blob/main/.github/workflows/public-docs.yml) builds
+only the six generated files, retains read-only repository access during build,
+and grants Pages/OIDC deployment permissions only to its deployment job on
+`main`. It checks the configured Pages base URL against the owner-approved URL.
+Pull requests build the artifact without deploying it. Source visibility stays
+private; public documentation exposes the deliberately curated content.
+
+After deployment, anonymously request all six files, verify their manifest hashes,
+canonical/social/structured URLs, internal anchors, sitemap and crawl rules.
+Check that repository visibility is still private. Retain the deployment revision,
+workflow URL and actual HTTP outcomes. These checks do not establish indexing.
 
 [Google's AI search guidance](https://developers.google.com/search/docs/appearance/ai-features)
 emphasizes ordinary search eligibility, useful text, internal links, crawl access

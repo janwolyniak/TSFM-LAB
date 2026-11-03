@@ -174,7 +174,7 @@ def test_pinned_configs_and_catalog_preserve_truthful_profile_bounds(name, tmp_p
     )
     assert info["capabilities"]["max_horizon"] == horizon
     assert info["frequency_policy"] == record["point_forecast"]["frequency_policy"]
-    assert info["project_inference_status"] == "not_recorded"
+    assert info["project_inference_status"] == "recorded"
     settings = model_settings(
         "ttm_r2", repository=REPOSITORY, revision=info["reference_revision"]
     )
